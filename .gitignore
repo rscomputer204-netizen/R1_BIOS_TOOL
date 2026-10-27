@@ -68,7 +68,34 @@ repo_scan.txt
 itlab_matches.txt
 sandbox_log.txt
 outimage.map
+repair_history.json
+
+# Chat logs & Chat saver
+chat_*.txt
+chat_saver.py
 .chat_saver_state.json
+chat_history/
+
+# Temporary MEA and verification text dumps in root
+mea_*.txt
+testing_area_*.txt
+test_padding.*
+
+# One-off scratch test scripts in root
+test_*.py
+fix_*.py
+v13_*.py
+v15_*.py
+repair_edb41_*.py
+extract_me_diag.py
+
+# Update Cache & Backup
+update_cache/
+temp_update_payload/
+backup/
+
+# Allow update.zip for auto-update distribution
+!update.zip
 
 # Local Secrets & Configuration
 config/github_token.json
