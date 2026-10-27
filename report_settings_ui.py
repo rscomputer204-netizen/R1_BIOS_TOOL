@@ -14,10 +14,10 @@ class ReportSettingsManager:
             "show_flash_partition": False,  # Flash Partition Table (FPT)
             "show_bpdt":            False,  # Boot Partition Descriptor Table (BPDT/IFWI)
             "show_cse_layout":      False,  # CSE Layout Table (Code/Data partitions)
-            "show_normal_analysis": False,  # Normal Analyze (Basic MEAnalyzer run)
-            "show_bios_analysis":   True,   # BIOS Analysis Report (ME Family/Version/SKU...) — ON by default
+            "show_normal_analysis": True,   # Normal Analyze (Basic MEAnalyzer run) — ON by default
+            "show_bios_analysis":   False,  # BIOS Analysis Report (ME Family/Version/SKU...)
             "show_pmc_pchc_phy":    False,  # PMC / PCHC / PHY Independent firmware info
-            "show_me_warnings":     True,   # ME Firmware Notes / Warnings / Errors — ON by default
+            "show_me_warnings":     False,  # ME Firmware Notes / Warnings / Errors
             "show_microcode":       False,  # Intel Microcode Audit (via MCExtractor)
         }
         self.settings = self.load_settings()
