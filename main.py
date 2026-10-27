@@ -4133,6 +4133,9 @@ class BiosServiceTool(QMainWindow):
         # Apply current language translations
         self.retranslate_ui()
 
+        # Automatic Cloud Update Check on Startup (like reference project)
+        QTimer.singleShot(2500, self.check_startup_update)
+
 
     def setup_ui(self):
         # Main Layout
@@ -5180,6 +5183,29 @@ class BiosServiceTool(QMainWindow):
             dlg.exec()
         except Exception as e:
             QMessageBox.critical(self, "Update Error", f"Failed to open update manager:\n{e}")
+
+    def check_startup_update(self):
+        """Silently checks GitHub on application startup and prompts if a new version is available."""
+        try:
+            from update_manager import UpdateCheckWorker, is_newer_version, get_local_version, DEFAULT_UPDATE_URL
+            
+            def on_check_finished(success, data, error_msg):
+                if not success:
+                    return
+                remote_ver = str(data.get("version", "0.0.0")).strip()
+                local_ver = get_local_version()
+                
+                if is_newer_version(remote_ver, local_ver):
+                    self.log_to_terminal(f"[SYSTEM] NEW UPDATE AVAILABLE: {remote_ver} (Current: {local_ver})")
+                    self.show_update_dialog()
+                else:
+                    self.log_to_terminal(f"[SYSTEM] Software is up to date ({local_ver}).")
+
+            self._startup_update_worker = UpdateCheckWorker(DEFAULT_UPDATE_URL)
+            self._startup_update_worker.check_finished.connect(on_check_finished)
+            self._startup_update_worker.start()
+        except Exception as e:
+            print(f"[!] Startup update check error: {e}")
 
     def retranslate_ui(self):
         # Update Layout Direction (RTL for Arabic)
