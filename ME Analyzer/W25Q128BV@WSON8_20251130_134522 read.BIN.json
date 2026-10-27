@@ -1,0 +1,28 @@
+{
+    "C:/Users/R1 LAB/Desktop/HP/da0x61mb6g0 rev g/430_440_G3 N78_0138 ME_CLEAN/W25Q128BV@WSON8_20251130_134522 read.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.0.1202",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "11",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2015-12-29",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.0.0.1202",
+                "MEA Database Name": "11.0.0.1202_CON_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "356164D59B25C7C938C244D91DA5811A15E4ADDC0EFF313B1909BCDB14BAE24A"
+            }
+        ],
+        "Messages": []
+    }
+}

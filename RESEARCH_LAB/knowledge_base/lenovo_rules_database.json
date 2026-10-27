@@ -1,0 +1,102 @@
+{
+  "brand": "Lenovo",
+  "rules_count": 4,
+  "rules": [
+    {
+      "category": "PASSWORD_UNLOCK",
+      "family": "ThinkPad Classic (4th to 8th Gen Intel)",
+      "models": [
+        "T440",
+        "T450",
+        "T460",
+        "T460s",
+        "T470",
+        "T470s",
+        "T480",
+        "X240",
+        "X250",
+        "X260",
+        "X270",
+        "X280",
+        "X1 Carbon Gen 2-6",
+        "X1 Yoga"
+      ],
+      "chip_size": "16 MB (Single SPI)",
+      "technique": "AutoPatcher DXE Hook Method",
+      "nvram_format": "EVSA (Extended Variable Storage Architecture)",
+      "description": "ThinkPad stores the Supervisor Password (SVP) cryptographically linked to the embedded hardware security chip. A DXE driver patch hooks the authentication routine and forces an EVSA clear command.",
+      "steps": [
+        "1. Read original 16MB BIOS dump from SPI flash.",
+        "2. Apply AutoPatcher DXE payload to replace auth hook and flush active NVRAM setup (0x00800000 - 0x0084C000 erased to 0xFF).",
+        "3. Flash the patched binary to the motherboard.",
+        "4. Power on laptop: custom screen with GIF89a banner appears. Press Space / Enter to execute SVP hardware wipe.",
+        "5. Flash back the original BIOS dump. The machine boots 100% password-free."
+      ],
+      "target_signatures": [
+        "EVSA",
+        "just test",
+        "GIF89a",
+        "SvpVerify",
+        "PasswordCheck"
+      ]
+    },
+    {
+      "category": "PASSWORD_UNLOCK",
+      "family": "ThinkPad Modern (8th to 11th Gen - Whiskey Lake / Tiger Lake)",
+      "models": [
+        "T490",
+        "T490s",
+        "T14 Gen 1",
+        "T14 Gen 2",
+        "X390",
+        "X1 Carbon Gen 7-9"
+      ],
+      "chip_size": "32 MB (Single SPI)",
+      "technique": "32MB AutoPatcher DXE Hook Method",
+      "nvram_format": "EVSA / UEFI NVRAM",
+      "description": "Applied to 32MB SPI flash chips (such as MX25L25673G / W25Q256JV). Same 2-step DXE hook method tailored for 32MB address space (hook inserted at 0x01452000 - 0x01789000).",
+      "target_signatures": [
+        "EVSA",
+        "Setup",
+        "_FVH"
+      ]
+    },
+    {
+      "category": "PASSWORD_UNLOCK",
+      "family": "IdeaPad / Yoga Consumer (AMI / InsydeH2O)",
+      "models": [
+        "IdeaPad 320",
+        "IdeaPad 330",
+        "IdeaPad 3",
+        "IdeaPad 5",
+        "IdeaPad Gaming"
+      ],
+      "chip_size": "8 MB / 16 MB",
+      "technique": "Active NVRAM Flush / Donor Rebuild with DMI Transfer",
+      "description": "IdeaPad series does not have an external SVP crypto chip. Password is held directly in the active NVRAM bank (AMITSESetup / Setup). Clearing the active NVRAM bank or transferring DMI to a clean vendor update binary unlocks the machine immediately.",
+      "target_signatures": [
+        "AMITSESetup",
+        "Setup",
+        "InsydeSetup",
+        "LENOVO"
+      ]
+    },
+    {
+      "category": "DMI_PROTECTION",
+      "family": "All Lenovo Laptops",
+      "models": [
+        "ThinkPad & IdeaPad"
+      ],
+      "chip_size": "All",
+      "technique": "Lenovo DMI Block Preservation",
+      "description": "Preserves Serial Number (e.g. 1S...), Machine Type Model (MTM), UUID, Board Serial and Windows OEM Product Key located in the DMI partition.",
+      "target_signatures": [
+        "LENOVO",
+        "LNVN",
+        "1S",
+        "SDK0J40697"
+      ]
+    }
+  ],
+  "generated": "2026-09-27 23:02:29"
+}

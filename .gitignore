@@ -1,0 +1,78 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Build and Distribution folders
+build/
+dist/
+*.exe
+*.msi
+*.zip
+*.tar
+*.gz
+
+# Ignore ALL BIOS dump binaries everywhere
+**/*.bin
+**/*.BIN
+**/*.rom
+**/*.ROM
+**/*.fd
+**/*.FD
+**/*.cap
+**/*.CAP
+
+# Ignore all __CHECK__ temporary analysis folders
+**/__CHECK__/
+__CHECK__/
+
+# Test, decompile & temporary binary workspaces
+TESTING_AREA/
+REPAIRED_BIOS/
+FIT_WORKSPACE/
+FIT_TEST_LEGACY/
+FIT_TEST_MFIT/
+FIT_TEST_MFIT3/
+DIAG_WORKSPACE/
+SERVER_WORKSPACE/
+WORKSPACE/
+Test_Decomp_Area/
+Extracted_Resources/
+HP_REPAIR_WORK/
+server_data/
+CRASH_REPORTS/
+ValidationLogs/
+scratch/
+.system_generated/
+7280 TPM ERROR OLD/
+DELL LATITUDE 3520 CYBORG L15 MB TGL 213047-1 6yt0kg3/
+read/
+orig/
+
+# Large dump text & logs
+logs/
+*.log
+*.dump
+app.log
+error.log
+fit.log
+search_results.txt
+repo_scan.txt
+itlab_matches.txt
+sandbox_log.txt
+outimage.map
+.chat_saver_state.json
+
+# Local Secrets & Configuration
+config/github_token.json
+
+# Web bundle binaries (keep html/css/js assets)
+web/*.exe
+web/*.zip

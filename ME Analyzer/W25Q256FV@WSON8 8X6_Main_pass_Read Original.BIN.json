@@ -1,0 +1,48 @@
+{
+    "C:/Users/R1 LAB/Desktop/HP/830 G5_G5/HP EliteBook 830 G6 Two face cam/W25Q256FV@WSON8 8X6_Main_pass_Read Original.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.93.2331",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "14",
+                "Version Control Number": "62",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2023-02-13",
+                "File System State": "Initialized",
+                "Size": "0x7BA000",
+                "Flash Image Tool": "12.0.49.1536",
+                "MEA Database Name": "12.0.93.2331_COR_LP_C_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "2AF2FFCB4503BD727BDBDA12306567909A80B7D265B2715A8A1AA376F7003952"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1030",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-03-18",
+                "Size": "0x11000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1030_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "ADE052EF9B2A982391C0A433551C8D2E36B0690B5B07289C34CB7855317414CD"
+            }
+        ],
+        "Messages": []
+    }
+}

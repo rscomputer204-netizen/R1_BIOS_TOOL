@@ -1,0 +1,34 @@
+{
+  "brand": "ASUS",
+  "rules": [
+    {
+      "category": "PASSWORD_UNLOCK",
+      "platform": "ASUS ZenBook / VivoBook (AMI Aptio V)",
+      "model": "ASUS UX310UV / UX3410U",
+      "chip_size": "8 MB",
+      "technique": "ASUS NVRAM Active Bank Flush",
+      "description": "Clears administrator and user BIOS passwords by erasing the dirty NVRAM variable bank (offset 0x007BC000 - 0x007C5FFF) to 0xFF.",
+      "target_signatures": [
+        "AMITSESetup",
+        "Setup",
+        "_FVH"
+      ],
+      "action": "Locate the primary active NVRAM bank containing user-modified AMITSESetup, and fill with 0xFF. BIOS automatically recovers default (password-free) setup from the default store upon next boot."
+    },
+    {
+      "category": "DMI_PROTECTION",
+      "platform": "ASUS Modern Laptops",
+      "model": "ASUS VivoBook / ZenBook / ROG",
+      "chip_size": "8 MB / 16 MB",
+      "technique": "ASUS DMI Preservation ($ASUS$ / _SM_)",
+      "description": "Preserves Serial Number, Motherboard UUID, MAC Address and Windows Product Key located in the DMI area.",
+      "target_signatures": [
+        "$ASUS$",
+        "_DMI_",
+        "_SM_"
+      ],
+      "action": "Ensure the DMI block remains untouched during password clearing or donor injection."
+    }
+  ],
+  "generated": "2026-09-27 22:53:16"
+}

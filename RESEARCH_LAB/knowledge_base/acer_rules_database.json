@@ -1,0 +1,53 @@
+{
+  "brand": "Acer",
+  "rules_count": 2,
+  "rules": [
+    {
+      "category": "PASSWORD_UNLOCK",
+      "family": "Acer Aspire / Nitro / Predator / Swift / Spin",
+      "models": [
+        "Aspire 3",
+        "Aspire 5",
+        "Aspire 7",
+        "Nitro 5",
+        "Predator Helios",
+        "Swift 3",
+        "Spin 5"
+      ],
+      "chip_size": "8 MB / 16 MB / 32 MB",
+      "bios_vendor": "InsydeH2O (Insyde Software)",
+      "technique": "Insyde NVRAM VSS / Active Variable Bank Reset",
+      "description": "Acer exclusively utilizes InsydeH2O UEFI BIOS across almost all consumer and gaming laptops. Passwords and security flags are maintained in the Insyde Variable Storage Subsystem (VSS).",
+      "mechanisms": [
+        "Method 1 (NVRAM Flush): Locate the dirty active NVRAM variable bank containing 'PasswordCheck' and 'AdminPassword'. Erasing this bank to 0xFF forces InsydeH2O upon next cold boot to regenerate pristine NVRAM defaults (Password Disabled).",
+        "Method 2 (Clean Factory Update Rebuild): Official Acer update packages (.fd / .bin) contain clean decompressed BIOS volumes without passwords. Technicians inject the user's DMI partition (Serial Number, SNID, UUID, Windows Key) into the clean factory image and flash."
+      ],
+      "target_signatures": [
+        "$H2O",
+        "Insyde",
+        "PasswordCheck",
+        "AdminPassword",
+        "UserPassword",
+        "CustomSetup"
+      ]
+    },
+    {
+      "category": "DMI_PROTECTION",
+      "family": "All Acer Laptops",
+      "models": [
+        "Aspire, Nitro, Predator, Swift, Spin, Extensa"
+      ],
+      "chip_size": "All",
+      "technique": "Acer DMI & SNID Extraction & Preservation",
+      "description": "Preserves Acer 22-character Serial Number (e.g. NXM... / NHM...), 11-digit numeric SNID, Motherboard UUID and Windows OEM license key.",
+      "target_signatures": [
+        "$DMI$",
+        "NX.",
+        "NH.",
+        "SNID",
+        "Acer"
+      ]
+    }
+  ],
+  "generated": "2026-09-27 23:11:43"
+}

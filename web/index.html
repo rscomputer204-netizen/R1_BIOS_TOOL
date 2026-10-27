@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R1 BIOS SERVICE - Cyber Park Download</title>
+    <style>
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-green: #00ff41;
+            --dark-bg: #0a0b10;
+            --card-bg: #12141d;
+            --text-color: #e0e0e0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            overflow-x: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: radial-gradient(circle at center, #1a1d2e 0%, #0a0b10 100%);
+        }
+
+        .container {
+            text-align: center;
+            padding: 40px;
+            border-radius: 20px;
+            background: rgba(18, 20, 29, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(0, 243, 255, 0.2);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 243, 255, 0.1);
+            max-width: 600px;
+            width: 90%;
+            animation: fadeIn 1s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 10px rgba(0, 243, 255, 0.5));
+        }
+
+        h1 {
+            color: var(--neon-blue);
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 30px;
+            color: #aaa;
+        }
+
+        .download-btn {
+            display: inline-block;
+            padding: 15px 40px;
+            background-color: transparent;
+            color: var(--neon-green);
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border: 2px solid var(--neon-green);
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0, 255, 65, 0.2);
+        }
+
+        .download-btn:hover {
+            background-color: var(--neon-green);
+            color: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 65, 0.6);
+            transform: scale(1.05);
+        }
+
+        .footer {
+            margin-top: 50px;
+            font-size: 0.8rem;
+            color: #444;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Cyberpunk scanline effect */
+        .scanlines {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            z-index: 100;
+            background-size: 100% 4px, 3px 100%;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="scanlines"></div>
+    <div class="container">
+        <img src="/static/assets/logo.png" alt="R1 Logo" class="logo">
+        <h1>R1 BIOS SERVICE</h1>
+        <p>Premium BIOS Repair & Analysis Suite.<br>Download the latest desktop client to start your professional repair pipeline.</p>
+        <div style="display: flex; gap: 20px; justify-content: center; flex-wrap: wrap;">
+            <a href="/download-client" class="download-btn">DOWNLOAD DESKTOP APP (.ZIP)</a>
+            <a href="/download-installer" class="download-btn" style="border-color: var(--neon-blue); color: var(--neon-blue);">DOWNLOAD INSTALLER APPLICATION</a>
+        </div>
+        <div class="footer">CYBER PARK EDITION v2.0</div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,48 @@
+{
+    "c:\\Users\\R1 LAB\\Desktop\\BIOS_-TOOL\\TESTING_AREA\\edb41.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.71.1681",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "10",
+                "Version Control Number": "27",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2020-10-04",
+                "File System State": "Initialized",
+                "Size": "0x7BD000",
+                "Flash Image Tool": "12.0.70.1652",
+                "MEA Database Name": "12.0.71.1681_COR_LP_C_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "CDE33A07FAD4E015ADB1A0CAD3CC4FEDE1A63FBBFC11C4B174FC276A9E49699C"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1030",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-03-18",
+                "Size": "0x14000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1030_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "ADE052EF9B2A982391C0A433551C8D2E36B0690B5B07289C34CB7855317414CD"
+            }
+        ],
+        "Messages": []
+    }
+}

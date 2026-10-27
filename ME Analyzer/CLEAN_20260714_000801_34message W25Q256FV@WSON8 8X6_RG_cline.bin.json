@@ -1,0 +1,48 @@
+{
+    "C:/Users/R1 LAB/Desktop/HP/830 G5_G5/HP EliteBook 830 G6 Two face cam/CLEAN_20260714_000801_34message W25Q256FV@WSON8 8X6_RG_cline.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.1.1.1022",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "16",
+                "Version Control Number": "71",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2025-07-16",
+                "File System State": "Configured",
+                "Size": "0x77A000",
+                "Flash Image Tool": "12.0.85.1919",
+                "MEA Database Name": "12.1.1.1022_COR_LP_C_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "3A5EE9658FC543863AF931C8D115B2D6753742D865971EEDFF7BC02D04D37BC3"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1030",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-03-18",
+                "Size": "0x11000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1030_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "ADE052EF9B2A982391C0A433551C8D2E36B0690B5B07289C34CB7855317414CD"
+            }
+        ],
+        "Messages": []
+    }
+}

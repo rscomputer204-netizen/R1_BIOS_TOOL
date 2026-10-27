@@ -1,0 +1,11 @@
+{
+    "show_spi_region_map": true,
+    "show_flash_partition": true,
+    "show_bpdt": true,
+    "show_cse_layout": true,
+    "show_normal_analysis": true,
+    "show_bios_analysis": true,
+    "show_pmc_pchc_phy": true,
+    "show_me_warnings": true,
+    "show_microcode": true
+}

@@ -1,0 +1,6 @@
+
+[lznt1]
+dissect.util==3.20
+
+[pefile]
+pefile==2023.2.7

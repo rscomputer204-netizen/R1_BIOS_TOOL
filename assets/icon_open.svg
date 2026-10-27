@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <defs>
+    <filter id="glow-cyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="7" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00f3ff" />
+      <stop offset="100%" stop-color="#0077ff" />
+    </linearGradient>
+    <linearGradient id="chipGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#182b48" />
+      <stop offset="100%" stop-color="#0a1322" />
+    </linearGradient>
+    <linearGradient id="folderBackGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#12233c" />
+      <stop offset="100%" stop-color="#091322" />
+    </linearGradient>
+  </defs>
+
+  <!-- Outer Glow Aura -->
+  <path d="M 34 82 L 94 82 L 116 104 L 222 104 L 222 216 L 34 216 Z" 
+        fill="none" stroke="#00f3ff" stroke-width="12" opacity="0.22" stroke-linejoin="round" filter="url(#glow-cyan)" />
+
+  <!-- Back Folder Body -->
+  <path d="M 36 74 L 98 74 L 120 98 L 220 98 C 226 98 230 102 230 108 L 230 212 C 230 218 226 222 220 222 L 36 222 C 30 222 26 218 26 212 L 26 84 C 26 78 30 74 36 74 Z" 
+        fill="url(#folderBackGrad)" stroke="#00aaff" stroke-width="4.5" stroke-linejoin="round" />
+
+  <!-- Glowing Microchip / BIOS ROM rising prominently out of folder -->
+  <g transform="translate(86, 32)">
+    <!-- Chip Outer Glow & Body -->
+    <rect x="0" y="0" width="84" height="84" rx="10" fill="url(#chipGrad)" stroke="#00f3ff" stroke-width="3.5" filter="url(#glow-cyan)" />
+    <!-- Chip Orientation Dot -->
+    <circle cx="16" cy="16" r="4.5" fill="#00f3ff" />
+    <!-- Glowing Pins Left -->
+    <line x1="-14" y1="22" x2="0" y2="22" stroke="#00f3ff" stroke-width="4.5" stroke-linecap="round" />
+    <line x1="-14" y1="42" x2="0" y2="42" stroke="#00f3ff" stroke-width="4.5" stroke-linecap="round" />
+    <line x1="-14" y1="62" x2="0" y2="62" stroke="#00f3ff" stroke-width="4.5" stroke-linecap="round" />
+    <!-- Glowing Pins Right -->
+    <line x1="84" y1="22" x2="98" y2="22" stroke="#00f3ff" stroke-width="4.5" stroke-linecap="round" />
+    <line x1="84" y1="42" x2="98" y2="42" stroke="#00f3ff" stroke-width="4.5" stroke-linecap="round" />
+    <line x1="84" y1="62" x2="98" y2="62" stroke="#00f3ff" stroke-width="4.5" stroke-linecap="round" />
+    <!-- Center Core Glow Indicator with Circuit Pattern -->
+    <rect x="22" y="22" width="40" height="40" rx="6" fill="#0b172a" stroke="#00ffcc" stroke-width="2.2" />
+    <circle cx="42" cy="42" r="8.5" fill="#00f3ff" filter="url(#glow-cyan)" />
+    <line x1="42" y1="22" x2="42" y2="8" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" />
+  </g>
+
+  <!-- Front Folder Flap (Angled 3D cyber perspective) -->
+  <path d="M 22 222 L 48 122 C 50 115 57 110 65 110 L 233 110 C 241 110 245 117 243 125 L 219 222 C 217 228 211 232 205 232 L 35 232 C 27 232 21 228 22 222 Z" 
+        fill="#102540" fill-opacity="0.94" stroke="url(#cyanGrad)" stroke-width="5" stroke-linejoin="round" />
+  
+  <!-- Cyber Flap Accent Lines -->
+  <line x1="58" y1="138" x2="155" y2="138" stroke="#00f3ff" stroke-width="3.5" stroke-linecap="round" opacity="0.85" />
+  <line x1="52" y1="156" x2="105" y2="156" stroke="#00ffcc" stroke-width="2.5" stroke-linecap="round" opacity="0.65" />
+  
+  <!-- Holographic Up-Arrow Eject Symbol on Flap -->
+  <g transform="translate(178, 172)">
+    <line x1="0" y1="18" x2="0" y2="-18" stroke="#ffffff" stroke-width="5" stroke-linecap="round" filter="url(#glow-cyan)" />
+    <path d="M -14 -6 L 0 -20 L 14 -6" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" filter="url(#glow-cyan)" />
+  </g>
+</svg>

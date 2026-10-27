@@ -1,0 +1,28 @@
+{
+    "c:\\Users\\R1 LAB\\Desktop\\bios-eidting\\(CS)ME Firmware\\CSE ME 15.0.47.2473 Prod ConLP TGP-LP B\\CSE ME 15.0.47.2473 Prod ConLP TGP-LP B.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "15.0.47.2473",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "TGP-LP B",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "6",
+                "Version Control Number": "41",
+                "Production Ready": "Yes",
+                "OEM Configuration": "No",
+                "FWUpdate Support": "No",
+                "Date": "2023-06-22",
+                "File System State": "Unconfigured",
+                "Size": "0x2FB000",
+                "Flash Image Tool": "15.0.47.2473",
+                "MEA Database Name": "15.0.47.2473_CON_LP_B_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "6C39EA55E07A1B6AC91FD98EDBA24FD8A548FA9129B34F603D4E5F57D3D409E3"
+            }
+        ],
+        "Messages": []
+    }
+}

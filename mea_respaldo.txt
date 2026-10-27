@@ -1,0 +1,95 @@
+╔═══════════════════════════════════════════╗
+║         ME Analyzer v1.307.0 r364         ║
+╚═══════════════════════════════════════════╝
+
+Welcome to Intel Engine & Graphics Firmware Analysis Tool
+
+Press Enter to skip or input -? to list options
+
+
+File:       respaldo.bin
+
+Option(s):  ╔═══════════════════════════════════════════╗
+║         ME Analyzer v1.307.0 r364         ║
+╚═══════════════════════════════════════════╝
+
+╔════════════════════════════════════════════╗
+║             respaldo.bin (1/1)             ║
+╟─────────────────────────────┬──────────────╢
+║            Family           │    CSE ME    ║
+╟─────────────────────────────┼──────────────╢
+║           Version           │ 12.1.1.1022  ║
+╟─────────────────────────────┼──────────────╢
+║           Release           │  Production  ║
+╟─────────────────────────────┼──────────────╢
+║             Type            │  Extracted   ║
+╟─────────────────────────────┼──────────────╢
+║             SKU             │ Corporate LP ║
+╟─────────────────────────────┼──────────────╢
+║           Chipset           │ CNP/CMP-LP C ║
+╟─────────────────────────────┼──────────────╢
+║ TCB Security Version Number │      1       ║
+╟─────────────────────────────┼──────────────╢
+║ ARB Security Version Number │      16      ║
+╟─────────────────────────────┼──────────────╢
+║    Version Control Number   │      71      ║
+╟─────────────────────────────┼──────────────╢
+║       Production Ready      │     Yes      ║
+╟─────────────────────────────┼──────────────╢
+║      OEM Configuration      │     Yes      ║
+╟─────────────────────────────┼──────────────╢
+║       FWUpdate Support      │  Impossible  ║
+╟─────────────────────────────┼──────────────╢
+║             Date            │  2025-07-16  ║
+╟─────────────────────────────┼──────────────╢
+║      File System State      │ Initialized  ║
+╟─────────────────────────────┼──────────────╢
+║             Size            │   0x7BA000   ║
+╟─────────────────────────────┼──────────────╢
+║       Flash Image Tool      │ 12.0.85.1919 ║
+╚═════════════════════════════╧══════════════╝
+╔═════════════════════════════════════════════╗
+║         Power Management Controller         ║
+╟─────────────────────────────┬───────────────╢
+║            Family           │      PMC      ║
+╟─────────────────────────────┼───────────────╢
+║           Version           │ 300.1.20.1030 ║
+╟─────────────────────────────┼───────────────╢
+║           Release           │   Production  ║
+╟─────────────────────────────┼───────────────╢
+║             Type            │  Independent  ║
+╟─────────────────────────────┼───────────────╢
+║         Chipset SKU         │       LP      ║
+╟─────────────────────────────┼───────────────╢
+║       Chipset Stepping      │       C       ║
+╟─────────────────────────────┼───────────────╢
+║ TCB Security Version Number │       2       ║
+╟─────────────────────────────┼───────────────╢
+║ ARB Security Version Number │       2       ║
+╟─────────────────────────────┼───────────────╢
+║    Version Control Number   │       0       ║
+╟─────────────────────────────┼───────────────╢
+║       Production Ready      │       No      ║
+╟─────────────────────────────┼───────────────╢
+║             Date            │   2020-03-18  ║
+╟─────────────────────────────┼───────────────╢
+║             Size            │    0x11000    ║
+╟─────────────────────────────┼───────────────╢
+║       Chipset Support       │      CNP      ║
+╚═════════════════════════════╧═══════════════╝
+
+Note: This CSE ME firmware is not in the database! You can help this
+      project by sharing it at https://win-raid.com forum. Thank you!
+
+Warning: Outdated ME Analyzer (v1.307.0 --> v1.311.0) & Database (r364 --> r377)!
+         Download the latest from https://github.com/platomav/MEAnalyzer/
+
+Press enter to exit[31m[1m
+Error: ME Analyzer v1.307.0 crashed, please report the following:
+
+[39m[0m
+[35m[1m
+Warning: Outdated ME Analyzer (v1.307.0 --> v1.311.0) & Database (r364 --> r377)!
+         Download the latest from https://github.com/platomav/MEAnalyzer/[39m[0m
+
+Press enter to exit

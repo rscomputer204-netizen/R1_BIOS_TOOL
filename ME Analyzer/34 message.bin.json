@@ -1,0 +1,28 @@
+{
+    "C:/Users/R1 LAB/Desktop/HP/830 G5_G5/HP EliteBook 830 g5 Two face cam/34 message.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.94.4494",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "342",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2023-01-04",
+                "File System State": "Initialized",
+                "Size": "0x643000",
+                "Flash Image Tool": "11.8.70.3626",
+                "MEA Database Name": "11.8.94.4494_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "92D5068AF56499D360B5F5F2A68B9129321FACBB41FAADD34DA67E33C77860B1"
+            }
+        ],
+        "Messages": []
+    }
+}

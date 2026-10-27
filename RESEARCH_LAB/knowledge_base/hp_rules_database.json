@@ -1,0 +1,275 @@
+{
+  "generator": "R1 BIOS Tool - Forensic Knowledge Extractor",
+  "date_created": "2026-09-27 22:39:09",
+  "target_brand": "HP",
+  "rules_count": 7,
+  "rules": [
+    {
+      "metadata": {
+        "category": "PASSWORD_UNLOCK",
+        "generation": "HP G6 (Whiskey Lake)",
+        "model": "ZBook 14u G6 / 15u G6",
+        "board": "6050A3022501-MB-A01",
+        "chip_type": "EC_BIOS_16MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\CRESCENT_G6 Editable Bios\\Touch_zbook_creacent_14u_ g6_gfx_4bg_8th gen\\read ec pass_W25Q128FV_ touch_GFX 4GB.bin",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\CRESCENT_G6 Editable Bios\\Touch_zbook_creacent_14u_ g6_gfx_4bg_8th gen\\read ec edit_W25Q128FV_ touch_GFX 4GB",
+        "description": "EC Password removal via 0x00037000 sector wipe"
+      },
+      "total_diff_bytes": 2214,
+      "total_blocks": 1,
+      "blocks": [
+        {
+          "start_offset": "0x00037000",
+          "end_offset": "0x000378A7",
+          "length": 2216,
+          "pattern": "ERASE_ALL_FF",
+          "signatures": [
+            "NvramActiveRegn",
+            "H_AuthVar",
+            "H_Hmacslt",
+            "H_SsStts"
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "category": "PASSWORD_UNLOCK",
+        "generation": "HP G8 (Tiger Lake 11th Gen)",
+        "model": "ProBook 440 G8",
+        "board": "DAX8QAMB8D0 REV D",
+        "chip_type": "EC_BIOS_32MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\HP_ProBook_440 G8_DAX8QAMB8D0 REV D_11th gen\\EC_Read ok_ Pass_.bin",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\HP_ProBook_440 G8_DAX8QAMB8D0 REV D_11th gen\\EC_Read ok_ Pass Unlock_.bin",
+        "description": "G8 32MB EC Password removal via 0x00037000 sector wipe"
+      },
+      "total_diff_bytes": 2119,
+      "total_blocks": 1,
+      "blocks": [
+        {
+          "start_offset": "0x00037000",
+          "end_offset": "0x00037849",
+          "length": 2122,
+          "pattern": "ERASE_ALL_FF",
+          "signatures": [
+            "NvramActiveRegn",
+            "H_AuthVar",
+            "H_Hmacslt",
+            "H_SsStts"
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "category": "PASSWORD_UNLOCK",
+        "generation": "HP G8 (Tiger Lake 11th Gen)",
+        "model": "ProBook 450 G8",
+        "board": "Intel 11th Gen",
+        "chip_type": "MAIN_BIOS_32MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\ph probook 450 g8\\read main pass.bin",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\ph probook 450 g8\\read main unpass.bin",
+        "description": "ProBook 450 G8 password removal via 0x00037000 & 0x00038000 wipe"
+      },
+      "total_diff_bytes": 3382,
+      "total_blocks": 2,
+      "blocks": [
+        {
+          "start_offset": "0x00037000",
+          "end_offset": "0x00037B93",
+          "length": 2964,
+          "pattern": "ERASE_ALL_FF",
+          "signatures": [
+            "NvramActiveRegn",
+            "H_AuthVar",
+            "H_Hmacslt",
+            "H_SsStts"
+          ]
+        },
+        {
+          "start_offset": "0x00038000",
+          "end_offset": "0x000381A9",
+          "length": 426,
+          "pattern": "ERASE_ALL_FF",
+          "signatures": [
+            "NvramActiveRegn",
+            "L_MpmPolcy"
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "category": "ERROR_34_FIX",
+        "generation": "HP G6 (Whiskey Lake)",
+        "model": "EliteBook x360 1040 G6",
+        "board": "6050A3037501-MB-A01",
+        "chip_type": "MAIN_BIOS_32MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\HP EliteBook x360 1040 G6_6050A3037501-MB-A01\\34 MESSAGE.BIN",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\HP EliteBook x360 1040 G6_6050A3037501-MB-A01\\read.bin",
+        "description": "Error 34 fix: restored missing 16KB Secure Platform Certificate block at 0x018F4000"
+      },
+      "total_diff_bytes": 16017,
+      "total_blocks": 1,
+      "blocks": [
+        {
+          "start_offset": "0x018F4000",
+          "end_offset": "0x018F7F2A",
+          "length": 16171,
+          "pattern": "RESTORED_FROM_FF",
+          "signatures": [
+            "_FVH"
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "category": "ERROR_34_FIX",
+        "generation": "HP G6 (Whiskey Lake)",
+        "model": "ZBook G6 Crescent",
+        "board": "6050A3022501-MB-A01",
+        "chip_type": "MAIN_BIOS_32MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\CRESCENT_G6 Editable Bios\\zBOOK\\34 mess build.bin",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\CRESCENT_G6 Editable Bios\\zBOOK\\r.bin",
+        "description": "Error 34 fix: restored missing 16KB volume at 0x018F4000"
+      },
+      "total_diff_bytes": 15298,
+      "total_blocks": 1,
+      "blocks": [
+        {
+          "start_offset": "0x018F4000",
+          "end_offset": "0x018F7C5A",
+          "length": 15451,
+          "pattern": "RESTORED_FROM_FF",
+          "signatures": [
+            "_FVH"
+          ]
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "category": "ERROR_34_FIX",
+        "generation": "HP G5 (Kaby Lake R)",
+        "model": "EliteBook x360 1030 G5",
+        "board": "6050A2930901-MB-A01",
+        "chip_type": "MAIN_BIOS_32MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\HP 1030_G5\\333 34 message.bin",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\HP 1030_G5\\333.bin",
+        "description": "Error 34 fix: restored missing Secure Boot Variable Signer block at 0x01AFC160"
+      },
+      "total_diff_bytes": 9139,
+      "total_blocks": 1,
+      "blocks": [
+        {
+          "start_offset": "0x01AFC160",
+          "end_offset": "0x01AFE572",
+          "length": 9235,
+          "pattern": "RESTORED_FROM_FF",
+          "signatures": []
+        }
+      ]
+    },
+    {
+      "metadata": {
+        "category": "MPM_CLEAR",
+        "generation": "HP G7 (Comet Lake 10th Gen)",
+        "model": "ZBook Firefly 14 G7",
+        "board": "6050A3136201-MB-A01",
+        "chip_type": "MAIN_BIOS_32MB",
+        "file_locked": "D:\\SDD DATA\\all bios\\HP\\HP ZBook Firefly 14 G7 Mobile Workstation (2V1J6US)\\5CG1206D1T_read no touch_cor i7 10th gen.bin",
+        "file_fixed": "D:\\SDD DATA\\all bios\\HP\\HP ZBook Firefly 14 G7 Mobile Workstation (2V1J6US)\\read no touch_MPM_Cleared.bin",
+        "description": "MPM Mode clear: flipped UEFI UserCred state flag from 0x3F to 0x3C and payload 0x01 to 0x00"
+      },
+      "total_diff_bytes": 14,
+      "total_blocks": 12,
+      "blocks": [
+        {
+          "start_offset": "0x018EC556",
+          "end_offset": "0x018EC556",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F0596",
+          "end_offset": "0x018F0596",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F061A",
+          "end_offset": "0x018F061A",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F170A",
+          "end_offset": "0x018F170A",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F1A5E",
+          "end_offset": "0x018F1A5E",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F1C12",
+          "end_offset": "0x018F1C12",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F1E5E",
+          "end_offset": "0x018F1E5E",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F1F56",
+          "end_offset": "0x018F1F56",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F21A1",
+          "end_offset": "0x018F21A4",
+          "length": 4,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F70A2",
+          "end_offset": "0x018F70A2",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018F70EE",
+          "end_offset": "0x018F70EE",
+          "length": 1,
+          "pattern": "ZERO_ALL_00",
+          "signatures": []
+        },
+        {
+          "start_offset": "0x018FC372",
+          "end_offset": "0x018FC372",
+          "length": 1,
+          "pattern": "BYTE_PATCH",
+          "signatures": []
+        }
+      ]
+    }
+  ]
+}

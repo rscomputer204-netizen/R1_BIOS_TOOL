@@ -1,0 +1,50 @@
+{
+  "brand": "Dell",
+  "rules": [
+    {
+      "category": "PASSWORD_UNLOCK",
+      "platform": "Dell Inspiron / Vostro / Latitude (AMI Aptio V NVAR)",
+      "model": "Dell 18827-1 (Latitude / Inspiron)",
+      "chip_size": "32 MB",
+      "technique": "AMI NVAR Security Variable Zeroing",
+      "description": "Zeros AMITSESetup and __KEYM__ variables in the active NVRAM bank, removing Administrator & System passwords.",
+      "target_signatures": [
+        "AMITSESetup",
+        "__KEYM__",
+        "DellVar01",
+        "NVAR"
+      ],
+      "action": "Zero out (0x00) the password token / hash payload inside AMITSESetup and Key Manager (__KEYM__) while preserving DMI block (_WB_)."
+    },
+    {
+      "category": "TPM_ERROR_FIX",
+      "platform": "Dell Latitude 7480 / 7280 / 5480 (Skylake / Kaby Lake)",
+      "model": "Latitude 7480",
+      "chip_size": "16 MB",
+      "technique": "CSME PTT Partition Re-initialization",
+      "description": "Fixes 'Alert! TPM device is not detected' error by restoring clean Intel CSME 11.8 Corporate LP firmware and clearing initialized/corrupt PTT state.",
+      "target_signatures": [
+        "FTPM",
+        "INTEL_PTT",
+        "CSE",
+        "CSME"
+      ],
+      "action": "Clean Intel CSME Region (replace dirty ME region with clean configured repository donor binary). TPM 2.0 re-initializes upon next boot."
+    },
+    {
+      "category": "DMI_PROTECTION",
+      "platform": "Dell Latitude 5400 / 5500 (EDC41 / EDC50)",
+      "model": "Latitude 5500",
+      "chip_size": "32 MB",
+      "technique": "Dell _WB_ Private Configuration Preservation",
+      "description": "Dell Service Tag, PPID, Asset Tag and Windows Product Key are stored in the _WB_ block (typically at 0x010C4000 - 0x010C6FFF).",
+      "target_signatures": [
+        "_WB_",
+        "PPID",
+        "CN0M14W7CMK0001T17ACA01"
+      ],
+      "action": "Never erase or overwrite the _WB_ block during Dell BIOS rebuilding/patching."
+    }
+  ],
+  "generated": "2026-09-27 22:53:16"
+}

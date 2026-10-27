@@ -1,0 +1,19 @@
+{
+    "version": "1.0",
+    "critical": {
+        "min_ram_gb": 8,
+        "min_cpu_gen": 6,
+        "os_architecture": "64-bit"
+    },
+    "recommended": {
+        "min_resolution_width": 1366,
+        "min_resolution_height": 768,
+        "min_free_disk_gb": 10
+    },
+    "information": [
+        "motherboard_model",
+        "bios_version",
+        "gpu_model",
+        "windows_build"
+    ]
+}
