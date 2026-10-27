@@ -4883,10 +4883,16 @@ class BiosServiceTool(QMainWindow):
         sidebar_layout.addLayout(toggle_wrapper)
         
         # Footer in Sidebar
-        footer = QLabel("VERSION 2.0.0\nENTERPRISE BUILD")
-        footer.setStyleSheet("color: #556270; font-family: 'Segoe UI', sans-serif; font-size: 10px; font-weight: 600; margin: 20px; line-height: 14px;")
-        footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        sidebar_layout.addWidget(footer)
+        cur_v = "R1.1.0.0"
+        try:
+            from update_manager import get_local_version
+            cur_v = get_local_version()
+        except Exception:
+            pass
+        self.lbl_version_footer = QLabel(f"VERSION {cur_v}\nENTERPRISE BUILD")
+        self.lbl_version_footer.setStyleSheet("color: #556270; font-family: 'Segoe UI', sans-serif; font-size: 10px; font-weight: 600; margin: 20px; line-height: 14px;")
+        self.lbl_version_footer.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        sidebar_layout.addWidget(self.lbl_version_footer)
         
         # Wrap sidebar in QScrollArea
         scroll_area = QScrollArea()
@@ -5209,6 +5215,15 @@ class BiosServiceTool(QMainWindow):
         if hasattr(self, 'btn_update'):
             self.btn_update.setText("UPDATE")
             self.btn_update.setToolTip(t("btn_update", "CHECK FOR UPDATES"))
+            
+        if hasattr(self, 'lbl_version_footer'):
+            cur_v = "R1.1.0.0"
+            try:
+                from update_manager import get_local_version
+                cur_v = get_local_version()
+            except Exception:
+                pass
+            self.lbl_version_footer.setText(f"VERSION {cur_v}\nENTERPRISE BUILD")
             
         # Terminal label
         if hasattr(self, 'terminal_label_widget'):

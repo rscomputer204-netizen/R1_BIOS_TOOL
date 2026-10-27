@@ -45,20 +45,23 @@ def get_current_version():
         try:
             with open(ver_file, "r", encoding="utf-8") as f:
                 v = f.read().strip()
-                if v: return v
+                if v:
+                    if not v.startswith("R1"):
+                        v = f"R1.{v.lstrip('v.')}"
+                    return v
         except Exception:
             pass
-    return "R1.0.0.6"
+    return "R1.1.0.0"
 
 def increment_version(ver_str):
     try:
-        prefix = "R" if ver_str.startswith("R") else ""
-        raw_num = ver_str.lstrip("Rv")
-        parts = [int(p) for p in raw_num.split(".")]
-        parts[-1] += 1
-        return f"{prefix}{'.'.join(str(p) for p in parts)}"
+        match = re.match(r'^(.*?)(\d+)$', ver_str)
+        if match:
+            prefix, num = match.groups()
+            return f"{prefix}{int(num)+1}"
     except Exception:
-        return ver_str
+        pass
+    return ver_str
 
 # ---------------------------------------------------------------------------
 # Deep Change & Function Analyzer

@@ -36,6 +36,8 @@ def get_local_version():
             with open(ver_txt, "r", encoding="utf-8") as f:
                 v = f.read().strip()
                 if v:
+                    if not v.startswith("R1"):
+                        v = f"R1.{v.lstrip('v.')}"
                     return v
         except Exception:
             pass
@@ -44,10 +46,13 @@ def get_local_version():
         try:
             with open(ver_json, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data.get("version", "R1.0.0.6")
+                v = str(data.get("version", "R1.1.0.0")).strip()
+                if not v.startswith("R1"):
+                    v = f"R1.{v.lstrip('v.')}"
+                return v
         except Exception:
             pass
-    return "R1.0.0.6"
+    return "R1.1.0.0"
 
 def is_newer_version(remote_ver, current_ver):
     """Compares version numbers robustly (e.g., R1.0.0.7 vs R1.0.0.6)."""
@@ -226,7 +231,7 @@ class UpdateDialog(QDialog):
         layout.addWidget(title_lbl)
 
         # Current Version Subtitle
-        self.ver_lbl = QLabel(f"Current Installed Version: v{self.current_version}")
+        self.ver_lbl = QLabel(f"Current Installed Version: {self.current_version}")
         self.ver_lbl.setStyleSheet("color: #8b949e; font-size: 11px;")
         self.ver_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.ver_lbl)
@@ -323,7 +328,7 @@ class UpdateDialog(QDialog):
         self.changelog = data.get("changelog", "Bug fixes and enhancements.")
 
         if is_newer_version(remote_ver, self.current_version):
-            self.status_lbl.setText(f"★ NEW VERSION AVAILABLE: v{remote_ver}")
+            self.status_lbl.setText(f"★ NEW VERSION AVAILABLE: {remote_ver}")
             self.status_lbl.setStyleSheet("color: #00f2ff; font-size: 13px; font-weight: 800;")
 
             self.changelog_lbl.show()
@@ -333,7 +338,7 @@ class UpdateDialog(QDialog):
             self.btn_action.show()
             self.btn_close.setText("LATER")
         else:
-            self.status_lbl.setText(f"✓ YOU ARE ON THE LATEST VERSION (v{self.current_version})")
+            self.status_lbl.setText(f"✓ YOU ARE ON THE LATEST VERSION ({self.current_version})")
             self.status_lbl.setStyleSheet("color: #00FFCC; font-size: 12px; font-weight: bold;")
             self.btn_close.setText("CLOSE")
 
