@@ -4189,6 +4189,13 @@ class BiosServiceTool(QMainWindow):
         self.btn_help.clicked.connect(self.show_help_dialog)
         self.top_toolbar.add_widget(self.btn_help)
         
+        self.btn_update = QPushButton("UPDATE")
+        self.btn_update.setToolTip(t("btn_update", "CHECK FOR UPDATES"))
+        self.btn_update.setEnabled(True)
+        self.btn_update.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_update.clicked.connect(self.show_update_dialog)
+        self.top_toolbar.add_widget(self.btn_update)
+        
         content_layout.addWidget(self.top_toolbar)
         # -------------------
 
@@ -5147,6 +5154,13 @@ class BiosServiceTool(QMainWindow):
 
         dialog.exec()
 
+    def show_update_dialog(self):
+        try:
+            from update_manager import UpdateDialog
+            dlg = UpdateDialog(self)
+            dlg.exec()
+        except Exception as e:
+            QMessageBox.critical(self, "Update Error", f"Failed to open update manager:\n{e}")
 
     def retranslate_ui(self):
         # Update Layout Direction (RTL for Arabic)
@@ -5192,6 +5206,9 @@ class BiosServiceTool(QMainWindow):
         if hasattr(self, 'btn_help'):
             self.btn_help.setText("HELP")
             self.btn_help.setToolTip(t("btn_help", "HELP & SUPPORT"))
+        if hasattr(self, 'btn_update'):
+            self.btn_update.setText("UPDATE")
+            self.btn_update.setToolTip(t("btn_update", "CHECK FOR UPDATES"))
             
         # Terminal label
         if hasattr(self, 'terminal_label_widget'):

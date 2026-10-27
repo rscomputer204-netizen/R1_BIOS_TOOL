@@ -450,7 +450,7 @@ class GitPushGUI:
                 os.makedirs(payload_content, exist_ok=True)
 
                 dist_source = os.path.join(BASE_DIR, "dist", "R1_BIOS_TOOL")
-                forbidden = {"updater.exe", "drivers", "logs", "backup", "update_cache", "tools"}
+                forbidden = {"updater.exe", "drivers", "logs", "backup", "update_cache", "tools", "temp_update_payload"}
 
                 if os.path.exists(dist_source):
                     for root, dirs, files in os.walk(dist_source):
@@ -464,19 +464,24 @@ class GitPushGUI:
                             os.makedirs(os.path.dirname(dest_p), exist_ok=True)
                             shutil.copy2(abs_p, dest_p)
 
-                # Ensure python_version source is also copied into payload/python_version
-                dest_py_ver = os.path.join(payload_content, "python_version")
-                if os.path.exists(dest_py_ver):
-                    shutil.rmtree(dest_py_ver, ignore_errors=True)
-                shutil.copytree(
-                    os.path.join(BASE_DIR, "python_version"),
-                    dest_py_ver,
-                    ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "_internal", "tools")
-                )
+                # Copy root python application files & assets
+                core_dirs = ["translations", "rg_engine", "utils", "scripts", "image"]
+                for cdir in core_dirs:
+                    src_dir = os.path.join(BASE_DIR, cdir)
+                    if os.path.exists(src_dir):
+                        dest_dir = os.path.join(payload_content, cdir)
+                        if os.path.exists(dest_dir):
+                            shutil.rmtree(dest_dir, ignore_errors=True)
+                        shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
-                if os.path.exists(os.path.join(BASE_DIR, "chiplist.xml")):
-                    shutil.copy2(os.path.join(BASE_DIR, "chiplist.xml"), os.path.join(payload_content, "chiplist.xml"))
-                shutil.copy2(os.path.join(BASE_DIR, "version.txt"), os.path.join(payload_dir, "version.txt"))
+                # Copy core python files from root
+                for f in os.listdir(BASE_DIR):
+                    if f.endswith(".py") and not f.startswith("push_to_github") and not f.startswith("chat_") and not f.startswith("test_"):
+                        shutil.copy2(os.path.join(BASE_DIR, f), os.path.join(payload_content, f))
+
+                if os.path.exists(os.path.join(BASE_DIR, "version.txt")):
+                    shutil.copy2(os.path.join(BASE_DIR, "version.txt"), os.path.join(payload_content, "version.txt"))
+                    shutil.copy2(os.path.join(BASE_DIR, "version.txt"), os.path.join(payload_dir, "version.txt"))
 
                 # Collect all individual files inside payload for manifest
                 manifest_files = []
