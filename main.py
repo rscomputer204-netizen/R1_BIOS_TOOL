@@ -7492,14 +7492,25 @@ class BiosServiceTool(QMainWindow):
         self.current_bios_file = None
         self.current_regions_map = {}
         if hasattr(self, 'hex_tabs') and self.hex_tabs.count() > 0:
-            self.hex_tabs.currentWidget().hex_model.set_regions({})
+            for i in range(self.hex_tabs.count()):
+                t = self.hex_tabs.widget(i)
+                if hasattr(t, 'hex_model') and t.hex_model:
+                    t.hex_model.set_data(b"")
+                    t.hex_model.set_regions({})
+                if hasattr(t, 'set_base_title'):
+                    t.set_base_title("Main BIOS")
         self.mea_history = "" # Reset MEA history
         
         # Explicitly disable all module buttons
         self.enable_module_buttons({})
         
         self.terminal.clear()
-        self.hex_model.set_data(b"")
+        if hasattr(self, 'hex_model') and self.hex_model:
+            self.hex_model.set_data(b"")
+            
+        # Reset Body Viewer
+        if hasattr(self, 'body_viewer') and self.body_viewer:
+            self.body_viewer.clear()
         
         # Reset UI Labels & Buttons
         if hasattr(self, 'dmi_lbl_brand'):

@@ -1007,6 +1007,28 @@ class BodyViewerWidget(QWidget):
     # ─────────────────────────────────────────────────────────────────────────
     # PUBLIC SLOTS / METHODS
     # ─────────────────────────────────────────────────────────────────────────
+    def clear(self):
+        """Reset and clear tree, search input, and status labels."""
+        if hasattr(self, 'parser_worker') and self.parser_worker and self.parser_worker.isRunning():
+            try:
+                self.parser_worker.terminate()
+                self.parser_worker.wait(200)
+            except Exception:
+                pass
+        self.parser_worker = None
+        self.file_path = ""
+        self.raw_data = None
+        if hasattr(self, 'tree'):
+            self.tree.clear()
+        if hasattr(self, 'txt_search'):
+            self.txt_search.blockSignals(True)
+            self.txt_search.clear()
+            self.txt_search.blockSignals(False)
+        if hasattr(self, 'lbl_selected_info'):
+            self.lbl_selected_info.setText("No item selected")
+        if hasattr(self, 'lbl_tree_stats'):
+            self.lbl_tree_stats.setText("Tree: 0 items")
+
     def load_bios_file(self, file_path: str, raw_data: bytes = None):
         """Called automatically when a BIOS file is dragged & dropped or opened."""
         self.file_path = file_path
