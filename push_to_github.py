@@ -558,13 +558,44 @@ class GitPushGUI:
                 payload_content = os.path.join(payload_dir, "payload")
                 os.makedirs(payload_content, exist_ok=True)
 
+                # Ensure fresh native updater.exe is compiled
+                csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+                updater_cs = os.path.join(BASE_DIR, "updater.cs")
+                dist_updater = os.path.join(BASE_DIR, "dist", "updater.exe")
+                if os.path.exists(csc_path) and os.path.exists(updater_cs):
+                    try:
+                        subprocess.run([
+                            csc_path, "/target:winexe", "/optimize",
+                            "/reference:System.Windows.Forms.dll",
+                            f"/out:{dist_updater}", updater_cs
+                        ], capture_output=True, check=False)
+                    except Exception:
+                        pass
+
                 dist_source = os.path.join(BASE_DIR, "dist", "R1_BIOS_TOOL")
                 if os.path.exists(dist_source):
                     for f in os.listdir(dist_source):
-                        if f.endswith(".exe") and not f.startswith("updater"):
+                        if f.endswith(".exe"):
                             abs_p = os.path.join(dist_source, f)
                             dest_p = os.path.join(payload_content, f)
                             shutil.copy2(abs_p, dest_p)
+
+                # Ensure updater.exe and updater.py are explicitly present in payload, _internal, and zip root
+                updater_exe_src = os.path.join(dist_source, "updater.exe") if os.path.exists(os.path.join(dist_source, "updater.exe")) else os.path.join(BASE_DIR, "dist", "updater.exe")
+                if os.path.exists(updater_exe_src):
+                    shutil.copy2(updater_exe_src, os.path.join(payload_content, "updater.exe"))
+                    shutil.copy2(updater_exe_src, os.path.join(payload_dir, "updater.exe"))
+                    payload_internal = os.path.join(payload_content, "_internal")
+                    os.makedirs(payload_internal, exist_ok=True)
+                    shutil.copy2(updater_exe_src, os.path.join(payload_internal, "updater.exe"))
+
+                updater_py_src = os.path.join(BASE_DIR, "updater.py")
+                if os.path.exists(updater_py_src):
+                    shutil.copy2(updater_py_src, os.path.join(payload_content, "updater.py"))
+                    shutil.copy2(updater_py_src, os.path.join(payload_dir, "updater.py"))
+                    payload_internal = os.path.join(payload_content, "_internal")
+                    os.makedirs(payload_internal, exist_ok=True)
+                    shutil.copy2(updater_py_src, os.path.join(payload_internal, "updater.py"))
 
                 # Copy root python application files & assets
                 core_dirs = ["translations", "rg_engine", "utils", "scripts", "image", "assets", "brands", "config", "BIOSUtilities"]
@@ -659,6 +690,13 @@ class GitPushGUI:
                     if "Authentication failed" in err_summary or "Invalid username or token" in err_summary or "could not read Password" in err_summary:
                         raise RuntimeError("GitHub Authentication Failed!\nYour Personal Access Token in config/github_token.json is expired or invalid.\nPlease enter a valid GitHub Personal Access Token (classic) with 'repo' scope and click Save.")
                     raise RuntimeError(f"Git push failed:\n{err_summary}")
+
+                # Synchronize local origin tracking ref so git knows all commits are pushed
+                try:
+                    run_cmd(f"git update-ref refs/remotes/origin/{branch} HEAD", check=False)
+                    run_cmd(f"git fetch origin {branch}", check=False)
+                except Exception:
+                    pass
 
                 self.root.after(0, lambda: self.render_push_success(target_ver))
             except Exception as e:

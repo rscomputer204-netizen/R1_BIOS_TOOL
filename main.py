@@ -6,10 +6,23 @@ import sys
 import os
 import io
 
-# Add current directory and virtualenv site-packages to path
-_app_root = os.path.dirname(os.path.abspath(__file__))
+# Dynamic root resolution
+if getattr(sys, 'frozen', False):
+    _app_root = os.path.dirname(sys.executable)
+else:
+    _app_root = os.path.dirname(os.path.abspath(__file__))
+
 if _app_root not in sys.path:
     sys.path.insert(0, _app_root)
+
+# If running frozen and disk main.py exists and not yet re-routed, execute from disk!
+if getattr(sys, 'frozen', False) and not os.environ.get("_R1_RUNNING_DISK_MAIN"):
+    _disk_main = os.path.join(_app_root, "main.py")
+    if os.path.isfile(_disk_main):
+        os.environ["_R1_RUNNING_DISK_MAIN"] = "1"
+        import runpy
+        runpy.run_path(_disk_main, run_name="__main__")
+        sys.exit(0)
 
 _venv_site_packages = os.path.join(_app_root, ".venv", "Lib", "site-packages")
 if os.path.exists(_venv_site_packages) and _venv_site_packages not in sys.path:

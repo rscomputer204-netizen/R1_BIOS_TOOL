@@ -328,6 +328,42 @@ pyrunner_cmd = _PYINSTALLER_CMD + [
 run(pyrunner_cmd)
 print(f"  [OK] pyrunner.exe compiled into {dist_app_dir}")
 
+# --- STEP 2b: COMPILE NATIVE STANDALONE UPDATER ---
+banner("Step 2b   |  Compiling Native Standalone Updater (updater.exe)")
+csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
+updater_cs = os.path.join(_app_root, "updater.cs")
+updater_dest_exe = os.path.join(dist_app_dir, "updater.exe")
+
+if os.path.exists(csc_path) and os.path.exists(updater_cs):
+    csc_cmd = [
+        csc_path,
+        "/target:winexe",
+        "/optimize",
+        "/reference:System.Windows.Forms.dll",
+        f"/out:{updater_dest_exe}",
+        updater_cs
+    ]
+    run(csc_cmd)
+else:
+    updater_cmd = _PYINSTALLER_CMD + [
+        "--noconfirm",
+        "--onefile",
+        "--noconsole",
+        "--distpath", dist_app_dir,
+        "updater.py",
+    ]
+    run(updater_cmd)
+
+# Ensure updater is available both at root and inside _internal
+internal_dest = os.path.join(dist_app_dir, "_internal")
+if os.path.exists(internal_dest):
+    shutil.copy2(updater_dest_exe, os.path.join(internal_dest, "updater.exe"))
+    if os.path.exists("updater.py"):
+        shutil.copy2("updater.py", os.path.join(internal_dest, "updater.py"))
+if os.path.exists("updater.py"):
+    shutil.copy2("updater.py", os.path.join(dist_app_dir, "updater.py"))
+print(f"  [OK] Native updater.exe deployed to {dist_app_dir} and _internal")
+
 # --- STEP 3: COPY EXTERNAL RUNTIME DIRS ---
 
 banner("Step 3/4  |  Copying External Runtime Directories")

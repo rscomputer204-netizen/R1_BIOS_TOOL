@@ -26,7 +26,13 @@ except ImportError:
 
 # --- CONSTANTS ---
 DEFAULT_UPDATE_URL = "https://raw.githubusercontent.com/rscomputer204-netizen/R1_BIOS_TOOL/main/version.json"
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+def get_app_dir():
+    """Returns the true application directory where executables and main files live."""
+    if getattr(sys, 'frozen', False):
+        return os.path.dirname(sys.executable)
+    return os.path.dirname(os.path.abspath(__file__))
+
+BASE_DIR = get_app_dir()
 
 def get_local_version():
     """Reads current software version from version.txt or version.json."""
@@ -384,23 +390,64 @@ class UpdateDialog(QDialog):
     def launch_updater_and_exit(self):
         """Spawns updater and cleanly terminates current application."""
         pid = os.getpid()
-        updater_exe = os.path.join(BASE_DIR, "updater.exe")
-        updater_py = os.path.join(BASE_DIR, "updater.py")
+        app_dir = get_app_dir()
+        internal_dir = os.path.join(app_dir, "_internal")
+        cache_dir = os.path.join(app_dir, "update_cache")
+        internal_cache = os.path.join(internal_dir, "update_cache")
+
+        # 1. Search for updater.exe in all possible places
+        exe_candidates = [
+            os.path.join(app_dir, "updater.exe"),
+            os.path.join(internal_dir, "updater.exe"),
+            os.path.join(cache_dir, "payload", "updater.exe"),
+            os.path.join(internal_cache, "payload", "updater.exe"),
+            os.path.join(cache_dir, "updater.exe"),
+            os.path.join(internal_cache, "updater.exe"),
+        ]
+
+        # 2. Search for updater.py in all possible places
+        py_candidates = [
+            os.path.join(app_dir, "updater.py"),
+            os.path.join(internal_dir, "updater.py"),
+            os.path.join(cache_dir, "payload", "updater.py"),
+            os.path.join(internal_cache, "payload", "updater.py"),
+            os.path.join(cache_dir, "updater.py"),
+            os.path.join(internal_cache, "updater.py"),
+        ]
+
+        target_exe = next((p for p in exe_candidates if os.path.isfile(p)), None)
+        target_py = next((p for p in py_candidates if os.path.isfile(p)), None)
 
         try:
-            if os.path.exists(updater_exe):
-                subprocess.Popen([updater_exe, str(pid)], cwd=BASE_DIR)
-            elif os.path.exists(updater_py):
+            if target_exe:
+                # If target_exe was found inside update_cache, copy it to app root
+                if target_exe != os.path.join(app_dir, "updater.exe"):
+                    try:
+                        shutil.copy2(target_exe, os.path.join(app_dir, "updater.exe"))
+                        target_exe = os.path.join(app_dir, "updater.exe")
+                    except Exception:
+                        pass
+                subprocess.Popen([target_exe, str(pid), app_dir], cwd=app_dir)
+            elif target_py:
+                # In frozen mode, run updater.py using pyrunner.exe so client doesn't need Python
+                runner_candidates = [
+                    os.path.join(app_dir, "pyrunner.exe"),
+                    os.path.join(cache_dir, "payload", "pyrunner.exe"),
+                    os.path.join(internal_cache, "payload", "pyrunner.exe"),
+                    sys.executable if not getattr(sys, 'frozen', False) else "python",
+                ]
+                runner = next((r for r in runner_candidates if os.path.isfile(r)), None) or "python"
+                cmd = [runner, target_py, str(pid), app_dir]
                 if sys.platform == "win32":
                     subprocess.Popen(
-                        [sys.executable, updater_py, str(pid)],
-                        cwd=BASE_DIR,
+                        cmd,
+                        cwd=app_dir,
                         creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP
                     )
                 else:
-                    subprocess.Popen([sys.executable, updater_py, str(pid)], cwd=BASE_DIR)
+                    subprocess.Popen(cmd, cwd=app_dir)
             else:
-                QMessageBox.critical(self, "Error", f"Updater component missing at:\n{updater_py}")
+                QMessageBox.critical(self, "Error", f"Updater component missing.\nSearched at:\n{os.path.join(app_dir, 'updater.exe')}\n{os.path.join(internal_dir, 'updater.py')}")
                 return
 
             # Terminate this application so updater can replace files

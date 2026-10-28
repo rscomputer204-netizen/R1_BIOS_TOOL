@@ -163,21 +163,52 @@ def relaunch_app(base_dir):
 
     log("CRITICAL: Neither executable nor main.py found for relaunch!", "error")
 
+def resolve_app_root():
+    """Finds the root folder of the installed application where exe / main files live."""
+    if len(sys.argv) > 2 and sys.argv[2] and os.path.isdir(sys.argv[2]):
+        return os.path.abspath(sys.argv[2])
+    
+    start_dir = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(os.path.abspath(__file__))
+    
+    # 1. Check current directory
+    for cand in EXE_CANDIDATES + ["main.py"]:
+        if os.path.exists(os.path.join(start_dir, cand)):
+            return start_dir
+            
+    # 2. Check parent directory (if updater was launched from _internal)
+    parent = os.path.dirname(start_dir)
+    for cand in EXE_CANDIDATES + ["main.py"]:
+        if os.path.exists(os.path.join(parent, cand)):
+            return parent
+            
+    return start_dir
+
+def find_cache_path(base_dir):
+    """Locates the update_cache folder whether in app root or _internal."""
+    candidates = [
+        os.path.join(base_dir, UPDATE_CACHE_DIR),
+        os.path.join(base_dir, "_internal", UPDATE_CACHE_DIR),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), UPDATE_CACHE_DIR),
+    ]
+    for c in candidates:
+        if os.path.exists(c) and os.path.exists(os.path.join(c, MANIFEST_FILE)):
+            return c
+    for c in candidates:
+        if os.path.exists(c):
+            return c
+    return os.path.join(base_dir, UPDATE_CACHE_DIR)
+
 def main():
     pid = sys.argv[1] if len(sys.argv) > 1 else None
-    
-    if getattr(sys, 'frozen', False):
-        base_dir = os.path.dirname(sys.executable)
-    else:
-        base_dir = os.path.dirname(os.path.abspath(__file__))
+    base_dir = resolve_app_root()
     
     # Wait for the main app to close and release file locks
     wait_for_process_exit(pid)
     time.sleep(1)
 
-    cache_path = os.path.join(base_dir, UPDATE_CACHE_DIR)
+    cache_path = find_cache_path(base_dir)
     if not os.path.exists(cache_path):
-        log("Update cache not found. Nothing to do.", "error")
+        log(f"Update cache not found at {cache_path}. Nothing to do.", "error")
         relaunch_app(base_dir)
         sys.exit(1)
 
