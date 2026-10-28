@@ -1381,6 +1381,120 @@ class HexFillDialog(QDialog):
         except ValueError:
             return None
 
+class SelectBlankDialog(QDialog):
+    """
+    Compact popup dialog allowing user to choose between 'FF Blank' and '00 Blank'
+    to quickly erase / fill the selected byte range in BIOS images.
+    """
+    def __init__(self, parent=None, start=0, count=0):
+        super().__init__(parent)
+        self.setWindowTitle("Select Blank")
+        self.setFixedSize(340, 200)
+        self.setStyleSheet("""
+            QDialog {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1e2328, stop:1 #14171a);
+                border: 1px solid #2d363f;
+                color: #e2e8f0;
+                font-family: 'Segoe UI', sans-serif;
+            }
+            QLabel { color: #4cd3e3; font-weight: bold; }
+        """)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(10)
+        
+        lbl_info = QLabel("Choose Blank / Erase Type:")
+        lbl_info.setStyleSheet("color: #4cd3e3; font-size: 13px; font-weight: bold;")
+        layout.addWidget(lbl_info)
+        
+        if count > 0:
+            lbl_range = QLabel(f"Selection: 0x{start:08X} - 0x{start+count-1:08X} ({count:,} bytes)")
+            lbl_range.setStyleSheet("color: #94a3b8; font-size: 11px; font-family: Consolas;")
+            layout.addWidget(lbl_range)
+            
+        radio_box = QWidget()
+        rb_layout = QVBoxLayout(radio_box)
+        rb_layout.setContentsMargins(4, 4, 4, 4)
+        rb_layout.setSpacing(8)
+        
+        self.radio_ff = QRadioButton("FF Blank  (0xFF - Flash Erase default)")
+        self.radio_00 = QRadioButton("00 Blank  (0x00 - Zero out)")
+        self.radio_ff.setChecked(True)
+        
+        rb_style = """
+            QRadioButton {
+                color: #e2e8f0;
+                font-size: 12px;
+                font-weight: 600;
+                spacing: 8px;
+            }
+            QRadioButton::indicator {
+                width: 14px;
+                height: 14px;
+                border-radius: 7px;
+                border: 1px solid #00f3ff;
+                background-color: #171a1d;
+            }
+            QRadioButton::indicator:checked {
+                background-color: #00f3ff;
+                border: 2px solid #ffffff;
+            }
+        """
+        self.radio_ff.setStyleSheet(rb_style)
+        self.radio_00.setStyleSheet(rb_style)
+        
+        rb_layout.addWidget(self.radio_ff)
+        rb_layout.addWidget(self.radio_00)
+        layout.addWidget(radio_box)
+        
+        layout.addStretch()
+        
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+        
+        self.btn_cancel = QPushButton("Cancel")
+        self.btn_cancel.setStyleSheet("""
+            QPushButton {
+                background: #252a2e;
+                color: #94a3b8;
+                border: 1px solid #3c444d;
+                border-radius: 4px;
+                padding: 6px 16px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background: #2d3338;
+                color: #ffffff;
+            }
+        """)
+        self.btn_cancel.clicked.connect(self.reject)
+        btn_layout.addWidget(self.btn_cancel)
+        
+        self.btn_ok = QPushButton("OK")
+        self.btn_ok.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #00f3ff, stop:1 #0088cc);
+                color: #0b151a;
+                border: none;
+                border-radius: 4px;
+                padding: 6px 20px;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #33f6ff, stop:1 #00a2f5);
+            }
+        """)
+        self.btn_ok.clicked.connect(self.accept)
+        btn_layout.addWidget(self.btn_ok)
+        
+        layout.addLayout(btn_layout)
+
+    def get_fill_byte(self) -> bytes:
+        return b"\xFF" if self.radio_ff.isChecked() else b"\x00"
+
+
 class AddBookmarkDialog(QDialog):
     def __init__(self, offset, parent=None):
         super().__init__(parent)
@@ -2276,11 +2390,26 @@ class HexEditorTab(QWidget):
             return None
 
         def _hex_mouse_press(event):
+            from PySide6.QtCore import Qt as _Qt
             offset = _get_offset_from_pos(event.pos())
             if offset is not None:
-                self._sel_anchor_offset = offset
-                _linear_select(offset, offset)
-                event.accept()
+                if event.button() == _Qt.MouseButton.RightButton:
+                    # Check if right-click is inside the existing active selection
+                    sel_start, sel_count = self.get_selected_range()
+                    if sel_start is not None and sel_count and (sel_start <= offset < sel_start + sel_count):
+                        # Right-clicked INSIDE selection -> preserve selection intact!
+                        event.accept()
+                        return
+                    # Right-clicked OUTSIDE selection -> select the single clicked byte
+                    self._sel_anchor_offset = offset
+                    _linear_select(offset, offset)
+                    event.accept()
+                    return
+                elif event.button() == _Qt.MouseButton.LeftButton:
+                    self._sel_anchor_offset = offset
+                    _linear_select(offset, offset)
+                    event.accept()
+                    return
             else:
                 self._sel_anchor_offset = None
                 type(self.hex_view).mousePressEvent(self.hex_view, event)
@@ -2700,13 +2829,33 @@ class HexEditorTab(QWidget):
         box.exec()
         self.log_signal.emit(f"[INFO] CRC32={crc:#010X}  SHA256={sha[:16]}...")
 
+    def show_select_blank_dialog(self):
+        start, count = self.get_selected_range()
+        if start is None or count == 0:
+            idx = self.hex_view.currentIndex()
+            if idx.isValid() and idx.column() < 16:
+                start = idx.row() * 16 + idx.column()
+                count = 1
+            else:
+                self.log_signal.emit("[WARN] Please select a byte range to blank.")
+                return
+
+        dialog = SelectBlankDialog(self, start=start, count=count)
+        if dialog.exec():
+            fill_byte = dialog.get_fill_byte()
+            fill_data = fill_byte * count
+            self.hex_model.replace_bytes(start, fill_data)
+            hex_name = "FF" if fill_byte == b"\xFF" else "00"
+            self.log_signal.emit(f"[INFO] Select Blank: filled {count:,} bytes with {hex_name} at 0x{start:08X} - 0x{start+count-1:08X}")
+
     def show_hex_context_menu(self, pos):
         index = self.hex_view.indexAt(pos)
-        if not index.isValid() or index.column() >= 16: return
+        if not index.isValid(): return
         
         menu = QMenu(self)
 
         # -------------------- Edit --------------------
+        menu.addAction("Select Blank...", self.show_select_blank_dialog)
         menu.addAction("Fill Selection...", self.fill_selection)
         menu.addAction("Delete Selection", self.delete_selected_data)
         menu.addAction("Extract Selection -> File", self.extract_selection_to_file)
