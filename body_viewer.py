@@ -772,7 +772,7 @@ class BodyViewerWidget(QWidget):
     UEFI Structure & Body Viewer Tree Widget.
     Provides identical tree hierarchy, inspection, search, and body extraction as UEFITool.
     """
-    request_hex_view = Signal(int) # Emits offset to jump in Hex Viewer
+    request_hex_view = Signal(int, int) # Emits (offset, size) to jump and highlight in Hex Viewer
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1115,7 +1115,8 @@ class BodyViewerWidget(QWidget):
         node = item.data(0, Qt.UserRole)
         if node:
             offset = node.get("body_offset", node.get("offset", 0))
-            self.request_hex_view.emit(offset)
+            size = node.get("body_size", node.get("size", 1))
+            self.request_hex_view.emit(offset, size)
 
     def show_context_menu(self, pos: QPoint):
         item = self.tree.itemAt(pos)
@@ -1158,7 +1159,9 @@ class BodyViewerWidget(QWidget):
         elif action == act_asis:
             self.extract_item_body(node, as_is=True)
         elif action == act_hex:
-            self.request_hex_view.emit(node.get("offset", 0))
+            offset = node.get("offset", 0)
+            size = node.get("size", 1)
+            self.request_hex_view.emit(offset, size)
         elif action == act_copy_guid:
             from PySide6.QtWidgets import QApplication
             QApplication.clipboard().setText(node.get("name", ""))

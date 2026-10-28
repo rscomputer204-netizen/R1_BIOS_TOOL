@@ -2217,6 +2217,48 @@ class HexEditorTab(QWidget):
         self.hex_view.mouseMoveEvent    = _hex_mouse_move
         self.hex_view.mouseReleaseEvent = _hex_mouse_release
 
+    def goto_offset(self, offset: int, length: int = 1):
+        """Scroll to the specified offset, center it, and select length bytes linearly."""
+        if not hasattr(self, 'hex_model') or self.hex_model is None:
+            return
+        doc = getattr(self.hex_model, 'document', None)
+        total_len = getattr(doc, 'size', 0) if doc else 0
+        if total_len == 0 and hasattr(self.hex_model, 'get_data'):
+            total_len = len(self.hex_model.get_data() or b"")
+        if total_len == 0:
+            return
+        
+        offset = max(0, min(offset, total_len - 1))
+        length = max(1, min(length, total_len - offset))
+        end = offset + length - 1
+        
+        from PySide6.QtCore import QItemSelection, QItemSelectionRange, QItemSelectionModel
+        from PySide6.QtWidgets import QAbstractItemView
+        
+        model = self.hex_model
+        sel_model = self.hex_view.selectionModel()
+        
+        selection = QItemSelection()
+        curr = offset
+        while curr <= end:
+            row = curr // 16
+            start_col = curr % 16
+            end_offset_this_row = min(end, (row + 1) * 16 - 1)
+            end_col = end_offset_this_row % 16
+            top_left = model.index(row, start_col)
+            bottom_right = model.index(row, end_col)
+            if top_left.isValid() and bottom_right.isValid():
+                selection.append(QItemSelectionRange(top_left, bottom_right))
+            curr = end_offset_this_row + 1
+            
+        sel_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
+        target_idx = model.index(offset // 16, offset % 16)
+        if target_idx.isValid():
+            sel_model.setCurrentIndex(target_idx, QItemSelectionModel.SelectionFlag.NoUpdate)
+            self.hex_view.scrollTo(model.index(offset // 16, 0),
+                                   QAbstractItemView.ScrollHint.PositionAtCenter)
+        self.hex_view.setFocus()
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
         if hasattr(self, 'search_bar') and self.search_bar and self.search_bar.isVisible():
@@ -5043,14 +5085,14 @@ class BiosServiceTool(QMainWindow):
     def toggle_hex_viewer_mode(self, detached: bool):
         self.switch_display_tab("HEX" if detached else "TERMINAL")
 
-    def _on_body_request_hex_view(self, offset: int):
+    def _on_body_request_hex_view(self, offset: int, length: int = 1):
         self.switch_display_tab("HEX")
         try:
             curr_tab = self.hex_tabs.currentWidget()
             if curr_tab and hasattr(curr_tab, 'goto_offset'):
-                curr_tab.goto_offset(offset)
+                curr_tab.goto_offset(offset, length)
             elif curr_tab and hasattr(curr_tab, 'hex_widget') and hasattr(curr_tab.hex_widget, 'goto_offset'):
-                curr_tab.hex_widget.goto_offset(offset)
+                curr_tab.hex_widget.goto_offset(offset, length)
         except Exception:
             pass
 
