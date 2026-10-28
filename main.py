@@ -23,10 +23,10 @@ from PySide6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
                              QAbstractItemView, QInputDialog, QTextBrowser,
                              QTableWidget, QTableWidgetItem, QRadioButton,
                              QListWidget, QListWidgetItem, QFormLayout, QGroupBox,
-                             QStackedWidget)
+                             QStackedWidget, QStyledItemDelegate)
 from PySide6.QtCore import (Qt, QSize, QMetaObject, Q_ARG, Slot, QTimer, 
                             QAbstractTableModel, QModelIndex, Signal, Property, 
-                            QPropertyAnimation, QRectF, QEasingCurve, QUrl)
+                            QPropertyAnimation, QRect, QRectF, QEasingCurve, QUrl)
 from PySide6.QtGui import (QFont, QColor, QPalette, QIcon, QShortcut, 
                            QKeySequence, QAction, QPainter, QPen, QBrush, QPainterPath, QPixmap)
 import threading
@@ -2059,6 +2059,68 @@ class HexSearchBar(QFrame):
             x = pv.width() - sb_w - margin_right
             self.setGeometry(x, margin_top, sb_w, sb_h)
 
+class HexAsciiDelegate(QStyledItemDelegate):
+    """
+    Delegate for the Decoded Text (ASCII) column 16.
+    Highlights characters in real-time corresponding to the active byte selection,
+    giving professional dual-side synchronized selection matching HxD / 010 Editor.
+    """
+    def __init__(self, tab, parent=None):
+        super().__init__(parent)
+        self.tab = tab
+
+    def paint(self, painter, option, index):
+        if not index.isValid():
+            return
+        
+        row = index.row()
+        text = index.data(Qt.ItemDataRole.DisplayRole) or ""
+        if not text:
+            return
+
+        painter.save()
+        rect = option.rect
+        painter.setFont(option.font)
+        fm = painter.fontMetrics()
+        char_w = max(1, fm.horizontalAdvance('M'))
+        char_h = fm.height()
+        ascent = fm.ascent()
+        
+        pad_x = 4
+        y_text = rect.top() + (rect.height() - char_h) // 2 + ascent
+        y_bg = rect.top()
+        h_bg = rect.height()
+        
+        sel_start, sel_count = self.tab.get_selected_range()
+        if sel_start is not None and sel_count and sel_count > 0:
+            sel_end = sel_start + sel_count - 1
+        else:
+            sel_start, sel_end = -1, -1
+
+        row_start = row * 16
+        is_light = getattr(self.tab.hex_model, 'is_light_mode', False)
+        sel_bg_color = QColor("#bfdbfe") if is_light else QColor("#1b4b5e")
+        sel_fg_color = QColor("#1e3a8a") if is_light else QColor("#ffffff")
+        default_fg_color = index.data(Qt.ItemDataRole.ForegroundRole)
+        if not isinstance(default_fg_color, QColor):
+            default_fg_color = QColor("#4a4a4a") if is_light else QColor("#888888")
+
+        for i, ch in enumerate(text):
+            byte_off = row_start + i
+            is_selected = (sel_start <= byte_off <= sel_end)
+            x_char = rect.left() + pad_x + i * char_w
+            
+            if is_selected:
+                painter.fillRect(QRect(x_char, y_bg, char_w, h_bg), sel_bg_color)
+                painter.setPen(sel_fg_color)
+            else:
+                painter.setPen(default_fg_color)
+            
+            painter.drawText(x_char, y_text, ch)
+
+        painter.restore()
+
+
 class HexEditorTab(QWidget):
     log_signal = Signal(str)
     modified_signal = Signal()  # Emitted when document is modified
@@ -2086,16 +2148,20 @@ class HexEditorTab(QWidget):
         font = QFont("Consolas", 11)
         self.hex_view.setFont(font)
         for i in range(16):
-            self.hex_view.setColumnWidth(i, 26)
-        self.hex_view.setColumnWidth(16, 160)
+            self.hex_view.setColumnWidth(i, 23)
+        self.hex_view.setColumnWidth(16, 145)
         self.hex_view.horizontalHeader().setMinimumSectionSize(20)
         self.hex_view.verticalHeader().setDefaultSectionSize(20)
         self.hex_view.verticalHeader().setMinimumSectionSize(20)
         self.hex_view.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
-        self.hex_view.verticalHeader().setFixedWidth(85)
+        self.hex_view.verticalHeader().setFixedWidth(72)
         self.hex_view.verticalHeader().setDefaultAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
         self.hex_view.horizontalHeader().setStretchLastSection(True)
         self.hex_view.horizontalHeader().setFixedHeight(25)
+        
+        # Attach custom delegate for column 16 (Decoded ASCII text synchronized selection)
+        self.ascii_delegate = HexAsciiDelegate(self, self.hex_view)
+        self.hex_view.setItemDelegateForColumn(16, self.ascii_delegate)
         
         # Normal scroll speed for the hex view viewport
         def normal_wheel_event(event):
@@ -2128,8 +2194,8 @@ class HexEditorTab(QWidget):
         scroll_bar.installEventFilter(self.sb_filter)
         
         self.corner_label = QLabel("Offset (h)", self.hex_view)
-        self.corner_label.setStyleSheet("color: #4cd3e3; font-weight: bold; font-family: 'Consolas', monospace; font-size: 12px; background-color: #171a1d; padding-left: 5px;")
-        self.corner_label.setGeometry(1, 1, 84, 23)
+        self.corner_label.setStyleSheet("color: #4cd3e3; font-weight: bold; font-family: 'Consolas', monospace; font-size: 11px; background-color: #171a1d; padding-left: 4px;")
+        self.corner_label.setGeometry(1, 1, 71, 23)
         self.corner_label.show()
         
         self.hex_container = QWidget()
@@ -2171,6 +2237,7 @@ class HexEditorTab(QWidget):
             from PySide6.QtCore import QItemSelection, QItemSelectionRange, QItemSelectionModel
             if start_offset > end_offset:
                 start_offset, end_offset = end_offset, start_offset
+            self._cached_sel_range = (start_offset, end_offset - start_offset + 1)
             selection = QItemSelection()
             curr = start_offset
             while curr <= end_offset:
@@ -2185,12 +2252,32 @@ class HexEditorTab(QWidget):
             self.hex_view.selectionModel().select(
                 selection, QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
+            self.hex_view.viewport().update()
+
+        def _get_offset_from_pos(pos):
+            idx = self.hex_view.indexAt(pos)
+            if not idx.isValid():
+                return None
+            doc = getattr(self.hex_model, 'document', None)
+            doc_size = doc.size if doc else 0
+            if doc_size <= 0:
+                return None
+            if idx.column() < 16:
+                off = idx.row() * 16 + idx.column()
+                return min(off, doc_size - 1)
+            elif idx.column() == 16:
+                col_x = self.hex_view.columnViewportPosition(16)
+                fm = self.hex_view.fontMetrics()
+                char_w = max(1, fm.horizontalAdvance('M'))
+                click_x = pos.x() - col_x - 4
+                char_col = max(0, min(15, int(click_x // char_w)))
+                off = idx.row() * 16 + char_col
+                return min(off, doc_size - 1)
+            return None
 
         def _hex_mouse_press(event):
-            from PySide6.QtCore import Qt as _Qt
-            idx = self.hex_view.indexAt(event.pos())
-            if idx.isValid() and idx.column() < 16:
-                offset = idx.row() * 16 + idx.column()
+            offset = _get_offset_from_pos(event.pos())
+            if offset is not None:
                 self._sel_anchor_offset = offset
                 _linear_select(offset, offset)
                 event.accept()
@@ -2201,9 +2288,8 @@ class HexEditorTab(QWidget):
         def _hex_mouse_move(event):
             from PySide6.QtCore import Qt as _Qt
             if (event.buttons() & _Qt.MouseButton.LeftButton) and self._sel_anchor_offset is not None:
-                idx = self.hex_view.indexAt(event.pos())
-                if idx.isValid() and idx.column() < 16:
-                    curr_offset = idx.row() * 16 + idx.column()
+                curr_offset = _get_offset_from_pos(event.pos())
+                if curr_offset is not None:
                     _linear_select(self._sel_anchor_offset, curr_offset)
                     event.accept()
                     return
@@ -2251,12 +2337,14 @@ class HexEditorTab(QWidget):
                 selection.append(QItemSelectionRange(top_left, bottom_right))
             curr = end_offset_this_row + 1
             
+        self._cached_sel_range = (offset, length)
         sel_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
         target_idx = model.index(offset // 16, offset % 16)
         if target_idx.isValid():
             sel_model.setCurrentIndex(target_idx, QItemSelectionModel.SelectionFlag.NoUpdate)
             self.hex_view.scrollTo(model.index(offset // 16, 0),
                                    QAbstractItemView.ScrollHint.PositionAtCenter)
+        self.hex_view.viewport().update()
         self.hex_view.setFocus()
 
     def resizeEvent(self, event):
@@ -2265,6 +2353,7 @@ class HexEditorTab(QWidget):
             self.search_bar._reposition()
 
     def _emit_selection(self, selected, deselected):
+        self.hex_view.viewport().update()
         start, count = self.get_selected_range()
         from core_workspace import event_bus
         if start is not None and count is not None:
@@ -2273,6 +2362,7 @@ class HexEditorTab(QWidget):
             event_bus.selection_changed.emit(self.hex_model.document, -1, 0)
 
     def _emit_cursor(self, current, previous):
+        self.hex_view.viewport().update()
         if current.isValid():
             offset = current.row() * 16 + current.column()
             from core_workspace import event_bus
