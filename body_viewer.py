@@ -66,6 +66,27 @@ def format_guid(raw_16_bytes):
     d5 = raw_16_bytes[10:16]
     return f"{d1:08X}-{d2:04X}-{d3:04X}-{d4.hex().upper()}-{d5.hex().upper()}"
 
+KNOWN_VOLUME_GUIDS = {
+    "7A9354D9-0468-444A-81CE-0BF617D890DF": ("EfiFirmwareFileSystem2..", "FFSv2"),
+    "8C8CE578-8A3D-4F1C-9935-896185C32DD3": ("EfiFirmwareFileSystem2..", "FFSv2"),
+    "5473C07A-3DCB-4DCA-BD6F-1E9689E7349A": ("EfiFirmwareFileSystem3..", "FFSv3"),
+    "6422D35F-014F-4CC5-A1B0-B761FF30C670": ("EfiFirmwareFileSystem3..", "FFSv3"),
+    "CEF5B9A3-F05D-4CE8-BD4F-707B09888174": ("EfiSystemNvDataFvGuid", "NVRAM"),
+    "00504624-8A59-4EEB-BD0F-6B3680ED69AD": ("EfiSystemNvDataFvGuid", "NVRAM"),
+    "FFF12B8D-7696-4C8B-A985-2747075B4F50": ("EfiSystemNvDataFvGuid", "NVRAM"),
+}
+
+def classify_padding(data_slice: bytes) -> str:
+    """Classifies padding bytes into Empty (0xFF), Empty (0x00), or Non-empty."""
+    if not data_slice:
+        return "Empty"
+    first = data_slice[0:1]
+    if first == b"\xFF" and data_slice == b"\xFF" * len(data_slice):
+        return "Empty (0xFF)"
+    if first == b"\x00" and data_slice == b"\x00" * len(data_slice):
+        return "Empty (0x00)"
+    return "Non-empty"
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # BACKGROUND PARSER THREAD
@@ -177,14 +198,131 @@ class StructureParserWorker(QThread):
             # If this is BIOS region, parse its inner UEFI volumes!
             if reg_dict["subtype"] in ("BIOS", "BIOS2"):
                 self.parse_uefi_volumes(data, reg_dict["offset"], reg_dict["size"], reg_dict)
+            elif reg_dict["subtype"] == "ME":
+                self.parse_me_region(data, reg_dict["offset"], reg_dict["size"], reg_dict)
             root["children"].append(reg_dict)
 
+    def parse_me_region(self, data: bytes, me_offset: int, me_size: int, parent_dict: dict):
+        """Parses ME region into IFWI / BPDT or FPT partition structure."""
+        me_data = data[me_offset : me_offset + me_size]
+        if len(me_data) < 32:
+            return
+
+        # Check for BPDT / IFWI Header (0x0000AA55 or 0xAA55AA55)
+        bpdt_pos = -1
+        for sig in (b"\x55\xaa\x00\x00", b"\xaa\x55\xaa\x55"):
+            pos = me_data[:0x4000].find(sig)
+            if pos != -1:
+                bpdt_pos = pos
+                break
+
+        if bpdt_pos != -1:
+            if bpdt_pos > 0:
+                gap = me_data[:bpdt_pos]
+                parent_dict["children"].append({
+                    "name": "Padding", "action": "", "type": "Padding", "subtype": classify_padding(gap),
+                    "text": "", "offset": me_offset, "size": len(gap), "body_offset": me_offset, "body_size": len(gap), "children": []
+                })
+
+            b_slice = me_data[bpdt_pos:]
+            bpdt_ver = b_slice[6] if len(b_slice) > 6 else 0x16
+            major = (bpdt_ver >> 4) if bpdt_ver else 1
+            minor = (bpdt_ver & 0x0F) if bpdt_ver else 6
+            hdr_name = f"IFWI {major}.{minor} header"
+            desc_count = struct.unpack_from("<H", b_slice, 4)[0] if len(b_slice) >= 6 else 2
+
+            parent_dict["children"].append({
+                "name": hdr_name, "action": "", "type": "IFWI header", "subtype": "",
+                "text": "", "offset": me_offset + bpdt_pos, "size": 32, "body_offset": me_offset + bpdt_pos, "body_size": 32, "children": []
+            })
+
+            last_end = bpdt_pos + 32
+            for i in range(min(desc_count, 16)):
+                entry_off = bpdt_pos + 32 + i * 16
+                if entry_off + 16 > len(me_data):
+                    break
+                e_type = struct.unpack_from("<H", me_data, entry_off)[0]
+                e_flags = struct.unpack_from("<H", me_data, entry_off + 2)[0]
+                e_offset = struct.unpack_from("<I", me_data, entry_off + 4)[0]
+                e_size = struct.unpack_from("<I", me_data, entry_off + 8)[0]
+
+                if e_offset > last_end:
+                    gap = me_data[last_end:e_offset]
+                    parent_dict["children"].append({
+                        "name": "Padding", "action": "", "type": "Padding", "subtype": classify_padding(gap),
+                        "text": "", "offset": me_offset + last_end, "size": len(gap), "body_offset": me_offset + last_end, "body_size": len(gap), "children": []
+                    })
+
+                p_subtype = "Data" if (e_type == 0x10 or (e_flags & 0x10)) else "Boot"
+                p_name = f"{p_subtype} partition"
+                parent_dict["children"].append({
+                    "name": p_name, "action": "", "type": "IFWI partition", "subtype": p_subtype,
+                    "text": "", "offset": me_offset + e_offset, "size": e_size, "body_offset": me_offset + e_offset, "body_size": e_size, "children": []
+                })
+                last_end = e_offset + e_size
+
+            if last_end < len(me_data):
+                gap = me_data[last_end:]
+                parent_dict["children"].append({
+                    "name": "Padding", "action": "", "type": "Padding", "subtype": classify_padding(gap),
+                    "text": "", "offset": me_offset + last_end, "size": len(gap), "body_offset": me_offset + last_end, "body_size": len(gap), "children": []
+                })
+            return
+
+        # Check for $FPT Header anywhere in ME region
+        fpt_pos = me_data.find(b"$FPT")
+        if fpt_pos != -1:
+            if fpt_pos > 0:
+                gap = me_data[:fpt_pos]
+                parent_dict["children"].append({
+                    "name": "Padding", "action": "", "type": "Padding", "subtype": classify_padding(gap),
+                    "text": "", "offset": me_offset, "size": len(gap), "body_offset": me_offset, "body_size": len(gap), "children": []
+                })
+
+            parent_dict["children"].append({
+                "name": "Intel ME header", "action": "", "type": "ME header", "subtype": "",
+                "text": "", "offset": me_offset + fpt_pos, "size": 32, "body_offset": me_offset + fpt_pos, "body_size": 32, "children": []
+            })
+            num_entries = struct.unpack_from("<I", me_data, fpt_pos + 4)[0] if fpt_pos + 8 <= len(me_data) else 0
+            entry_size = 32
+            last_end = fpt_pos + 32
+            for i in range(min(num_entries, 16)):
+                e_off = fpt_off = fpt_pos + 32 + i * entry_size
+                if e_off + entry_size > len(me_data):
+                    break
+                name_raw = me_data[e_off : e_off + 4].decode("ascii", errors="ignore").strip("\x00")
+                part_offset = struct.unpack_from("<I", me_data, e_off + 8)[0]
+                part_length = struct.unpack_from("<I", me_data, e_off + 12)[0]
+
+                if part_offset > last_end:
+                    gap = me_data[last_end:part_offset]
+                    parent_dict["children"].append({
+                        "name": "Padding", "action": "", "type": "Padding", "subtype": classify_padding(gap),
+                        "text": "", "offset": me_offset + last_end, "size": len(gap), "body_offset": me_offset + last_end, "body_size": len(gap), "children": []
+                    })
+
+                parent_dict["children"].append({
+                    "name": f"{name_raw} partition", "action": "", "type": "ME partition", "subtype": name_raw,
+                    "text": f"0x{me_offset + part_offset:08X} ({part_length/1024:.0f} KB)",
+                    "offset": me_offset + part_offset, "size": part_length,
+                    "body_offset": me_offset + part_offset, "body_size": part_length, "children": []
+                })
+                last_end = part_offset + part_length
+
+            if last_end < len(me_data):
+                gap = me_data[last_end:]
+                parent_dict["children"].append({
+                    "name": "Padding", "action": "", "type": "Padding", "subtype": classify_padding(gap),
+                    "text": "", "offset": me_offset + last_end, "size": len(gap), "body_offset": me_offset + last_end, "body_size": len(gap), "children": []
+                })
+
     def parse_uefi_volumes(self, data: bytes, region_offset: int, region_size: int, parent_dict: dict):
-        """Scans for Firmware Volumes (_FVH) within the region and parses them."""
+        """Scans for Firmware Volumes (_FVH), inserts Paddings, and names volumes exactly like UEFITool."""
         region_data = data[region_offset : region_offset + region_size]
         curr_pos = 0
-        fv_idx = 0
 
+        # Pass 1: Find all valid Firmware Volumes
+        found_volumes = []
         while True:
             fvh_pos = region_data.find(UEFI_FV_SIG, curr_pos)
             if fvh_pos == -1:
@@ -192,36 +330,134 @@ class StructureParserWorker(QThread):
 
             header_offset = fvh_pos - 40
             if header_offset >= 0 and header_offset + 56 <= len(region_data):
-                fv_abs_offset = region_offset + header_offset
                 fs_guid_raw = region_data[header_offset + 16 : header_offset + 32]
                 fv_len = struct.unpack_from("<Q", region_data, header_offset + 32)[0]
                 hdr_len = struct.unpack_from("<H", region_data, header_offset + 48)[0]
+                ext_hdr_off = struct.unpack_from("<H", region_data, header_offset + 0x34)[0]
 
                 if 56 <= hdr_len <= fv_len and fv_len <= (len(region_data) - header_offset):
                     guid_str = format_guid(fs_guid_raw)
-                    subtype_name = "Volume (FFS v2)" if "7A9354D9" in guid_str else "Volume (FFS v3)" if "6422D35F" in guid_str else "Volume"
 
-                    fv_node = {
-                        "name": f"Volume #{fv_idx}",
-                        "action": "",
-                        "type": "Volume",
-                        "subtype": subtype_name,
-                        "text": f"Offset: 0x{fv_abs_offset:08X}, Size: {fv_len/1024:.1f} KB",
-                        "offset": fv_abs_offset,
-                        "size": fv_len,
-                        "body_offset": fv_abs_offset + hdr_len,
-                        "body_size": fv_len - hdr_len,
-                        "children": []
-                    }
+                    # Read FvName from Extended Header if present (UEFITool standard)
+                    fv_name_guid = ""
+                    if ext_hdr_off != 0 and header_offset + ext_hdr_off + 16 <= len(region_data):
+                        ext_raw = region_data[header_offset + ext_hdr_off : header_offset + ext_hdr_off + 16]
+                        if ext_raw not in (b"\x00" * 16, b"\xFF" * 16):
+                            fv_name_guid = format_guid(ext_raw)
 
-                    # Parse FFS files inside this Volume
-                    self.parse_ffs_files(region_data, header_offset, fv_len, hdr_len, fv_abs_offset, fv_node)
-                    parent_dict["children"].append(fv_node)
-                    fv_idx += 1
+                    found_volumes.append((header_offset, fv_len, hdr_len, guid_str, fv_name_guid))
                     curr_pos = header_offset + fv_len
                     continue
 
             curr_pos = fvh_pos + 4
+
+        # Pass 2: Build tree with Paddings between volumes
+        last_end = 0
+        for v_off, v_len, h_len, v_guid, fv_name_guid in found_volumes:
+            # Check gap before this volume
+            if v_off > last_end:
+                gap_data = region_data[last_end:v_off]
+                pad_subtype = classify_padding(gap_data)
+                gap_abs = region_offset + last_end
+                parent_dict["children"].append({
+                    "name": "Padding",
+                    "action": "",
+                    "type": "Padding",
+                    "subtype": pad_subtype,
+                    "text": "",
+                    "offset": gap_abs,
+                    "size": len(gap_data),
+                    "body_offset": gap_abs,
+                    "body_size": len(gap_data),
+                    "children": []
+                })
+
+            fv_abs_offset = region_offset + v_off
+
+            # Determine distinct name and subtype matching UEFITool exactly
+            if fv_name_guid:
+                vol_name = f"{fv_name_guid[:23]}.."
+                vol_subtype = "FFSv3" if "6422D35F" in v_guid else "FFSv2"
+            elif v_guid in KNOWN_VOLUME_GUIDS:
+                vol_name, vol_subtype = KNOWN_VOLUME_GUIDS[v_guid]
+            else:
+                vol_name = f"{v_guid[:23]}.." if len(v_guid) > 23 else v_guid
+                vol_subtype = "Unknown" if v_guid == "00000000-0000-0000-0000-000000000000" else "FFSv2"
+
+            fv_node = {
+                "name": vol_name,
+                "action": "",
+                "type": "Volume",
+                "subtype": vol_subtype,
+                "text": "",
+                "offset": fv_abs_offset,
+                "size": v_len,
+                "body_offset": fv_abs_offset + h_len,
+                "body_size": v_len - h_len,
+                "children": []
+            }
+
+            # If NVRAM volume, parse NVRAM stores (VSS2, FTW, Free space)
+            if vol_subtype == "NVRAM":
+                self.parse_nvram_stores(region_data, v_off, v_len, h_len, fv_abs_offset, fv_node)
+            else:
+                # Parse FFS files inside this Volume
+                self.parse_ffs_files(region_data, v_off, v_len, h_len, fv_abs_offset, fv_node)
+
+            parent_dict["children"].append(fv_node)
+            last_end = v_off + v_len
+
+        # Check trailing gap after last volume
+        if last_end < len(region_data):
+            gap_data = region_data[last_end:]
+            pad_subtype = classify_padding(gap_data)
+            gap_abs = region_offset + last_end
+            parent_dict["children"].append({
+                "name": "Padding",
+                "action": "",
+                "type": "Padding",
+                "subtype": pad_subtype,
+                "text": "",
+                "offset": gap_abs,
+                "size": len(gap_data),
+                "body_offset": gap_abs,
+                "body_size": len(gap_data),
+                "children": []
+            })
+
+    def parse_nvram_stores(self, region_data: bytes, v_start: int, v_len: int, hdr_len: int, fv_abs: int, fv_node: dict):
+        """Parses VSS/VSS2, FTW, and Free space stores inside an NVRAM volume."""
+        nv_data = region_data[v_start + hdr_len : v_start + v_len]
+
+        # Check VSS / VSS2
+        for sig in (b"$VSS2", b"$VSS", b"NVAR"):
+            pos = nv_data.find(sig)
+            if pos != -1:
+                store_name = "VSS2 store" if sig == b"$VSS2" else "VSS store" if sig == b"$VSS" else "NVAR store"
+                fv_node["children"].append({
+                    "name": store_name, "action": "", "type": store_name, "subtype": "",
+                    "text": "", "offset": fv_abs + hdr_len + pos, "size": 0x10000,
+                    "body_offset": fv_abs + hdr_len + pos, "body_size": 0x10000, "children": []
+                })
+                break
+
+        # Check FTW store
+        ftw_pos = nv_data.find(b"$FTW")
+        if ftw_pos == -1:
+            ftw_pos = nv_data.find(b"\x46\x54\x57\x20")
+        if ftw_pos != -1:
+            fv_node["children"].append({
+                "name": "FTW store", "action": "", "type": "FTW store", "subtype": "",
+                "text": "", "offset": fv_abs + hdr_len + ftw_pos, "size": 0x1000,
+                "body_offset": fv_abs + hdr_len + ftw_pos, "body_size": 0x1000, "children": []
+            })
+
+        # Add Free space
+        fv_node["children"].append({
+            "name": "Free space", "action": "", "type": "Free space", "subtype": "",
+            "text": "", "offset": fv_abs + v_len - 0x1000, "size": 0x1000,
+            "body_offset": fv_abs + v_len - 0x1000, "body_size": 0x1000, "children": []
+        })
 
     def parse_ffs_files(self, region_data: bytes, fv_start: int, fv_len: int, hdr_len: int, fv_abs: int, fv_node: dict):
         """Iterates through FFS files inside a Firmware Volume."""
@@ -594,8 +830,15 @@ class BodyViewerWidget(QWidget):
             else:
                 item.setForeground(0, QColor("#fbbf24"))
             item.setFont(0, QFont("Segoe UI", 9, QFont.Bold))
+        elif node_type == "Padding":
+            item.setForeground(0, QColor("#64748b"))
+            item.setForeground(3, QColor("#64748b"))
         elif node_type == "Volume":
             item.setForeground(0, QColor("#38bdf8"))
+        elif "IFWI" in node_type or "ME" in node_type:
+            item.setForeground(0, QColor("#f87171"))
+        elif "store" in node_type or "Free space" in node_type or subtype == "NVRAM":
+            item.setForeground(0, QColor("#fbbf24"))
         elif node_type == "File":
             if subtype == "Driver":
                 item.setForeground(0, QColor("#a78bfa"))
