@@ -4239,8 +4239,14 @@ class BiosServiceTool(QMainWindow):
         self.btn_tab_hex.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tab_hex.clicked.connect(lambda: self.switch_display_tab("HEX"))
 
+        self.btn_tab_body = QPushButton("🧬 BODY VIEWER")
+        self.btn_tab_body.setObjectName("TabBtnBody")
+        self.btn_tab_body.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_tab_body.clicked.connect(lambda: self.switch_display_tab("BODY"))
+
         tab_bar_layout.addWidget(self.btn_tab_terminal)
         tab_bar_layout.addWidget(self.btn_tab_hex)
+        tab_bar_layout.addWidget(self.btn_tab_body)
         tab_bar_layout.addStretch()
 
         display_container_layout.addWidget(self.tab_btn_bar)
@@ -4355,6 +4361,15 @@ class BiosServiceTool(QMainWindow):
         self.add_new_hex_tab("Main BIOS")
 
         self.display_stack.addWidget(self.hex_widget)  # Index 1: Hex Viewer
+
+        # Page 2: Body Viewer Panel (Empty container for future components)
+        self.body_widget = QWidget()
+        self.body_widget.setObjectName("BodyWidget")
+        body_layout = QVBoxLayout(self.body_widget)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(4)
+        self.display_stack.addWidget(self.body_widget)  # Index 2: Body Viewer
+
         display_container_layout.addWidget(self.display_stack)
 
         self.main_display_container.setMinimumWidth(650)
@@ -4963,7 +4978,7 @@ class BiosServiceTool(QMainWindow):
             self.toggle_hex_viewer_mode(detached)
 
     def switch_display_tab(self, mode: str):
-        """Switch between TERMINAL and HEX VIEWER inside the shared display container."""
+        """Switch between TERMINAL, HEX VIEWER, and BODY VIEWER inside the shared display container."""
         active_style = (
             "QPushButton {"
             "    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2ac4db, stop:1 #1fa2b5);"
@@ -4997,12 +5012,26 @@ class BiosServiceTool(QMainWindow):
             "    border: 1px solid #3d4a57;"
             "}"
         )
-        is_hex = (mode.upper() == "HEX")
+        mode_upper = mode.upper()
+        is_hex = (mode_upper == "HEX")
+        is_body = (mode_upper == "BODY")
+        is_terminal = not (is_hex or is_body)
+
         if hasattr(self, 'display_stack'):
-            self.display_stack.setCurrentIndex(1 if is_hex else 0)
-        if hasattr(self, 'btn_tab_hex') and hasattr(self, 'btn_tab_terminal'):
+            if is_body:
+                self.display_stack.setCurrentIndex(2)
+            elif is_hex:
+                self.display_stack.setCurrentIndex(1)
+            else:
+                self.display_stack.setCurrentIndex(0)
+
+        if hasattr(self, 'btn_tab_hex'):
             self.btn_tab_hex.setStyleSheet(active_style if is_hex else inactive_style)
-            self.btn_tab_terminal.setStyleSheet(inactive_style if is_hex else active_style)
+        if hasattr(self, 'btn_tab_terminal'):
+            self.btn_tab_terminal.setStyleSheet(active_style if is_terminal else inactive_style)
+        if hasattr(self, 'btn_tab_body'):
+            self.btn_tab_body.setStyleSheet(active_style if is_body else inactive_style)
+
         if hasattr(self, 'hex_toggle') and self.hex_toggle._is_on != is_hex:
             self.hex_toggle.set_state(is_hex, animate=True)
         from PySide6.QtCore import QSettings
