@@ -4013,6 +4013,10 @@ class BiosServiceTool(QMainWindow):
             if idx >= 0:
                 self.hex_tabs.setTabText(idx, file_title)
 
+        # Feed firmware data to Body Viewer
+        if hasattr(self, 'body_viewer') and file_path:
+            self.body_viewer.load_bios_file(file_path, data)
+
     def __init__(self):
         super().__init__()
         self.report_manager = ReportSettingsManager(get_app_root())
@@ -4362,13 +4366,11 @@ class BiosServiceTool(QMainWindow):
 
         self.display_stack.addWidget(self.hex_widget)  # Index 1: Hex Viewer
 
-        # Page 2: Body Viewer Panel (Empty container for future components)
-        self.body_widget = QWidget()
-        self.body_widget.setObjectName("BodyWidget")
-        body_layout = QVBoxLayout(self.body_widget)
-        body_layout.setContentsMargins(0, 0, 0, 0)
-        body_layout.setSpacing(4)
-        self.display_stack.addWidget(self.body_widget)  # Index 2: Body Viewer
+        # Page 2: Body Viewer Panel (UEFI Structure & Body Inspector)
+        from body_viewer import BodyViewerWidget
+        self.body_viewer = BodyViewerWidget(self)
+        self.body_viewer.request_hex_view.connect(self._on_body_request_hex_view)
+        self.display_stack.addWidget(self.body_viewer)  # Index 2: Body Viewer
 
         display_container_layout.addWidget(self.display_stack)
 
@@ -5040,6 +5042,17 @@ class BiosServiceTool(QMainWindow):
 
     def toggle_hex_viewer_mode(self, detached: bool):
         self.switch_display_tab("HEX" if detached else "TERMINAL")
+
+    def _on_body_request_hex_view(self, offset: int):
+        self.switch_display_tab("HEX")
+        try:
+            curr_tab = self.hex_tabs.currentWidget()
+            if curr_tab and hasattr(curr_tab, 'goto_offset'):
+                curr_tab.goto_offset(offset)
+            elif curr_tab and hasattr(curr_tab, 'hex_widget') and hasattr(curr_tab.hex_widget, 'goto_offset'):
+                curr_tab.hex_widget.goto_offset(offset)
+        except Exception:
+            pass
 
     def show_language_dialog(self):
         dialog = LanguageDialog(self)
