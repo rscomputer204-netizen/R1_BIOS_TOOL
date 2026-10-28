@@ -2241,6 +2241,7 @@ class HexEditorTab(QWidget):
 
     def __init__(self, data=b"", parent=None):
         super().__init__(parent)
+        self.parent_tool = parent
         self.file_path = None   # Track the source file path
         self._base_title = "Untitled"  # Base tab title without '*'
         self._is_modified = False
@@ -2744,6 +2745,11 @@ class HexEditorTab(QWidget):
                 self.hex_view.scrollTo(model.index(start // 16, 0))
 
     def show_find_dialog(self):
+        # Prefer the integrated top Hex Viewer search bar if available
+        if hasattr(self, 'parent_tool') and hasattr(self.parent_tool, 'hex_search_input'):
+            self.parent_tool.hex_search_input.setFocus()
+            self.parent_tool.hex_search_input.selectAll()
+            return
         if hasattr(self, 'search_bar') and self.search_bar:
             if self.search_bar.isVisible():
                 self.search_bar.search_input.setFocus()
@@ -2755,10 +2761,16 @@ class HexEditorTab(QWidget):
                 self.search_bar.search_input.selectAll()
 
     def _find_next(self):
+        if hasattr(self, 'parent_tool') and hasattr(self.parent_tool, '_on_hex_search_next'):
+            self.parent_tool._on_hex_search_next()
+            return
         if hasattr(self, 'search_bar'):
             self.search_bar._go_next()
 
     def _find_prev(self):
+        if hasattr(self, 'parent_tool') and hasattr(self.parent_tool, '_on_hex_search_prev'):
+            self.parent_tool._on_hex_search_prev()
+            return
         if hasattr(self, 'search_bar'):
             self.search_bar._go_prev()
 
@@ -4358,6 +4370,11 @@ class BiosServiceTool(QMainWindow):
         self.cached_dmi_info = None
         self.staged_dmi_profile = None
         
+        # Hex Viewer Search Bar State
+        self._hex_search_results = []
+        self._hex_search_current_idx = -1
+        self._hex_search_match_len = 0
+        
         # Path Memory: Default to Downloads folder
         self.last_directory = os.path.join(os.path.expanduser("~"), "Downloads")
         if not os.path.exists(self.last_directory):
@@ -4565,17 +4582,123 @@ class BiosServiceTool(QMainWindow):
         hex_layout.setContentsMargins(0, 0, 0, 0)
         hex_layout.setSpacing(2)
         
-        # Hex Viewer Title Bar with Recent Files button
-        hex_header = QHBoxLayout()
-        hex_header.setContentsMargins(4, 2, 4, 2)
+        # Hex Viewer Control & Search Bar (matching Body Viewer control bar)
+        hex_header_w = QWidget()
+        hex_header_w.setStyleSheet("""
+            QWidget {
+                background: #11141a;
+                border: 1px solid #1f252e;
+                border-radius: 6px;
+            }
+        """)
+        hex_header = QHBoxLayout(hex_header_w)
+        hex_header.setContentsMargins(6, 4, 6, 4)
+        hex_header.setSpacing(6)
+
         self.hex_label_widget = QLabel("HEX VIEWER")
         self.hex_label_widget.setObjectName("HexLabel")
-        self.hex_label_widget.setStyleSheet("font-weight: bold; font-family: monospace; color: #888888; font-size: 11px; padding: 2px 4px;")
+        self.hex_label_widget.setStyleSheet("color: #4cd3e3; font-weight: bold; font-size: 11px; letter-spacing: 0.5px; border: none; background: transparent;")
         hex_header.addWidget(self.hex_label_widget)
+
         hex_header.addStretch()
-        
-        hex_header_w = QWidget()
-        hex_header_w.setLayout(hex_header)
+
+        # Search Type Combo (Auto / Hex / Text)
+        self.hex_search_type = QComboBox()
+        self.hex_search_type.addItems(["Auto", "Hex", "Text"])
+        self.hex_search_type.setToolTip("Search mode: Auto detects hex or text")
+        self.hex_search_type.setStyleSheet("""
+            QComboBox {
+                background-color: #0b0d12;
+                color: #e2e8f0;
+                border: 1px solid #28303d;
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-size: 11px;
+                min-width: 52px;
+            }
+            QComboBox::drop-down { border: none; }
+            QComboBox QAbstractItemView {
+                background-color: #11141a;
+                color: #e2e8f0;
+                selection-background-color: #00f3ff;
+                selection-color: #000000;
+            }
+        """)
+        self.hex_search_type.currentIndexChanged.connect(self._on_hex_search_query_changed)
+        hex_header.addWidget(self.hex_search_type)
+
+        # Search Input
+        self.hex_search_input = QLineEdit()
+        self.hex_search_input.setPlaceholderText("🔍 Search (Hex / Text)...")
+        self.hex_search_input.setMinimumWidth(160)
+        self.hex_search_input.setMaximumWidth(240)
+        self.hex_search_input.setStyleSheet("""
+            QLineEdit {
+                background-color: #0b0d12;
+                color: #e2e8f0;
+                border: 1px solid #28303d;
+                border-radius: 4px;
+                padding: 3px 8px;
+                font-size: 11px;
+                font-family: 'Segoe UI', Consolas, sans-serif;
+            }
+            QLineEdit:focus {
+                border-color: #0ef6fd;
+            }
+        """)
+        self.hex_search_input.textChanged.connect(self._on_hex_search_query_changed)
+        self.hex_search_input.returnPressed.connect(self._on_hex_search_next)
+        hex_header.addWidget(self.hex_search_input)
+
+        # Match Count Badge / Indicator (shows total matches clearly)
+        self.lbl_hex_search_count = QLabel("")
+        self.lbl_hex_search_count.setToolTip("Total search results found")
+        self.lbl_hex_search_count.setStyleSheet("""
+            QLabel {
+                color: #0ef6fd;
+                background-color: #0d1117;
+                border: 1px solid #30363d;
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: 700;
+                font-family: Consolas, 'Segoe UI', monospace;
+                min-width: 65px;
+            }
+        """)
+        self.lbl_hex_search_count.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hex_header.addWidget(self.lbl_hex_search_count)
+
+        # Prev / Next Navigation Buttons
+        hex_btn_style = """
+            QPushButton {
+                background: #1c222b;
+                color: #94a3b8;
+                border: 1px solid #2d3748;
+                border-radius: 4px;
+                padding: 3px 7px;
+                font-size: 10px;
+                font-weight: bold;
+                min-width: 22px;
+            }
+            QPushButton:hover {
+                background: #2d3748;
+                color: #00f3ff;
+                border-color: #00f3ff;
+            }
+        """
+        self.btn_hex_search_prev = QPushButton("▲")
+        self.btn_hex_search_prev.setToolTip("Previous match (Shift+F3)")
+        self.btn_hex_search_prev.setStyleSheet(hex_btn_style)
+        self.btn_hex_search_prev.clicked.connect(self._on_hex_search_prev)
+        hex_header.addWidget(self.btn_hex_search_prev)
+
+        self.btn_hex_search_next = QPushButton("▼")
+        self.btn_hex_search_next.setToolTip("Next match (Enter / F3)")
+        self.btn_hex_search_next.setStyleSheet(hex_btn_style)
+        self.btn_hex_search_next.clicked.connect(self._on_hex_search_next)
+        hex_header.addWidget(self.btn_hex_search_next)
+
         hex_layout.addWidget(hex_header_w)
 
         self.hex_tabs = QTabWidget()
@@ -4583,6 +4706,7 @@ class BiosServiceTool(QMainWindow):
         self.hex_tabs.tabCloseRequested.connect(self.close_hex_tab)
         self.hex_tabs.tabBar().setMovable(True)  # Tabs are draggable/re-orderable
         self.hex_tabs.tabBar().tabBarDoubleClicked.connect(self._on_tab_double_clicked)
+        self.hex_tabs.currentChanged.connect(self._on_hex_tab_switched)
         self.hex_tabs.setStyleSheet("")
         
         self.add_tab_btn = QPushButton("+")
@@ -5334,6 +5458,211 @@ class BiosServiceTool(QMainWindow):
                 curr_tab.hex_widget.goto_offset(offset, length)
         except Exception:
             pass
+
+    def _on_hex_tab_switched(self, idx: int):
+        """Re-evaluates hex header search for newly active tab."""
+        if hasattr(self, 'hex_search_input') and self.hex_search_input.text().strip():
+            self._run_hex_header_search(select_first=False)
+        else:
+            self._hex_search_results = []
+            self._hex_search_current_idx = -1
+            self._hex_search_match_len = 0
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setText("")
+
+    def _on_hex_search_query_changed(self):
+        """Called when query text or search mode changes."""
+        self._hex_search_results = []
+        self._hex_search_current_idx = -1
+        self._hex_search_match_len = 0
+        if not hasattr(self, 'hex_search_input'):
+            return
+        query = self.hex_search_input.text().strip()
+        if not query:
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setText("")
+            return
+        self._run_hex_header_search(select_first=False)
+
+    def _on_hex_search_next(self):
+        """Navigate to next match or start search if not run yet."""
+        if not hasattr(self, '_hex_search_results') or not self._hex_search_results:
+            self._run_hex_header_search(select_first=True)
+            return
+        self._hex_search_current_idx = (self._hex_search_current_idx + 1) % len(self._hex_search_results)
+        self._jump_to_current_hex_search_match()
+
+    def _on_hex_search_prev(self):
+        """Navigate to previous match or start search if not run yet."""
+        if not hasattr(self, '_hex_search_results') or not self._hex_search_results:
+            self._run_hex_header_search(select_first=True)
+            return
+        self._hex_search_current_idx = (self._hex_search_current_idx - 1) % len(self._hex_search_results)
+        self._jump_to_current_hex_search_match()
+
+    def _run_hex_header_search(self, select_first: bool = True):
+        """Runs search on the active HexEditorTab document data."""
+        if not hasattr(self, 'hex_tabs') or self.hex_tabs.count() == 0:
+            return
+        curr_tab = self.hex_tabs.currentWidget()
+        if not curr_tab or not hasattr(curr_tab, 'hex_model'):
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setText("No Tab")
+            return
+
+        query = self.hex_search_input.text().strip() if hasattr(self, 'hex_search_input') else ""
+        mode = self.hex_search_type.currentText() if hasattr(self, 'hex_search_type') else "Auto"
+
+        self._hex_search_results = []
+        self._hex_search_current_idx = -1
+        self._hex_search_match_len = 0
+
+        if not query:
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setText("")
+            return
+
+        try:
+            raw_model_data = curr_tab.hex_model.get_data()
+            if hasattr(raw_model_data, 'data'):
+                raw_model_data = raw_model_data.data
+            data = bytes(raw_model_data or b"")
+        except Exception:
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setText("Data Err")
+            return
+
+        if not data:
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setText("0 found")
+            return
+
+        # Fast search helper
+        limit = 10000
+        search_mode_matched = ""
+        clean_hex = query.replace(" ", "").replace(",", "").replace("0x", "").replace("0X", "").strip()
+
+        def _scan_all(pattern: bytes) -> list:
+            if not pattern:
+                return []
+            res = []
+            off = 0
+            while len(res) < limit:
+                p = data.find(pattern, off)
+                if p == -1:
+                    break
+                res.append(p)
+                off = p + 1
+            return res
+
+        if mode == "Hex":
+            try:
+                if len(clean_hex) % 2 != 0:
+                    clean_hex = "0" + clean_hex
+                search_bytes = bytes.fromhex(clean_hex)
+                self._hex_search_match_len = len(search_bytes)
+                self._hex_search_results = _scan_all(search_bytes)
+                search_mode_matched = "Hex"
+            except ValueError:
+                if hasattr(self, 'lbl_hex_search_count'):
+                    self.lbl_hex_search_count.setText("Invalid Hex")
+                return
+        elif mode == "Text":
+            search_bytes = query.encode("utf-8", errors="ignore")
+            self._hex_search_match_len = len(search_bytes)
+            self._hex_search_results = _scan_all(search_bytes)
+            search_mode_matched = "Text"
+        else:
+            # Auto mode: Try Hex first, then Text
+            import string
+            hex_found = False
+            if clean_hex and all(c in string.hexdigits for c in clean_hex):
+                try:
+                    ch = clean_hex if len(clean_hex) % 2 == 0 else "0" + clean_hex
+                    hb = bytes.fromhex(ch)
+                    hr = _scan_all(hb)
+                    if hr:
+                        self._hex_search_results = hr
+                        self._hex_search_match_len = len(hb)
+                        hex_found = True
+                        search_mode_matched = "Hex"
+                except Exception:
+                    pass
+
+            if not hex_found:
+                tb = query.encode("utf-8", errors="ignore")
+                if tb:
+                    tr = _scan_all(tb)
+                    if tr:
+                        self._hex_search_results = tr
+                        self._hex_search_match_len = len(tb)
+                        search_mode_matched = "Text"
+                    else:
+                        self._hex_search_results = []
+                        self._hex_search_match_len = len(tb)
+
+        total = len(self._hex_search_results)
+        if total == 0:
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setStyleSheet("""
+                    QLabel {
+                        color: #f85149;
+                        background-color: #0d1117;
+                        border: 1px solid #30363d;
+                        border-radius: 4px;
+                        padding: 2px 8px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        font-family: Consolas, 'Segoe UI', monospace;
+                        min-width: 65px;
+                    }
+                """)
+                self.lbl_hex_search_count.setText("0 found")
+                self.lbl_hex_search_count.setToolTip("0 matching results found")
+        else:
+            if hasattr(self, 'lbl_hex_search_count'):
+                self.lbl_hex_search_count.setStyleSheet("""
+                    QLabel {
+                        color: #0ef6fd;
+                        background-color: #0d1117;
+                        border: 1px solid #30363d;
+                        border-radius: 4px;
+                        padding: 2px 8px;
+                        font-size: 11px;
+                        font-weight: 700;
+                        font-family: Consolas, 'Segoe UI', monospace;
+                        min-width: 65px;
+                    }
+                """)
+            if select_first:
+                self._hex_search_current_idx = 0
+                self._jump_to_current_hex_search_match()
+            else:
+                if hasattr(self, 'lbl_hex_search_count'):
+                    suffix = "+" if total >= limit else ""
+                    self.lbl_hex_search_count.setText(f"{total}{suffix} found")
+                    self.lbl_hex_search_count.setToolTip(f"{total} total results found ({search_mode_matched})")
+
+    def _jump_to_current_hex_search_match(self):
+        """Scrolls and highlights the current match in the active HexEditorTab."""
+        if not hasattr(self, '_hex_search_results') or not self._hex_search_results:
+            return
+        if self._hex_search_current_idx < 0 or self._hex_search_current_idx >= len(self._hex_search_results):
+            self._hex_search_current_idx = 0
+
+        total = len(self._hex_search_results)
+        curr_idx = self._hex_search_current_idx + 1
+        if hasattr(self, 'lbl_hex_search_count'):
+            self.lbl_hex_search_count.setText(f"{curr_idx} of {total}")
+            self.lbl_hex_search_count.setToolTip(f"Result {curr_idx} of {total} total matches")
+
+        # Ensure Hex Viewer display is active
+        self.switch_display_tab("HEX")
+
+        target_offset = self._hex_search_results[self._hex_search_current_idx]
+        curr_tab = self.hex_tabs.currentWidget() if hasattr(self, 'hex_tabs') else None
+        if curr_tab and hasattr(curr_tab, 'goto_offset'):
+            curr_tab.goto_offset(target_offset, max(1, getattr(self, '_hex_search_match_len', 1)))
 
     def show_language_dialog(self):
         dialog = LanguageDialog(self)

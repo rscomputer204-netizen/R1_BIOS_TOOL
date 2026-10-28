@@ -68,73 +68,129 @@ def increment_version(ver_str):
 # ---------------------------------------------------------------------------
 def analyze_git_changes():
     """
-    Scans the repository for all modified/untracked files and extracts
-    detailed function-level and resource-level changes.
+    Scans the repository for all modified/untracked files AND any unpushed commits
+    compared to origin/{branch}, extracting detailed function-level and resource-level changes.
     """
-    raw_status = run_cmd("git status --porcelain", check=False)
-    if not raw_status:
-        return []
+    cfg = load_config()
+    branch = cfg.get("branch", "main")
+    file_map = {}
 
-    file_reports = []
-    for raw_line in raw_status.splitlines():
-        trimmed = raw_line.strip()
-        if not trimmed:
-            continue
-        parts = trimmed.split(None, 1)
-        if len(parts) < 2:
-            continue
-        status_code = parts[0]
-        filepath = parts[1].replace('"', '')
+    def parse_py_functions(filepath, diff_text=""):
         full_path = os.path.join(BASE_DIR, filepath)
+        funcs = []
+        if not os.path.exists(full_path):
+            return funcs
 
-        change_type = "MODIFIED"
-        if "?" in status_code:
-            change_type = "NEW FILE"
-        elif "D" in status_code:
-            change_type = "DELETED"
-        elif "A" in status_code:
-            change_type = "ADDED"
+        if diff_text:
+            for d_line in diff_text.splitlines():
+                hunk_match = re.search(r'@@\s+(?:def|class)\s+([A-Za-z0-9_]+)', d_line)
+                if hunk_match:
+                    fn = hunk_match.group(1)
+                    if f"def {fn}()" not in funcs:
+                        funcs.append(f"def {fn}()")
+                added_match = re.search(r'^\+\s*(?:async\s+)?def\s+([A-Za-z0-9_]+)\s*\(', d_line)
+                if added_match:
+                    fn = added_match.group(1)
+                    tag = f"def {fn}() [NEW]"
+                    if tag not in funcs and f"def {fn}()" not in funcs:
+                        funcs.append(tag)
+        else:
+            try:
+                with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                    tree = ast.parse(f.read(), filename=filepath)
+                for node in ast.walk(tree):
+                    if isinstance(node, ast.FunctionDef):
+                        funcs.append(f"def {node.name}()")
+                    elif isinstance(node, ast.ClassDef):
+                        funcs.append(f"class {node.name}")
+            except Exception:
+                pass
+        return funcs
 
-        functions_found = []
+    # 1. Check Unpushed Commits (compared to origin/branch)
+    try:
+        unpushed_raw = run_cmd(f"git diff --name-status origin/{branch}..HEAD", check=False)
+        if unpushed_raw:
+            for line in unpushed_raw.splitlines():
+                trimmed = line.strip()
+                if not trimmed:
+                    continue
+                parts = trimmed.split(None, 1)
+                if len(parts) < 2:
+                    continue
+                sc, fp = parts[0], parts[1].replace('"', '')
 
-        # Analyze Python files for function/class modifications
-        if filepath.endswith(".py") and os.path.exists(full_path):
-            if change_type == "NEW FILE":
-                try:
-                    with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
-                        tree = ast.parse(f.read(), filename=filepath)
-                    for node in ast.walk(tree):
-                        if isinstance(node, ast.FunctionDef):
-                            functions_found.append(f"def {node.name}()")
-                        elif isinstance(node, ast.ClassDef):
-                            functions_found.append(f"class {node.name}")
-                except Exception:
-                    pass
-            elif change_type == "MODIFIED":
-                # Check git diff for touched or new functions
-                diff_out = run_cmd(f'git diff -U0 -- "{filepath}"', check=False)
-                for d_line in diff_out.splitlines():
-                    # Diff hunk function headers: @@ ... @@ def func():
-                    hunk_match = re.search(r'@@\s+(?:def|class)\s+([A-Za-z0-9_]+)', d_line)
-                    if hunk_match:
-                        fn = hunk_match.group(1)
-                        if f"def {fn}()" not in functions_found:
-                            functions_found.append(f"def {fn}()")
-                    # Direct additions: +def func_name
-                    added_match = re.search(r'^\+\s*(?:async\s+)?def\s+([A-Za-z0-9_]+)\s*\(', d_line)
-                    if added_match:
-                        fn = added_match.group(1)
-                        tag = f"def {fn}() [NEW]"
-                        if tag not in functions_found and f"def {fn}()" not in functions_found:
-                            functions_found.append(tag)
+                # Filter out transient files
+                if fp.endswith(".log") or fp.endswith(".dump") or "__pycache__" in fp or fp.startswith(".gemini"):
+                    continue
 
-        file_reports.append({
-            "status": change_type,
-            "path": filepath,
-            "functions": functions_found
-        })
+                ch_type = "MODIFIED"
+                if "A" in sc:
+                    ch_type = "NEW FILE"
+                elif "D" in sc:
+                    ch_type = "DELETED"
 
-    return file_reports
+                funcs = []
+                if fp.endswith(".py") and ch_type != "DELETED":
+                    diff_txt = run_cmd(f'git diff -U0 origin/{branch}..HEAD -- "{fp}"', check=False)
+                    funcs = parse_py_functions(fp, diff_txt)
+
+                file_map[fp] = {
+                    "status": ch_type,
+                    "path": fp,
+                    "functions": funcs,
+                    "source": "committed"
+                }
+    except Exception:
+        pass
+
+    # 2. Check Uncommitted / Working Tree changes (git status --porcelain)
+    raw_status = run_cmd("git status --porcelain", check=False)
+    if raw_status:
+        for raw_line in raw_status.splitlines():
+            trimmed = raw_line.strip()
+            if not trimmed:
+                continue
+            parts = trimmed.split(None, 1)
+            if len(parts) < 2:
+                continue
+            status_code = parts[0]
+            filepath = parts[1].replace('"', '')
+
+            # Filter out transient files
+            if filepath.endswith(".log") or filepath.endswith(".dump") or "__pycache__" in filepath or filepath.startswith(".gemini") or filepath.endswith(".tmp"):
+                continue
+
+            change_type = "MODIFIED"
+            if "?" in status_code:
+                change_type = "NEW FILE"
+            elif "D" in status_code:
+                change_type = "DELETED"
+            elif "A" in status_code:
+                change_type = "ADDED"
+
+            funcs = []
+            if filepath.endswith(".py") and change_type != "DELETED":
+                if change_type == "NEW FILE":
+                    funcs = parse_py_functions(filepath, "")
+                else:
+                    diff_out = run_cmd(f'git diff -U0 -- "{filepath}"', check=False)
+                    funcs = parse_py_functions(filepath, diff_out)
+
+            if filepath in file_map:
+                existing = file_map[filepath]
+                merged_funcs = list(dict.fromkeys(existing["functions"] + funcs))
+                file_map[filepath]["functions"] = merged_funcs
+                file_map[filepath]["status"] = change_type
+            else:
+                file_map[filepath] = {
+                    "status": change_type,
+                    "path": filepath,
+                    "functions": funcs,
+                    "source": "working_tree"
+                }
+
+    return list(file_map.values())
 
 # ---------------------------------------------------------------------------
 # Modern Cyberpunk Tkinter GUI Application
@@ -165,10 +221,21 @@ class GitPushGUI:
         self.cfg = load_config()
         self.detected_changes = []
         self.is_busy = False
+        self._last_scan_sig = ""
+        self.auto_poll_interval_ms = 3500  # Automatically scan every 3.5 seconds
 
         self.setup_ui()
         self.center_window()
-        self.log("SYSTEM READY. Click '[ 🔍 DETECT NEW UPDATE ]' to scan local code changes.")
+        self.log("SYSTEM READY. Real-Time Auto-Detection ACTIVE.")
+
+        # Bind window focus so when user returns from IDE, it scans immediately
+        self.root.bind("<FocusIn>", lambda e: self.on_window_focus())
+
+        # Trigger automatic initial detection on launch
+        self.root.after(400, self.on_detect_click)
+
+        # Start live background polling
+        self.root.after(self.auto_poll_interval_ms, self._auto_poll_loop)
 
     def center_window(self):
         self.root.update_idletasks()
@@ -177,6 +244,28 @@ class GitPushGUI:
         x = (self.root.winfo_screenwidth() // 2) - (w // 2)
         y = (self.root.winfo_screenheight() // 2) - (h // 2) - 30
         self.root.geometry(f"{w}x{h}+{x}+{y}")
+
+    def on_window_focus(self):
+        if not self.is_busy:
+            self._check_for_updates_background()
+
+    def _auto_poll_loop(self):
+        if not self.is_busy:
+            self._check_for_updates_background()
+        self.root.after(self.auto_poll_interval_ms, self._auto_poll_loop)
+
+    def _check_for_updates_background(self):
+        def worker():
+            try:
+                status_raw = run_cmd("git status --porcelain", check=False)
+                head_rev = run_cmd("git rev-parse HEAD", check=False)
+                sig = f"{status_raw}|{head_rev}"
+                if sig != getattr(self, '_last_scan_sig', None):
+                    self._last_scan_sig = sig
+                    self.root.after(0, self.on_detect_click)
+            except Exception:
+                pass
+        threading.Thread(target=worker, daemon=True).start()
 
     def setup_ui(self):
         # 1. Header Frame
@@ -197,7 +286,7 @@ class GitPushGUI:
         
         repo_name = f"{self.cfg.get('repo_owner', 'rscomputer204-netizen')}/{self.cfg.get('repo_name', 'R1_BIOS_TOOL')}"
         tk.Label(repo_badge, text=f"REPO: {repo_name}", fg=self.clr_cyan_bright, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
-        tk.Label(repo_badge, text="BRANCH: main  •  STATUS: AUTH TOKEN OK", fg=self.clr_green, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="e")
+        tk.Label(repo_badge, text="⚡ AUTO-DETECT: ACTIVE  •  STATUS: OK", fg=self.clr_green, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
 
         # 2. Main Content Container
         content = tk.Frame(self.root, bg=self.clr_bg, padx=16, pady=12)
@@ -256,10 +345,27 @@ class GitPushGUI:
         # Changelog / Commit Message
         tk.Label(left_panel, text="UPDATE DESCRIPTION / NOTE", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
         self.txt_changelog = tk.Text(left_panel, bg=self.clr_bg, fg=self.clr_text, insertbackground=self.clr_cyan,
-                                     relief="flat", font=("Segoe UI", 9), height=7,
+                                     relief="flat", font=("Segoe UI", 9), height=5,
                                      highlightthickness=1, highlightbackground=self.clr_border)
-        self.txt_changelog.pack(fill=tk.BOTH, expand=True, pady=(2, 0))
+        self.txt_changelog.pack(fill=tk.BOTH, expand=True, pady=(2, 6))
         self.txt_changelog.insert(tk.END, "Added new features, optimized performance, and fixed identified bugs.")
+
+        # GitHub Access Token Input Field & Save Button
+        tk.Label(left_panel, text="GITHUB ACCESS TOKEN", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
+        token_row = tk.Frame(left_panel, bg=self.clr_card)
+        token_row.pack(fill=tk.X, pady=(2, 0))
+
+        self.var_token = tk.StringVar(value=self.cfg.get("github_token", ""))
+        self.token_entry = tk.Entry(token_row, textvariable=self.var_token, bg=self.clr_bg, fg=self.clr_text,
+                                    insertbackground=self.clr_cyan, relief="flat", font=("Consolas", 8), show="•",
+                                    highlightthickness=1, highlightbackground=self.clr_border)
+        self.token_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
+
+        btn_save_tok = tk.Button(token_row, text="💾 Save", bg="#1e293b", fg=self.clr_cyan,
+                                 font=("Segoe UI", 8, "bold"), relief="flat", cursor="hand2",
+                                 activebackground="#334155", activeforeground=self.clr_cyan_bright,
+                                 command=self.save_github_token)
+        btn_save_tok.pack(side=tk.RIGHT, padx=(6, 0))
 
         # --- RIGHT PANEL: Detected Changes & Function Tree ---
         right_panel = tk.Frame(split_frame, bg=self.clr_card, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
@@ -453,22 +559,15 @@ class GitPushGUI:
                 os.makedirs(payload_content, exist_ok=True)
 
                 dist_source = os.path.join(BASE_DIR, "dist", "R1_BIOS_TOOL")
-                forbidden = {"updater.exe", "drivers", "logs", "backup", "update_cache", "tools", "temp_update_payload"}
-
                 if os.path.exists(dist_source):
-                    for root, dirs, files in os.walk(dist_source):
-                        dirs[:] = [d for d in dirs if d not in forbidden and d != "__pycache__"]
-                        for f in files:
-                            if f in forbidden or f.endswith(".log") or f.endswith(".dump"):
-                                continue
-                            abs_p = os.path.join(root, f)
-                            rel_p = os.path.relpath(abs_p, dist_source)
-                            dest_p = os.path.join(payload_content, rel_p)
-                            os.makedirs(os.path.dirname(dest_p), exist_ok=True)
+                    for f in os.listdir(dist_source):
+                        if f.endswith(".exe") and not f.startswith("updater"):
+                            abs_p = os.path.join(dist_source, f)
+                            dest_p = os.path.join(payload_content, f)
                             shutil.copy2(abs_p, dest_p)
 
                 # Copy root python application files & assets
-                core_dirs = ["translations", "rg_engine", "utils", "scripts", "image"]
+                core_dirs = ["translations", "rg_engine", "utils", "scripts", "image", "assets", "brands", "config", "BIOSUtilities"]
                 for cdir in core_dirs:
                     src_dir = os.path.join(BASE_DIR, cdir)
                     if os.path.exists(src_dir):
@@ -531,12 +630,35 @@ class GitPushGUI:
                 # 4. Git Add & Commit
                 self.log("Committing changes locally...")
                 run_cmd("git add .")
-                run_cmd(f'git commit -m "{changelog} (v{target_ver})"')
+                staged = run_cmd("git diff --cached --name-only", check=False)
+                if staged:
+                    run_cmd(f'git commit -m "{changelog} (v{target_ver})"')
+                else:
+                    self.log("All files already committed. Proceeding to push all commits...")
 
-                # 5. Push to GitHub
+                # 5. Push to GitHub with Real-Time Streaming
                 self.log(f"Pushing to remote origin [{branch}]...")
-                auth_url = f"https://{token}@github.com/{repo_owner}/{repo_name}.git"
-                run_cmd(f'git push "{auth_url}" {branch}')
+                auth_url = f"https://x-access-token:{token}@github.com/{repo_owner}/{repo_name}.git"
+
+                push_cmd = f'git -c credential.helper= push --progress "{auth_url}" {branch}'
+                proc = subprocess.Popen(
+                    push_cmd, shell=True, text=True, encoding="utf-8", errors="replace",
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=BASE_DIR
+                )
+
+                output_lines = []
+                for line in proc.stdout:
+                    l = line.strip()
+                    if l:
+                        output_lines.append(l)
+                        self.log(l)
+                proc.wait()
+
+                if proc.returncode != 0:
+                    err_summary = "\n".join(output_lines[-3:]) if output_lines else f"Return code {proc.returncode}"
+                    if "Authentication failed" in err_summary or "Invalid username or token" in err_summary or "could not read Password" in err_summary:
+                        raise RuntimeError("GitHub Authentication Failed!\nYour Personal Access Token in config/github_token.json is expired or invalid.\nPlease enter a valid GitHub Personal Access Token (classic) with 'repo' scope and click Save.")
+                    raise RuntimeError(f"Git push failed:\n{err_summary}")
 
                 self.root.after(0, lambda: self.render_push_success(target_ver))
             except Exception as e:
@@ -545,6 +667,18 @@ class GitPushGUI:
                 self.is_busy = False
 
         threading.Thread(target=push_worker, daemon=True).start()
+
+    def save_github_token(self):
+        new_tok = self.var_token.get().strip() if hasattr(self, 'var_token') else ""
+        if not new_tok:
+            messagebox.showwarning("TOKEN REQUIRED", "Please enter a valid GitHub Personal Access Token.")
+            return
+        self.cfg["github_token"] = new_tok
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(self.cfg, f, indent=4)
+        self.log("GitHub Token updated & saved successfully in config/github_token.json.", "ok")
+        messagebox.showinfo("TOKEN SAVED", "GitHub Personal Access Token saved successfully!")
 
     def render_push_success(self, version):
         self.btn_detect.config(state=tk.NORMAL)

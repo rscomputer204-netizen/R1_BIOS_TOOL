@@ -1,6 +1,6 @@
 {
-    "version": "R1.1.0.0",
+    "version": "R1.1.0.3",
     "url": "https://raw.githubusercontent.com/rscomputer204-netizen/R1_BIOS_TOOL/main/update.zip",
-    "changelog": "R1 BIOS TOOL with surgical Dell 8FC8 unlock & DMI extraction",
-    "date": "2026-10-27 12:00:00"
+    "changelog": "Added new features, optimized performance, and fixed identified bugs.",
+    "date": "2026-10-28 10:28:47"
 }
