@@ -8,6 +8,8 @@ Provides interactive Tree View with Extract Body, Extract As Is, and Hex Viewer 
 import os
 import sys
 import struct
+import uuid
+import lzma
 from pathlib import Path
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QPoint
 from PySide6.QtWidgets import (
@@ -22,6 +24,17 @@ from PySide6.QtGui import QIcon, QFont, QColor, QCursor, QAction
 # ─────────────────────────────────────────────────────────────────────────────
 INTEL_FD_SIG = b"\x5A\xA5\xF0\x0F"
 UEFI_FV_SIG = b"_FVH"
+
+# Known NVRAM VSS2 and FTW GUIDs (little-endian bytes)
+VSS2_STORE_GUIDS = (
+    b"\x78\x2c\xf3\xaa\x7b\x94\x9a\x43\xa1\x80\x2e\x14\x4e\xc3\x77\x92", # AAF32C78-947B-439A-A180-2E144EC37792
+    b"\x17\x36\xcf\xdd\x75\x32\x64\x41\x98\xb6\xfe\x85\x70\x7f\xfe\x7d", # DDCF3617-3275-4164-98B6-FE85707FFE7D
+    b"\x16\x36\xcf\xdd\x75\x32\x64\x41\x98\xb6\xfe\x85\x70\x7f\xfe\x7d", # DDCF3616-3275-4164-98B6-FE85707FFE7D
+)
+FTW_STORE_GUIDS = (
+    b"\x2b\x29\x58\x9e\x68\x7c\x7d\x49\x0a\xce\x65\x00\xfd\x9f\x1b\x95", # 9E58292B-7C68-497D-0ACE-6500FD9F1B95
+    b"\x2b\x29\x58\x9e\x68\x7c\x7d\x49\xa0\xce\x65\x00\xfd\x9f\x1b\x95", # 9E58292B-7C68-497D-A0CE-6500FD9F1B95
+)
 
 FFS_FILE_TYPES = {
     0x01: "Raw",
@@ -495,38 +508,109 @@ class StructureParserWorker(QThread):
             })
 
     def parse_nvram_stores(self, region_data: bytes, v_start: int, v_len: int, hdr_len: int, fv_abs: int, fv_node: dict):
-        """Parses VSS/VSS2, FTW, and Free space stores inside an NVRAM volume."""
+        """Parses VSS/VSS2 stores with inner NVRAM variables, FTW store, and Free space."""
         nv_data = region_data[v_start + hdr_len : v_start + v_len]
 
-        # Check VSS / VSS2
-        for sig in (b"$VSS2", b"$VSS", b"NVAR"):
-            pos = nv_data.find(sig)
+        vss_found = False
+        # 1. Search for VSS2 Store by GUID
+        for g in VSS2_STORE_GUIDS:
+            pos = nv_data.find(g)
             if pos != -1:
-                store_name = "VSS2 store" if sig == b"$VSS2" else "VSS store" if sig == b"$VSS" else "NVAR store"
-                fv_node["children"].append({
-                    "name": store_name, "action": "", "type": store_name, "subtype": "",
-                    "text": "", "offset": fv_abs + hdr_len + pos, "size": 0x10000,
-                    "body_offset": fv_abs + hdr_len + pos, "body_size": 0x10000, "children": []
-                })
+                vss_abs = fv_abs + hdr_len + pos
+                v_sz = struct.unpack_from("<I", nv_data, pos + 16)[0] if pos + 20 <= len(nv_data) else 0x10000
+                v_sz = min(v_sz, len(nv_data) - pos)
+                vss_node = {
+                    "name": "VSS2 store", "action": "", "type": "VSS2 store", "subtype": "",
+                    "text": f"Size: {v_sz:,} bytes", "offset": vss_abs, "size": v_sz,
+                    "body_offset": vss_abs + 28, "body_size": max(0, v_sz - 28), "children": []
+                }
+
+                # Parse inner variables inside VSS2 store
+                store_bytes = nv_data[pos : pos + v_sz]
+                curr_var = 28
+                while curr_var + 64 <= len(store_bytes):
+                    start_id = struct.unpack_from("<H", store_bytes, curr_var)[0]
+                    if start_id != 0x55AA:
+                        if store_bytes[curr_var : curr_var + 8] == b"\xFF" * 8:
+                            break
+                        curr_var = (curr_var + 4) & ~3
+                        continue
+
+                    name_sz = struct.unpack_from("<I", store_bytes, curr_var + 36)[0]
+                    data_sz = struct.unpack_from("<I", store_bytes, curr_var + 40)[0]
+                    if 2 <= name_sz <= 512 and data_sz <= len(store_bytes):
+                        try:
+                            v_name = store_bytes[curr_var + 60 : curr_var + 60 + name_sz].decode("utf-16le", errors="ignore").rstrip("\x00")
+                            if v_name.isprintable() and len(v_name) > 0:
+                                tot_len = 60 + name_sz + data_sz
+                                vss_node["children"].append({
+                                    "name": v_name, "action": "", "type": "Variable", "subtype": "VSS2",
+                                    "text": f"Size: {data_sz:,} bytes", "offset": vss_abs + curr_var, "size": tot_len,
+                                    "body_offset": vss_abs + curr_var + 60 + name_sz, "body_size": data_sz, "children": []
+                                })
+                                curr_var = (curr_var + tot_len + 3) & ~3
+                                continue
+                        except Exception:
+                            pass
+                    curr_var = (curr_var + 4) & ~3
+
+                fv_node["children"].append(vss_node)
+                vss_found = True
                 break
 
-        # Check FTW store
-        ftw_pos = nv_data.find(b"$FTW")
-        if ftw_pos == -1:
-            ftw_pos = nv_data.find(b"\x46\x54\x57\x20")
-        if ftw_pos != -1:
-            fv_node["children"].append({
-                "name": "FTW store", "action": "", "type": "FTW store", "subtype": "",
-                "text": "", "offset": fv_abs + hdr_len + ftw_pos, "size": 0x1000,
-                "body_offset": fv_abs + hdr_len + ftw_pos, "body_size": 0x1000, "children": []
-            })
+        if not vss_found:
+            for sig in (b"$VSS2", b"$VSS", b"NVAR"):
+                pos = nv_data.find(sig)
+                if pos != -1:
+                    store_name = "VSS2 store" if sig == b"$VSS2" else "VSS store" if sig == b"$VSS" else "NVAR store"
+                    fv_node["children"].append({
+                        "name": store_name, "action": "", "type": store_name, "subtype": "",
+                        "text": "", "offset": fv_abs + hdr_len + pos, "size": 0x10000,
+                        "body_offset": fv_abs + hdr_len + pos, "body_size": 0x10000, "children": []
+                    })
+                    break
 
-        # Add Free space
-        fv_node["children"].append({
-            "name": "Free space", "action": "", "type": "Free space", "subtype": "",
-            "text": "", "offset": fv_abs + v_len - 0x1000, "size": 0x1000,
-            "body_offset": fv_abs + v_len - 0x1000, "body_size": 0x1000, "children": []
-        })
+        # 2. Search for FTW store by GUID
+        ftw_found = False
+        for g in FTW_STORE_GUIDS:
+            ftw_pos = nv_data.find(g)
+            if ftw_pos != -1:
+                ftw_abs = fv_abs + hdr_len + ftw_pos
+                fv_node["children"].append({
+                    "name": "FTW store", "action": "", "type": "FTW store", "subtype": "",
+                    "text": "", "offset": ftw_abs, "size": 0x2000,
+                    "body_offset": ftw_abs, "body_size": 0x2000, "children": []
+                })
+                ftw_found = True
+                break
+
+        if not ftw_found:
+            ftw_pos = nv_data.find(b"$FTW")
+            if ftw_pos == -1:
+                ftw_pos = nv_data.find(b"\x46\x54\x57\x20")
+            if ftw_pos != -1:
+                fv_node["children"].append({
+                    "name": "FTW store", "action": "", "type": "FTW store", "subtype": "",
+                    "text": "", "offset": fv_abs + hdr_len + ftw_pos, "size": 0x1000,
+                    "body_offset": fv_abs + hdr_len + ftw_pos, "body_size": 0x1000, "children": []
+                })
+
+        # 3. Add Free space
+        if fv_node["children"]:
+            last_used = max(c["offset"] + c["size"] - fv_abs for c in fv_node["children"])
+            if last_used < v_len:
+                free_len = v_len - last_used
+                fv_node["children"].append({
+                    "name": "Free space", "action": "", "type": "Free space", "subtype": "",
+                    "text": f"Size: {free_len:,} bytes", "offset": fv_abs + last_used, "size": free_len,
+                    "body_offset": fv_abs + last_used, "body_size": free_len, "children": []
+                })
+        else:
+            fv_node["children"].append({
+                "name": "Free space", "action": "", "type": "Free space", "subtype": "",
+                "text": f"Size: {v_len:,} bytes", "offset": fv_abs + hdr_len, "size": v_len - hdr_len,
+                "body_offset": fv_abs + hdr_len, "body_size": v_len - hdr_len, "children": []
+            })
 
     def parse_ffs_files(self, region_data: bytes, fv_start: int, fv_len: int, hdr_len: int, fv_abs: int, fv_node: dict, ext_hdr_off: int = 0):
         """Iterates through FFS files inside a Firmware Volume."""
@@ -601,7 +685,7 @@ class StructureParserWorker(QThread):
             })
 
     def parse_sections(self, region_data: bytes, s_start: int, s_total: int, sec_abs: int, file_node: dict) -> str:
-        """Parses EFI sections inside an FFS file and extracts the UI Name if present."""
+        """Parses EFI sections inside an FFS file, decompresses inner volume images, and extracts the UI Name."""
         s_pos = s_start
         s_end = s_start + s_total
         found_ui_name = ""
@@ -631,13 +715,48 @@ class StructureParserWorker(QThread):
                 "action": "",
                 "type": "Section",
                 "subtype": sec_type_name,
-                "text": sec_text or f"Size: {s_size} B",
+                "text": sec_text or f"Size: {s_size:,} bytes",
                 "offset": current_abs,
                 "size": s_size,
                 "body_offset": current_abs + 4,
                 "body_size": s_size - 4,
                 "children": []
             }
+
+            # Decompress nested volume images inside GUID_DEFINED or COMPRESSION sections
+            if s_type == 0x02 and s_size > 24: # EFI_SECTION_GUID_DEFINED
+                data_off = struct.unpack_from("<H", region_data, s_pos + 20)[0]
+                if data_off < s_size:
+                    comp_data = region_data[s_pos + data_off : s_pos + s_size]
+                    decomp = None
+                    try:
+                        decomp = lzma.decompress(comp_data)
+                    except Exception:
+                        for skip in (4, 8, 12):
+                            if skip < len(comp_data):
+                                try:
+                                    decomp = lzma.decompress(comp_data[skip:])
+                                    break
+                                except Exception:
+                                    pass
+                    if decomp and b"_FVH" in decomp:
+                        self.parse_uefi_volumes(decomp, 0, len(decomp), sec_node)
+
+            elif s_type == 0x01 and s_size > 8: # EFI_SECTION_COMPRESSION
+                comp_data = region_data[s_pos + 8 : s_pos + s_size]
+                decomp = None
+                try:
+                    decomp = lzma.decompress(comp_data)
+                except Exception:
+                    pass
+                if decomp and b"_FVH" in decomp:
+                    self.parse_uefi_volumes(decomp, 0, len(decomp), sec_node)
+
+            elif s_type == 0x17 and s_size > 4: # EFI_SECTION_FIRMWARE_VOLUME_IMAGE
+                fv_img_data = region_data[s_pos + 4 : s_pos + s_size]
+                if b"_FVH" in fv_img_data:
+                    self.parse_uefi_volumes(fv_img_data, 0, len(fv_img_data), sec_node)
+
             file_node["children"].append(sec_node)
             # Sections are 4-byte aligned
             s_pos = (s_pos + s_size + 3) & ~3
