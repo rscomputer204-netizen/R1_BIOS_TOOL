@@ -672,9 +672,17 @@ class BodyViewerWidget(QWidget):
         self.tree.itemSelectionChanged.connect(self.on_item_selected)
         self.tree.itemDoubleClicked.connect(self.on_item_double_clicked)
 
-        # Modern Dark Cyberpunk QTreeWidget Stylesheet
-        self.tree.setStyleSheet("""
-            QTreeWidget {
+        # Resolve White Tree Arrow indicators
+        from path_utils import get_app_root
+        assets_dir = (Path(get_app_root()) / "assets").as_posix()
+        arr_closed = f"{assets_dir}/tree_arrow_closed.svg"
+        arr_open = f"{assets_dir}/tree_arrow_open.svg"
+        arr_closed_hover = f"{assets_dir}/tree_arrow_closed_hover.svg"
+        arr_open_hover = f"{assets_dir}/tree_arrow_open_hover.svg"
+
+        # Modern Dark Cyberpunk QTreeWidget Stylesheet with Glowing White Expanders
+        self.tree.setStyleSheet(f"""
+            QTreeWidget {{
                 background-color: #0b0d13;
                 color: #cbd5e1;
                 border: 1px solid #1a202c;
@@ -682,22 +690,22 @@ class BodyViewerWidget(QWidget):
                 font-family: 'Segoe UI', Consolas, monospace;
                 font-size: 11px;
                 padding: 4px;
-            }
-            QTreeWidget::item {
+            }}
+            QTreeWidget::item {{
                 height: 24px;
                 padding: 2px 4px;
                 border-radius: 3px;
-            }
-            QTreeWidget::item:hover {
+            }}
+            QTreeWidget::item:hover {{
                 background-color: #1a2230;
                 color: #ffffff;
-            }
-            QTreeWidget::item:selected {
+            }}
+            QTreeWidget::item:selected {{
                 background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #1a3a47, stop:1 #132733);
                 color: #0ef6fd;
                 border-left: 2px solid #0ef6fd;
-            }
-            QHeaderView::section {
+            }}
+            QHeaderView::section {{
                 background-color: #131720;
                 color: #94a3b8;
                 padding: 5px 8px;
@@ -705,25 +713,41 @@ class BodyViewerWidget(QWidget):
                 font-size: 11px;
                 border: 1px solid #1e2633;
                 border-bottom: 2px solid #2d3748;
-            }
+            }}
+            /* Crisp White Tree Branch Expander Arrows */
             QTreeWidget::branch:has-children:!has-siblings:closed,
-            QTreeWidget::branch:closed:has-children:has-siblings {
+            QTreeWidget::branch:closed:has-children:has-siblings {{
                 border-image: none;
-                image: none;
-            }
-            QScrollBar:vertical {
+                image: url("{arr_closed}");
+            }}
+            QTreeWidget::branch:open:has-children:!has-siblings,
+            QTreeWidget::branch:open:has-children:has-siblings {{
+                border-image: none;
+                image: url("{arr_open}");
+            }}
+            QTreeWidget::branch:has-children:!has-siblings:closed:hover,
+            QTreeWidget::branch:closed:has-children:has-siblings:hover {{
+                border-image: none;
+                image: url("{arr_closed_hover}");
+            }}
+            QTreeWidget::branch:open:has-children:!has-siblings:hover,
+            QTreeWidget::branch:open:has-children:has-siblings:hover {{
+                border-image: none;
+                image: url("{arr_open_hover}");
+            }}
+            QScrollBar:vertical {{
                 background: #0b0d13;
                 width: 10px;
                 margin: 0px;
-            }
-            QScrollBar::handle:vertical {
+            }}
+            QScrollBar::handle:vertical {{
                 background: #232c3d;
                 border-radius: 5px;
                 min-height: 20px;
-            }
-            QScrollBar::handle:vertical:hover {
+            }}
+            QScrollBar::handle:vertical:hover {{
                 background: #0ef6fd;
-            }
+            }}
         """)
 
         # Set Column Resizing
