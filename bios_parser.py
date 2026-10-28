@@ -91,29 +91,43 @@ def find_flash_descriptor(data, terminal_callback=None):
 import hashlib
 
 def get_region_color(rn_lower):
-    """Dynamically assigns or generates a color for a given region name."""
+    """Dynamically assigns a unique, distinct color for each SPI region."""
     if "descriptor" in rn_lower:
-        return "#00FF00"
-    elif "me/csme" in rn_lower or "me" in rn_lower or "csme" in rn_lower:
-        return "#FF0055"
+        return "#4ade80"   # Light Emerald Green
+    elif "me/csme" in rn_lower or "csme" in rn_lower or rn_lower == "me":
+        return "#ff5252"   # Bright Coral Red
+    elif "bios2" in rn_lower:
+        return "#00bcd4"   # Darker Cyan
     elif "bios" in rn_lower:
-        return "#00FFFF"
-    elif "gbe2" in rn_lower:
-        return "#FFD700"
-    elif "gbe" in rn_lower:
-        return "#FFFF00"
-    elif "platform data" in rn_lower:
-        return "#FFA500"
-    elif "microcode" in rn_lower:
-        return "#8A2BE2"
+        return "#00e5ff"   # Electric Cyan
     elif "ec" in rn_lower:
-        return "#00FA9A"
+        return "#c084fc"   # Vibrant Purple / Violet (distinct from GbE and Green!)
+    elif "gbe2" in rn_lower:
+        return "#fde047"   # Bright Lemon Yellow
+    elif "gbe" in rn_lower:
+        return "#fbbf24"   # Amber Gold
+    elif "platform data" in rn_lower or "platform_data" in rn_lower:
+        return "#fb923c"   # Tangerine Orange
+    elif "microcode" in rn_lower:
+        return "#818cf8"   # Indigo
+    elif "devexp" in rn_lower:
+        return "#f472b6"   # Electric Pink
+    elif "pmc" in rn_lower:
+        return "#a3e635"   # Lime
+    elif "pchc" in rn_lower:
+        return "#34d399"   # Mint
+    elif "phy" in rn_lower:
+        return "#60a5fa"   # Sky Blue
+    elif "ptt" in rn_lower:
+        return "#ff7043"   # Deep Orange
+    elif "ie" in rn_lower:
+        return "#d946ef"   # Orchid
     else:
         hash_val = int(hashlib.md5(rn_lower.encode()).hexdigest(), 16)
-        r = (hash_val & 0xFF) % 150 + 105
-        g = ((hash_val >> 8) & 0xFF) % 150 + 105
-        b = ((hash_val >> 16) & 0xFF) % 150 + 105
-        return f"#{r:02X}{g:02X}{b:02X}"
+        palette = ["#f43f5e", "#ec4899", "#d946ef", "#a855f7", "#8b5cf6", 
+                   "#6366f1", "#3b82f6", "#0ea5e9", "#06b6d4", "#14b8a6", 
+                   "#10b981", "#22c55e", "#84cc16", "#eab308", "#f97316"]
+        return palette[hash_val % len(palette)]
 
 
 def parse_spi_regions(data, signature_offset, terminal_callback=None):

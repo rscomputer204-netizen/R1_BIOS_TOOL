@@ -1053,11 +1053,8 @@ class BodyViewerWidget(QWidget):
         root_item = self._create_tree_item(tree_data, total_items)
         self.tree.addTopLevelItem(root_item)
         root_item.setExpanded(True)
-
-        # Expand first 2 levels for immediate preview
-        for i in range(root_item.childCount()):
-            child = root_item.child(i)
-            child.setExpanded(True)
+        # Keep region children collapsed by default so the tree is clean and organized,
+        # exactly like UEFITool. The user can expand BIOS/ME regions with the arrow when desired.
 
         self.lbl_selected_info.setText(f"Structure ready: {os.path.basename(self.file_path)}")
         self.lbl_tree_stats.setText(f"Nodes: {total_items[0]:,} items")
@@ -1082,14 +1079,33 @@ class BodyViewerWidget(QWidget):
             item.setForeground(0, QColor("#0ef6fd"))
             item.setFont(0, QFont("Segoe UI", 10, QFont.Bold))
         elif node_type == "Region":
-            if subtype == "BIOS":
-                item.setForeground(0, QColor("#4cd3e3"))
-            elif subtype == "ME":
-                item.setForeground(0, QColor("#ff5252"))
-            elif subtype == "Descriptor":
-                item.setForeground(0, QColor("#4ade80"))
+            sub_lower = subtype.lower()
+            if "descriptor" in sub_lower:
+                item.setForeground(0, QColor("#4ade80"))  # Emerald Green
+            elif "me" in sub_lower:
+                item.setForeground(0, QColor("#ff5252"))  # Coral Red
+            elif "bios" in sub_lower:
+                item.setForeground(0, QColor("#00e5ff"))  # Electric Cyan
+            elif "ec" in sub_lower:
+                item.setForeground(0, QColor("#c084fc"))  # Purple / Violet (distinct from GbE!)
+            elif "gbe" in sub_lower:
+                item.setForeground(0, QColor("#fbbf24"))  # Amber / Gold
+            elif "platform" in sub_lower:
+                item.setForeground(0, QColor("#fb923c"))  # Tangerine Orange
+            elif "microcode" in sub_lower:
+                item.setForeground(0, QColor("#818cf8"))  # Indigo
+            elif "devexp" in sub_lower:
+                item.setForeground(0, QColor("#f472b6"))  # Pink
+            elif "pmc" in sub_lower:
+                item.setForeground(0, QColor("#a3e635"))  # Lime
+            elif "pchc" in sub_lower:
+                item.setForeground(0, QColor("#34d399"))  # Mint
+            elif "phy" in sub_lower:
+                item.setForeground(0, QColor("#60a5fa"))  # Sky Blue
+            elif "ptt" in sub_lower:
+                item.setForeground(0, QColor("#ff7043"))  # Deep Orange
             else:
-                item.setForeground(0, QColor("#fbbf24"))
+                item.setForeground(0, QColor("#e2e8f0"))
             item.setFont(0, QFont("Segoe UI", 9, QFont.Bold))
         elif node_type == "Padding":
             item.setForeground(0, QColor("#64748b"))
