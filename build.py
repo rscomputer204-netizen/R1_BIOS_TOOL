@@ -56,7 +56,7 @@ print(f"[BUILD] PyInstaller: {_PYTHON_EXE} -m PyInstaller")
 
 APP_NAME        = "R1_BIOS_TOOL"
 MAIN_SCRIPT     = "main.py"
-ICON_PATH       = os.path.join("assets", "icon.ico")   # Optional; skipped if missing
+ICON_PATH       = os.path.join(_app_root, "assets", "icon.ico")
 
 # Folders to bundle inside the compiled app alongside the exe
 BUNDLE_DATA_DIRS = [
@@ -219,8 +219,6 @@ for src, dest in BUNDLE_DATA_DIRS:
 if os.path.exists(ICON_PATH):
     main_cmd += ["--icon", ICON_PATH]
 
-main_cmd.append(MAIN_SCRIPT)
-
 # ── BIOSUTILITIES HIDDEN IMPORTS (critical for advanced_extractor.py) ──
 BIOSUTILITIES_HIDDEN_IMPORTS = [
     "biosutilities",
@@ -309,6 +307,8 @@ def get_all_modules(root_dir='.'):
 # Add all dynamically found modules as hidden imports
 for mod_name in get_all_modules():
     main_cmd += ["--hidden-import", mod_name]
+
+main_cmd.append(MAIN_SCRIPT)
 
 run(main_cmd)
 

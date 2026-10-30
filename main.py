@@ -5257,10 +5257,10 @@ class BiosServiceTool(QMainWindow):
         self.btn_password_remove.clicked.connect(self.open_password_remove_dialog)
         self.btn_password_remove.setStyleSheet(cyber_btn_style)
 
-        # Grouped Patches
-        self.btn_apply_patches = QPushButton("APPLY PATCHES")
-        self.btn_apply_patches.setEnabled(False)
-        self.btn_apply_patches.clicked.connect(self.show_patches_menu)
+        # BIOS Virtual Test (Replaces Apply Patches)
+        self.btn_apply_patches = QPushButton("BIOS V TEST")
+        self.btn_apply_patches.setEnabled(True)
+        self.btn_apply_patches.clicked.connect(self.open_bios_v_test)
         self.btn_apply_patches.setStyleSheet(cyber_btn_style)
 
         # Final output
@@ -5888,7 +5888,7 @@ class BiosServiceTool(QMainWindow):
         self.btn_smart_me_fix.setText(t("btn_smart_me_fix"))
         self.btn_dmi_migrate.setText(t("btn_bios_rg_fix"))
         self.btn_extract_dmi.setText(t("btn_extract_dmi"))
-        self.btn_apply_patches.setText(t("btn_apply_patches"))
+        self.btn_apply_patches.setText("BIOS V TEST")
         self.btn_save_fix.setText(t("btn_save_fix"))
         self.btn_advanced_extract.setText(t("btn_manual_extract"))
         self.btn_settings.setText(t("btn_settings"))
@@ -6322,7 +6322,7 @@ class BiosServiceTool(QMainWindow):
         if hasattr(self, 'btn_extract_dmi'):
             self.btn_extract_dmi.setEnabled(has_file)
         if hasattr(self, 'btn_apply_patches'):
-            self.btn_apply_patches.setEnabled(has_file)
+            self.btn_apply_patches.setEnabled(True)
         if hasattr(self, 'btn_save_fix'):
             self.btn_save_fix.setEnabled(has_file)
         if hasattr(self, 'btn_save'):
@@ -6403,6 +6403,7 @@ class BiosServiceTool(QMainWindow):
 
             # Reload hex view with the fixed file
             self.current_bios_file = repaired_path
+            self.last_repaired_file = repaired_path
             self.log_to_terminal("[INFO] Reloading hex view with repaired data...")
             try:
                 with open(repaired_path, "rb") as f:
@@ -6572,19 +6573,35 @@ class BiosServiceTool(QMainWindow):
                 
         threading.Thread(target=_run_fix, daemon=True).start()
 
-    def show_patches_menu(self):
-        from PySide6.QtWidgets import QMenu
-        menu = QMenu(self)
-        menu.setStyleSheet("QMenu { background-color: #171a1d; color: #ffffff; border: 1px solid #3c444d; border-radius: 6px; padding: 4px; } QMenu::item { padding: 6px 20px; font-family: 'Segoe UI', sans-serif; } QMenu::item:selected { background-color: #3598a6; color: #ffffff; border-radius: 4px; }")
-        
-        unlock_action = menu.addAction("🔓 UNLOCK DATA REGIONS")
-        unlock_action.triggered.connect(self.unlock_bios)
-        
-        password_action = menu.addAction("🔑 REMOVE PASSWORD")
-        password_action.triggered.connect(self.remove_password)
-        
-        # Position menu above or at the button
-        menu.exec(self.btn_apply_patches.mapToGlobal(self.btn_apply_patches.rect().bottomLeft()))
+    def open_bios_v_test(self):
+        """
+        Opens the Virtual BIOS TestBench popup window.
+        Automatically loads the active repaired BIOS (or current loaded BIOS).
+        User can also load and test any other BIOS file independently.
+        """
+        try:
+            from virtual_bios_testbench import VirtualBiosTestBench
+            if not hasattr(self, 'v_testbench_win') or self.v_testbench_win is None:
+                self.v_testbench_win = VirtualBiosTestBench()
+            
+            # Determine target file to auto-load: prioritize repaired file, then current file
+            target_file = None
+            if hasattr(self, 'last_repaired_file') and self.last_repaired_file and os.path.exists(self.last_repaired_file):
+                target_file = self.last_repaired_file
+            elif hasattr(self, 'current_bios_file') and self.current_bios_file and os.path.exists(self.current_bios_file):
+                target_file = self.current_bios_file
+
+            if target_file:
+                self.v_testbench_win.load_main_file(target_file, is_single=True)
+                self.log_to_terminal(f"[ACTION] BIOS V TEST opened with auto-loaded firmware: {os.path.basename(target_file)}")
+            else:
+                self.log_to_terminal("[ACTION] BIOS V TEST opened. Please select or drop a firmware image.")
+
+            self.v_testbench_win.show()
+            self.v_testbench_win.raise_()
+            self.v_testbench_win.activateWindow()
+        except Exception as e:
+            self.log_to_terminal(f"[ERROR] Failed to launch BIOS V TEST: {e}")
 
     def save_and_fix_handler(self):
         self.log_to_terminal("[ACTION] SAVE && FIX triggered. Recalculating Checksums...")
@@ -8518,6 +8535,10 @@ class BiosServiceTool(QMainWindow):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         
+        btn_inject = QPushButton("⚡ Direct Hex Injection (Cut && Paste)")
+        btn_inject.setCursor(Qt.PointingHandCursor)
+        btn_inject.setStyleSheet("QPushButton { background-color: #0284c7; color: #ffffff; border: 1px solid #38bdf8; font-size: 14px; font-weight: bold; padding: 12px; } QPushButton:hover { background-color: #0369a1; }")
+        
         btn_retry = QPushButton("Retry")
         btn_retry.setCursor(Qt.PointingHandCursor)
         btn_retry.setStyleSheet(f"QPushButton {{ background-color: {btn_bg}; color: {text_color}; border: 1px solid #f59e0b; font-size: 14px; font-weight: bold; padding: 12px; }} QPushButton:hover {{ background-color: #f59e0b; color: #fff; }}")
@@ -8530,6 +8551,7 @@ class BiosServiceTool(QMainWindow):
         btn_abort.setCursor(Qt.PointingHandCursor)
         btn_abort.setStyleSheet(f"QPushButton {{ background-color: {border_color}; color: #ffffff; border: 1px solid {border_color}; font-size: 14px; font-weight: bold; padding: 12px; }} QPushButton:hover {{ background-color: #dc2626; }}")
         
+        btn_layout.addWidget(btn_inject)
         btn_layout.addWidget(btn_retry)
         btn_layout.addWidget(btn_ignore)
         btn_layout.addWidget(btn_abort)
@@ -8579,6 +8601,7 @@ class BiosServiceTool(QMainWindow):
             drop_zone = ExternalFitDropZone(dialog, self)
             layout.addWidget(drop_zone)
         
+        btn_inject.clicked.connect(lambda: dialog.done(4))
         btn_retry.clicked.connect(lambda: dialog.done(1))
         btn_ignore.clicked.connect(lambda: dialog.done(2))
         btn_abort.clicked.connect(lambda: dialog.done(0))
@@ -8591,6 +8614,8 @@ class BiosServiceTool(QMainWindow):
             self.last_error_choice = "ignore"
         elif result == 3:
             self.last_error_choice = "retry_with_external"
+        elif result == 4:
+            self.last_error_choice = "direct_injection"
         else:
             self.last_error_choice = "abort"
 
