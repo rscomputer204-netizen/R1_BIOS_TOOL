@@ -7,6 +7,30 @@ import threading
 from pathlib import Path
 from path_utils import get_app_root, get_python_cmd, get_subprocess_env
 
+# ─────────────────────────────────────────────────────────────────────────────
+# R1 CSME ANALYZER ENGINE — Import (Native Support for CSME v11 to v21+)
+# ─────────────────────────────────────────────────────────────────────────────
+_r1_engine_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "R1_CSME_Analyzer")
+if _r1_engine_dir not in sys.path:
+    sys.path.insert(0, _r1_engine_dir)
+
+try:
+    from r1_csme_parser import (
+        R1CSMEAnalyzer,
+        render_report,
+        format_default_summary,
+        format_spi_regions,
+        format_fpt_table,
+        format_microcode_audit,
+        format_sub_firmwares,
+        format_warnings,
+        render_boxed_csme_report,
+        render_sub_fw_cards,
+    )
+    R1_ENGINE_AVAILABLE = True
+except ImportError:
+    R1_ENGINE_AVAILABLE = False
+
 # Constants
 INTEL_FD_SIGNATURE = b'\x5a\xa5\xf0\x0f'
 
@@ -74,14 +98,30 @@ def detect_spi_flash(data, terminal_callback=None):
 
 
 def find_flash_descriptor(data, terminal_callback=None):
-    """Searches for Intel Flash Descriptor signature and returns its offset."""
-    offset = data.find(INTEL_FD_SIGNATURE)
-    if offset != -1:
-        return offset
-    else:
-        if terminal_callback:
-            print_terminal_log(terminal_callback, "WARNING: Flash descriptor not detected. Firmware may be non-Intel or corrupted.", "WARNING")
-        return None
+    """Searches for Intel Flash Descriptor signature at standard offset (0x10) or within the first 64KB."""
+    if len(data) >= 0x50:
+        if data[0x10:0x14] == INTEL_FD_SIGNATURE:
+            return 0x10
+        # Check within the first 64KB (offset must be >= 0x10)
+        search_limit = min(0x10000, len(data))
+        p = 0x10
+        while p < search_limit:
+            idx = data.find(INTEL_FD_SIGNATURE, p, search_limit)
+            if idx == -1:
+                break
+            if idx >= 0x10:
+                try:
+                    flmap0 = struct.unpack_from("<I", data, idx - 0x10 + 0x14)[0]
+                    frba_val = (flmap0 >> 16) & 0xFF
+                    frba_offset = (idx - 0x10) + (frba_val << 4)
+                    if frba_offset + 64 <= len(data):
+                        return idx
+                except Exception:
+                    pass
+            p = idx + 1
+    if terminal_callback:
+        print_terminal_log(terminal_callback, "WARNING: Flash descriptor not detected. Firmware may be non-Intel or corrupted.", "WARNING")
+    return None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -218,48 +258,26 @@ def generate_spi_region_report(data, signature_offset, terminal_callback):
 
 def fetch_mea_output(file_path, report_settings=None):
     """
-    Runs ME Analyzer on the BIOS file with selected settings and returns stdout_text.
-    If partition tables (FPT, BPDT, CSE Layout) are requested, passes -dfpt.
-    MEA is invoked once; its output is shared among all downstream report functions.
+    Native fetch using R1 CSME Analyzer engine.
+    Returns (r1_info dict, r1_text str).
     """
-    mea_dir = os.path.join(get_app_root(), "ME Analyzer")
-    mea_py  = os.path.join(mea_dir, "MEA.py")
+    if R1_ENGINE_AVAILABLE:
+        try:
+            analyzer = R1CSMEAnalyzer(file_path)
+            r1_info = analyzer.parse()
+            if r1_info.get("is_valid_me") or r1_info.get("version") != "Unknown":
+                r1_text = format_default_summary(r1_info)
+                return r1_info, r1_text
+        except Exception:
+            pass
+    return None, None
 
-    if not os.path.exists(mea_py):
-        return None
 
-    startupinfo = None
-    creationflags = 0
-    if os.name == 'nt':
-        creationflags = 0x08000000
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = 0
-
-    python_exe = get_python_cmd()
-    if report_settings is None:
-        report_settings = {}
-
-    needs_dfpt = any([
-        report_settings.get("show_flash_partition", False),
-        report_settings.get("show_bpdt", False),
-        report_settings.get("show_cse_layout", False),
-    ])
-
-    cmd = [python_exe, mea_py, file_path, "-skip", "-exit", "-duc", "-dcm"]
-    if needs_dfpt:
-        cmd.append("-dfpt")
-
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True,
-            encoding='utf-8', errors='ignore',
-            creationflags=creationflags, startupinfo=startupinfo,
-            env=get_subprocess_env()
-        )
-        return result.stdout if result else None
-    except Exception:
-        return None
+def fetch_mea_output_legacy(file_path, report_settings=None):
+    """
+    Deprecated legacy ME Analyzer stub (External ME Analyzer removed).
+    """
+    return None
 
 
 def _extract_mea_table(mea_output, title_keyword):
@@ -300,16 +318,36 @@ def _extract_mea_table(mea_output, title_keyword):
 # REPORT 9 — NORMAL ANALYZE (BASIC SCAN)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_normal_analysis_report(mea_output, terminal_callback):
-    """Report 9 — Normal Analyze (Basic Scan output)."""
+def generate_normal_analysis_report(r1_info_or_mea, terminal_callback):
+    """Report 9 — Normal Analyze (Basic Scan). Accepts R1 info dict or legacy MEA string."""
+    color = '#A855F7'
+    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+    print_terminal_log(terminal_callback, f"<font color='{color}'><b>🔍 NORMAL ANALYZE REPORT (BASIC SCAN)</b></font>")
+    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+
+    if R1_ENGINE_AVAILABLE and isinstance(r1_info_or_mea, dict):
+        # 1. Main Profile Boxed Table with Highlights (CPU, CSE ME, SKU, etc.)
+        for line in render_boxed_csme_report(r1_info_or_mea):
+            print_terminal_log(terminal_callback, line)
+
+        # 2. Independent Sub-firmware Controllers (PMC, PCHC, PHY, IOM, TBT) in separate small tables with highlights
+        sub_cards = render_sub_fw_cards(r1_info_or_mea)
+        if sub_cards:
+            print_terminal_log(terminal_callback, "")
+            print_terminal_log(terminal_callback, f"<font color='#38bdf8'><b>{'━'*52}</b></font>")
+            print_terminal_log(terminal_callback, f"<font color='#38bdf8'><b>⚡ SUB-FIRMWARE CONTROLLERS (PMC / PCHC / PHY / IOM)</b></font>")
+            print_terminal_log(terminal_callback, f"<font color='#38bdf8'><b>{'━'*52}</b></font>")
+            for line in sub_cards:
+                if line.strip():
+                    print_terminal_log(terminal_callback, line)
+                else:
+                    print_terminal_log(terminal_callback, "")
+        return
+
+    mea_output = r1_info_or_mea
     if not mea_output:
         print_terminal_log(terminal_callback, "WARNING: ME Analyzer output unavailable for Basic Scan.", "WARNING")
         return
-
-    ui_lines = []
-    ui_lines.append("<font color='#A855F7'><b>" + "━"*52 + "</b></font>")
-    ui_lines.append("<font color='#A855F7'><b>🔍 NORMAL ANALYZE REPORT (BASIC SCAN)</b></font>")
-    ui_lines.append("<font color='#A855F7'><b>" + "━"*52 + "</b></font>")
 
     skip_next_sep = False
     for line in mea_output.splitlines():
@@ -321,21 +359,33 @@ def generate_normal_analysis_report(mea_output, terminal_callback):
             skip_next_sep = False
             continue
         skip_next_sep = False
-
-        # Replace spaces to preserve horizontal formatting in HTML text browser
         formatted = line.replace(' ', '&nbsp;')
-        ui_lines.append(f"<font color='#d0d0e0'>{formatted}</font>")
-
-    for l in ui_lines:
-        print_terminal_log(terminal_callback, l)
+        print_terminal_log(terminal_callback, f"<font color='#d0d0e0'>{formatted}</font>")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # REPORT 2 — FLASH PARTITION TABLE (FPT)
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_flash_partition_report(mea_output, terminal_callback):
-    """Report 2 — Flash Partition Table (FPT) only."""
+def generate_flash_partition_report(r1_info_or_mea, terminal_callback):
+    """Report 2 — Flash Partition Table (FPT). Accepts R1 info dict or legacy MEA string."""
+    color = '#FFA500'
+    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+    print_terminal_log(terminal_callback, f"<font color='{color}'><b>📋 FLASH PARTITION TABLE  (FPT)</b></font>")
+    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+
+    if R1_ENGINE_AVAILABLE and isinstance(r1_info_or_mea, dict):
+        fpt_text = format_fpt_table(r1_info_or_mea)
+        if not fpt_text.strip():
+            print_terminal_log(terminal_callback, "<font color='#888'>ℹ Flash Partition Table (FPT) not found in this firmware image.</font>")
+            return
+        for line in fpt_text.splitlines():
+            if line.strip():
+                formatted = line.rstrip().replace(' ', '&nbsp;')
+                print_terminal_log(terminal_callback, f"<font color='{color}'>{formatted}</font>")
+        return
+
+    mea_output = r1_info_or_mea
     if not mea_output:
         print_terminal_log(terminal_callback, "WARNING: ME Analyzer output unavailable for FPT report.", "WARNING")
         return
@@ -344,11 +394,6 @@ def generate_flash_partition_report(mea_output, terminal_callback):
     if not table_lines:
         print_terminal_log(terminal_callback, "<font color='#888'>ℹ Flash Partition Table (FPT) not found in this firmware image.</font>")
         return
-
-    color = '#FFA500'
-    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
-    print_terminal_log(terminal_callback, f"<font color='{color}'><b>📋 FLASH PARTITION TABLE  (FPT)</b></font>")
-    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
 
     for line in table_lines:
         formatted = line.rstrip().replace(' ', '&nbsp;')
@@ -424,8 +469,11 @@ def generate_bios_analysis_report(mea_output, terminal_callback=None, legacy_par
     elif callable(mea_output):
         terminal_callback = mea_output
 
+    if isinstance(mea_output, dict):
+        generate_normal_analysis_report(mea_output, terminal_callback)
+        return
     if not mea_output or not isinstance(mea_output, str):
-        print_terminal_log(terminal_callback, "WARNING: ME Analyzer output unavailable for BIOS Analysis.", "WARNING")
+        print_terminal_log(terminal_callback, "WARNING: Analysis data unavailable for BIOS Analysis.", "WARNING")
         return
 
     color = '#00ff88'
@@ -517,8 +565,23 @@ def generate_bios_analysis_report(mea_output, terminal_callback=None, legacy_par
 # REPORT 6 — PMC / PCHC / PHY INDEPENDENT FIRMWARE
 # ─────────────────────────────────────────────────────────────────────────────
 
-def generate_pmc_pchc_phy_report(mea_output, terminal_callback):
+def generate_pmc_pchc_phy_report(r1_info_or_mea, terminal_callback):
     """Report 6 — Power Management Controller, PCHC and USB PHY firmware info."""
+    color = '#00f3ff'
+    if R1_ENGINE_AVAILABLE and isinstance(r1_info_or_mea, dict):
+        sub_text = format_sub_firmwares(r1_info_or_mea)
+        if sub_text.strip():
+            print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+            print_terminal_log(terminal_callback, f"<font color='{color}'><b>⚡ INDEPENDENT SUB-FIRMWARES  (PMC / PCHC / PHY)</b></font>")
+            print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+            for line in sub_text.splitlines():
+                if line.strip():
+                    formatted = line.rstrip().replace(' ', '&nbsp;')
+                    print_terminal_log(terminal_callback, f"<font color='{color}'>{formatted}</font>")
+            return
+        # If no sub_firmwares, continue down
+
+    mea_output = r1_info_or_mea
     if not mea_output:
         print_terminal_log(terminal_callback, "WARNING: ME Analyzer output unavailable for PMC/PCHC/PHY report.", "WARNING")
         return
@@ -744,8 +807,23 @@ def get_bios_metadata(file_path, terminal_callback=None, mea_handler=None, repor
     if descriptor_offset is not None:
         regions = parse_spi_regions(data, descriptor_offset, terminal_callback=None)
         firmware_type = "AMD SPI" if (b'AuthenticAMD' in data or b'AGESA' in data) else "Intel SPI"
-    else:
-        firmware_type = "AMD SPI" if (b'AuthenticAMD' in data or b'AGESA' in data) else "Unknown"
+    
+    if not regions:
+        is_intel = (b'$FPT' in data or b'_FIT_' in data or b'$MN2' in data or b'Intel' in data)
+        is_amd = (b'AuthenticAMD' in data or b'AGESA' in data)
+        if is_amd:
+            firmware_type = "AMD SPI"
+        elif is_intel:
+            firmware_type = "Intel SPI"
+            fpt_pos = data.find(b'$FPT')
+            if fpt_pos != -1:
+                regions = {'me_csme': {'offset': fpt_pos, 'size': len(data) - fpt_pos, 'index': 2, 'color': '#ff5252'}}
+            else:
+                mn2_pos = data.find(b'$MN2')
+                if mn2_pos != -1:
+                    regions = {'me_csme': {'offset': mn2_pos, 'size': len(data) - mn2_pos, 'index': 2, 'color': '#ff5252'}}
+        elif not descriptor_offset:
+            firmware_type = "Unknown"
 
     file_size_mb = len(data) // (1024 * 1024)
 
@@ -756,7 +834,7 @@ def get_bios_metadata(file_path, terminal_callback=None, mea_handler=None, repor
     show_cse      = report_settings.get("show_cse_layout",       True)
     show_normal   = report_settings.get("show_normal_analysis",  False)
     show_bios     = report_settings.get("show_bios_analysis",    True)
-    show_pmc      = report_settings.get("show_pmc_pchc_phy",     False)
+    show_pmc      = report_settings.get("show_pmc_pchc_phy",     True)
     show_warnings = report_settings.get("show_me_warnings",      True)
     show_micro    = report_settings.get("show_microcode",         True)
 
@@ -786,15 +864,20 @@ def get_bios_metadata(file_path, terminal_callback=None, mea_handler=None, repor
     # ── 5. Reports 2-7: MEA-based (async — single MEA run) ───────────────────
     if needs_mea or show_micro:
         def _run_async():
+            r1_info = None
+            r1_text = None
             mea_stdout = None
 
-            if needs_mea:
-                print_terminal_log(terminal_callback, "[INFO] Starting ME Analyzer...")
-                mea_stdout = fetch_mea_output(file_path, report_settings=report_settings)
+            if needs_mea or show_normal or show_bios:
+                print_terminal_log(terminal_callback, "[INFO] Starting R1 CSME Analyzer Engine...")
+                r1_info, r1_text = fetch_mea_output(file_path, report_settings=report_settings)
+
+            r1_active = R1_ENGINE_AVAILABLE and r1_info is not None
+            active_data = r1_info if r1_active else mea_stdout
 
             # Report 2 — FPT
             if show_fpt:
-                generate_flash_partition_report(mea_stdout, terminal_callback)
+                generate_flash_partition_report(active_data, terminal_callback)
 
             # Report 3 — BPDT
             if show_bpdt:
@@ -806,29 +889,48 @@ def get_bios_metadata(file_path, terminal_callback=None, mea_handler=None, repor
 
             # Report 5 — BIOS Analysis
             if show_bios:
-                generate_bios_analysis_report(mea_stdout, terminal_callback)
+                generate_bios_analysis_report(active_data, terminal_callback)
 
             # Report 6 — PMC / PCHC / PHY
-            if show_pmc:
-                generate_pmc_pchc_phy_report(mea_stdout, terminal_callback)
+            if show_pmc and not show_normal:
+                generate_pmc_pchc_phy_report(active_data, terminal_callback)
 
             # Report 7 — Warnings
             if show_warnings:
-                generate_me_warnings_report(mea_stdout, terminal_callback)
+                if r1_active and r1_info.get("warnings"):
+                    for wl in format_warnings(r1_info).splitlines():
+                        print_terminal_log(terminal_callback, f"<font color='#FFA500'>{wl}</font>")
+                else:
+                    generate_me_warnings_report(mea_stdout, terminal_callback)
 
             # Report 9 — Normal Analyze (Basic Scan)
             if show_normal:
-                generate_normal_analysis_report(mea_stdout, terminal_callback)
+                generate_normal_analysis_report(active_data, terminal_callback)
 
-            # Report 8 — Microcode (separate MCExtractor subprocess)
+            # Report 8 — Microcode
             if show_micro:
-                generate_microcode_report(file_path, terminal_callback)
+                if r1_active and r1_info.get("microcodes"):
+                    mc_text = format_microcode_audit(r1_info)
+                    color = '#ff88ff'
+                    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+                    print_terminal_log(terminal_callback, f"<font color='{color}'><b>🧮 INTEL MICROCODE AUDIT  (R1 Engine)</b></font>")
+                    print_terminal_log(terminal_callback, f"<font color='{color}'><b>{'━'*52}</b></font>")
+                    for ml in mc_text.splitlines():
+                        if ml.strip():
+                            print_terminal_log(terminal_callback, f"<font color='{color}'>{ml.replace(' ', '&nbsp;')}</font>")
+                else:
+                    generate_microcode_report(file_path, terminal_callback)
 
-            # Done
+            # Done — Completion trigger
             print_terminal_log(terminal_callback, "═" * 52)
-            print_terminal_log(terminal_callback, "[SUCCESS] Report generation complete.")
+            print_terminal_log(terminal_callback, "[SUCCESS] R1 CSME Analyzer complete. ✅")
             if mea_handler:
-                raw_file_lines = mea_stdout.splitlines() if mea_stdout else []
+                if r1_active and r1_text:
+                    raw_file_lines = r1_text.splitlines()
+                elif mea_stdout:
+                    raw_file_lines = mea_stdout.splitlines()
+                else:
+                    raw_file_lines = []
                 mea_handler([], raw_file_lines)
 
         t = threading.Thread(target=_run_async, daemon=True)

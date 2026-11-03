@@ -2181,10 +2181,24 @@ class BiosServiceTool(QMainWindow):
                     else:
                         self.current_regions_map = {}
                         self.module_buttons_signal.emit({})
-                        self.log_to_terminal("\n" + "!"*45)
-                        self.log_to_terminal("[NOTICE] THIS IS NOT AN INTEL FIRMWARE FILE")
-                        self.log_to_terminal("[INFO] AMD OR OTHER FIRMWARE SYSTEM DETECTED")
-                        self.log_to_terminal("!"*45 + "\n")
+                        fw_type = str(metadata.get('firmware_type', '')) if isinstance(metadata, dict) else ''
+                        mea_hist = getattr(self, 'mea_history', '')
+                        intel_binary_sigs = (b'$FPT', b'$MN2', b'_FIT_', b'$CPD', b'FTPR', b'PMCP', b'PCHC', b'\x5a\xa5\xf0\x0f')
+                        has_intel_binary = False
+                        try:
+                            with open(file_path, 'rb') as _bf:
+                                _chunk = _bf.read(0x200000)
+                                has_intel_binary = any(sig in _chunk for sig in intel_binary_sigs)
+                        except Exception:
+                            pass
+                        is_intel = ('Intel' in fw_type) or ('CSE ME' in mea_hist) or ('ME Version' in mea_hist) or has_intel_binary
+                        if is_intel:
+                            self.log_to_terminal('[INFO] Intel Firmware Loaded (Descriptorless / Partial Image).')
+                        else:
+                            self.log_to_terminal("\n" + "!"*45)
+                            self.log_to_terminal("[NOTICE] THIS IS NOT AN INTEL FIRMWARE FILE")
+                            self.log_to_terminal("[INFO] AMD OR OTHER FIRMWARE SYSTEM DETECTED")
+                            self.log_to_terminal("!"*45 + "\n")
                 else:
                     self.current_regions_map = {}
                     self.module_buttons_signal.emit({})
@@ -2277,7 +2291,7 @@ class BiosServiceTool(QMainWindow):
         for line in ui_lines:
             self.terminal.append(line)
             # Detect end of MEA report
-            if "[SUCCESS] ME Analyzer complete." in line:
+            if "[SUCCESS] ME Analyzer complete." in line or "[SUCCESS] R1 CSME Analyzer complete." in line:
                 self.log_to_terminal("-" * 30)
                 self.log_to_terminal("<font color='#00f3ff'><b>[INFO] Firmware Analysis Complete.</b></font>")
                 self.log_to_terminal("[INFO] Decompilation deferred for performance.")

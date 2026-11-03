@@ -67,13 +67,13 @@ BUNDLE_DATA_DIRS = [
      "biosutilities"),                                  # biosutilities Python package (critical!)
     ("brands", "brands"),                               # Brand plugins folder
     ("rg_engine", "rg_engine"),                         # BIOS RG Fix engine modules
+    ("R1_CSME_Analyzer", "R1_CSME_Analyzer"),           # Native R1 CSME Analyzer engine
 ]
 
 # External folders NOT bundled into the exe but placed next to it in dist/
 EXTERNAL_RUNTIME_DIRS = [
     "Firmware_Repository",
     "external",        # Contains UniExtract, 7z, and other extraction tools
-    "ME Analyzer",
     "MCExtractor",     # Added for Microcode Audit
     "BGScriptTool",    # Added for BIOS Guard Analysis
     "MCS-Parser",      # Added for additional parsing
@@ -274,6 +274,10 @@ for dmi_mod in ["hp_dmi_extractor", "dell_dmi_extractor", "lenovo_dmi_extractor"
 # ── PASSWORD UNLOCK ENGINE (new modules) ──
 for unlock_mod in ["password_unlock_engine", "password_remover_dialog"]:
     main_cmd += ["--hidden-import", unlock_mod]
+
+# ── R1 CSME ANALYZER ENGINE (native in-house engine) ──
+for csme_mod in ["R1_CSME_Analyzer", "R1_CSME_Analyzer.r1_csme_parser"]:
+    main_cmd += ["--hidden-import", csme_mod]
 
 # ── DYNAMICALLY INCLUDE ALL NEW FEATURES ──
 # Recursively find all Python files in the workspace (excluding specific folders and files)

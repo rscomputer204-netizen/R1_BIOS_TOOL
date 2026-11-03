@@ -8303,10 +8303,24 @@ class BiosServiceTool(QMainWindow):
                     else:
                         self.current_regions_map = {}
                         self.module_buttons_signal.emit({})
-                        self.log_to_terminal("\n" + "!"*45)
-                        self.log_to_terminal("[NOTICE] THIS IS NOT AN INTEL FIRMWARE FILE")
-                        self.log_to_terminal("[INFO] AMD OR OTHER FIRMWARE SYSTEM DETECTED")
-                        self.log_to_terminal("!"*45 + "\n")
+                        fw_type = str(metadata.get('firmware_type', '')) if isinstance(metadata, dict) else ''
+                        mea_hist = getattr(self, 'mea_history', '')
+                        intel_binary_sigs = (b'', b'', b'_FIT_', b'', b'FTPR', b'PMCP', b'PCHC', b'\x5a\xa5\xf0\x0f')
+                        has_intel_binary = any(sig in raw_data for sig in intel_binary_sigs)
+                        is_intel = ('Intel' in fw_type) or ('CSE ME' in mea_hist) or ('ME Version' in mea_hist) or has_intel_binary
+                        is_amd = (b'AuthenticAMD' in raw_data or b'AGESA' in raw_data or b'' in raw_data)
+                        if is_amd and not is_intel:
+                            self.log_to_terminal('\n' + '!'*45)
+                            self.log_to_terminal('[NOTICE] AMD FIRMWARE SYSTEM DETECTED')
+                            self.log_to_terminal('[INFO] Intel CSME / ME Region not present.')
+                            self.log_to_terminal('!'*45 + '\n')
+                        elif is_intel:
+                            self.log_to_terminal('[INFO] Intel Firmware Loaded (Descriptorless / Partial Image).')
+                        else:
+                            self.log_to_terminal('\n' + '!'*45)
+                            self.log_to_terminal('[NOTICE] NON-INTEL OR UNKNOWN FIRMWARE FORMAT')
+                            self.log_to_terminal('[INFO] Standard Intel CSME descriptor not found.')
+                            self.log_to_terminal('!'*45 + '\n')
                 else:
                     self.current_regions_map = {}
                     self.module_buttons_signal.emit({})
@@ -8407,7 +8421,7 @@ class BiosServiceTool(QMainWindow):
             suppress_sep = False
             self.terminal.append(line)
             # Detect end of MEA report
-            if "[SUCCESS] ME Analyzer complete." in line:
+            if "[SUCCESS] ME Analyzer complete." in line or "[SUCCESS] R1 CSME Analyzer complete." in line:
                 self.log_to_terminal("-" * 30)
                 self.log_to_terminal("<font color='#00f3ff'><b>[INFO] Firmware Analysis Complete.</b></font>")
                 
@@ -8777,7 +8791,6 @@ if __name__ == "__main__":
             QTimer.singleShot(1000, lambda: window.load_bios_file(file_path))
 
     sys.exit(app.exec())
-
 
 
 

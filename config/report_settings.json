@@ -5,7 +5,7 @@
     "show_cse_layout": false,
     "show_normal_analysis": true,
     "show_bios_analysis": false,
-    "show_pmc_pchc_phy": false,
+    "show_pmc_pchc_phy": true,
     "show_me_warnings": false,
     "show_microcode": false
 }
