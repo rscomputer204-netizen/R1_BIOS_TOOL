@@ -194,16 +194,12 @@ QPushButton#AdvancedButton:disabled {
 """
 
 class HexTableModel(QAbstractTableModel):
-    # Fast character & hex lookup tables (Pre-calculating for Latin-1 and zero-allocation hex)
+    # Fast character lookup table (Pre-calculating for Latin-1)
     CHARS_LOOKUP = [chr(b) if (32 <= b <= 126 or b >= 160) else "." for b in range(256)]
-    HEX_LOOKUP = [f"{b:02X}" for b in range(256)]
 
     def __init__(self, data=b"", parent=None):
         super().__init__(parent)
         self._data = bytearray(data)
-        self._align_center = int(Qt.AlignCenter)
-        self._align_left_vcenter = int(Qt.AlignLeft | Qt.AlignVCenter)
-        self._color_blue = QColor("#00f3ff")
 
     def set_data(self, data):
         self.beginResetModel()
@@ -309,7 +305,7 @@ class HexTableModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             if col < 16:
                 if offset < len(self._data):
-                    return self.HEX_LOOKUP[self._data[offset]]
+                    return f"{self._data[offset]:02X}"
                 return ""
             else:
                 start = row * 16
@@ -537,24 +533,16 @@ class HexEditorTab(QWidget):
         self.shortcut_paste_write.activated.connect(self.paste_write_data)
 
     def get_selected_range(self):
-        sel_ranges = self.hex_view.selectionModel().selection()
-        if not sel_ranges:
-            return None, None
-        min_offset = float('inf')
-        max_offset = -1
-        for rng in sel_ranges:
-            tl = rng.topLeft()
-            br = rng.bottomRight()
-            if tl.column() < 16:
-                first_b = tl.row() * 16 + tl.column()
-                last_b = br.row() * 16 + min(15, br.column())
-                if first_b < min_offset:
-                    min_offset = first_b
-                if last_b > max_offset:
-                    max_offset = last_b
-        if max_offset < 0 or min_offset == float('inf'):
-            return None, None
-        return min_offset, max_offset - min_offset + 1
+        selection = self.hex_view.selectionModel().selectedIndexes()
+        if not selection: return None, None
+        offsets = []
+        for index in selection:
+            col = index.column()
+            if col < 16: offsets.append(index.row() * 16 + col)
+            else:
+                for c in range(16): offsets.append(index.row() * 16 + c)
+        if not offsets: return None, None
+        return min(offsets), max(offsets) - min(offsets) + 1
 
     def copy_hex_data(self):
         start, count = self.get_selected_range()

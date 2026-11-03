@@ -314,7 +314,7 @@ QLabel { color: #1f2937; }
 from bisect import bisect_right
 
 class HexTableModel(QAbstractTableModel):
-    # Fast character & hex lookup tables (Pre-calculated for zero-allocation rendering)
+    # Fast character & hex lookup tables (Pre-calculating for zero-allocation rendering)
     CHARS_LOOKUP = [chr(b) if (32 <= b <= 126 or b >= 160) else "." for b in range(256)]
     HEX_LOOKUP = [f"{b:02X}" for b in range(256)]
 
@@ -330,7 +330,7 @@ class HexTableModel(QAbstractTableModel):
         self._region_starts = []
         self.is_light_mode = False
         
-        # Pre-cached constant QColors and alignments for ultra-fast 60+ FPS rendering
+        # Pre-cached constant QColors and alignments for zero-allocation paint frames
         self._color_dark = QColor("#4CAF50")
         self._color_light = QColor("#4a4a4a")
         self._bookmark_colors = {}
@@ -2212,7 +2212,6 @@ class HexAsciiDelegate(QStyledItemDelegate):
     Delegate for the Decoded Text (ASCII) column 16.
     Highlights characters in real-time corresponding to the active byte selection,
     giving professional dual-side synchronized selection matching HxD / 010 Editor.
-    Optimized with fast-path string rendering for 60+ FPS buttery smooth scrolling.
     """
     def __init__(self, tab, parent=None):
         super().__init__(parent)
@@ -2235,7 +2234,6 @@ class HexAsciiDelegate(QStyledItemDelegate):
         rect = option.rect
         painter.setFont(option.font)
         
-        # Cache font metrics so we do not recalculate font layout on every visible row
         font_key = (option.font.family(), option.font.pointSize(), option.font.weight())
         if self._font_key != font_key or self._cached_char_w is None:
             fm = painter.fontMetrics()
@@ -2261,29 +2259,17 @@ class HexAsciiDelegate(QStyledItemDelegate):
             sel_start, sel_end = -1, -1
 
         row_start = row * 16
-        row_end = row_start + 15
-        
         is_light = getattr(self.tab.hex_model, 'is_light_mode', False)
+        sel_bg_color = QColor("#bfdbfe") if is_light else QColor("#1b4b5e")
+        sel_fg_color = QColor("#1e3a8a") if is_light else QColor("#ffffff")
         default_fg_color = index.data(Qt.ItemDataRole.ForegroundRole)
         if not isinstance(default_fg_color, QColor):
             default_fg_color = QColor("#4a4a4a") if is_light else QColor("#888888")
-            
-        # FAST PATH: if row is completely outside selection, draw the full string in one call!
-        if sel_start == -1 or row_end < sel_start or row_start > sel_end:
-            painter.setPen(default_fg_color)
-            painter.drawText(rect.left() + pad_x, y_text, text)
-            painter.restore()
-            return
 
-        # SELECTION INTERSECTION PATH: highlight only selected characters
-        sel_bg_color = QColor("#bfdbfe") if is_light else QColor("#1b4b5e")
-        sel_fg_color = QColor("#1e3a8a") if is_light else QColor("#ffffff")
-
-        left_base = rect.left() + pad_x
         for i, ch in enumerate(text):
             byte_off = row_start + i
             is_selected = (sel_start <= byte_off <= sel_end)
-            x_char = left_base + i * char_w
+            x_char = rect.left() + pad_x + i * char_w
             
             if is_selected:
                 painter.fillRect(QRect(x_char, y_bg, char_w, h_bg), sel_bg_color)
@@ -2319,16 +2305,8 @@ class HexEditorTab(QWidget):
         
         self.hex_view.setShowGrid(False)
         self.hex_view.setWordWrap(False)
-        self.hex_view.setCornerButtonEnabled(False)
         self.hex_view.verticalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
         self.hex_view.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Fixed)
-        self.hex_view.verticalHeader().setResizeContentsPrecision(0)
-        self.hex_view.horizontalHeader().setResizeContentsPrecision(0)
-        self.hex_view.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerItem)
-        self.hex_view.setHorizontalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
-        self.hex_view.viewport().setAttribute(Qt.WidgetAttribute.WA_StaticContents, True)
-        self.hex_view.viewport().setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent, True)
-        
         font = QFont("Consolas", 11)
         self.hex_view.setFont(font)
         for i in range(16):
@@ -2347,28 +2325,16 @@ class HexEditorTab(QWidget):
         self.ascii_delegate = HexAsciiDelegate(self, self.hex_view)
         self.hex_view.setItemDelegateForColumn(16, self.ascii_delegate)
         
-        # Velocity-sensitive butter-smooth scroll speed for the hex view viewport
+        # Normal scroll speed for the hex view viewport
         def normal_wheel_event(event):
             scroll_bar = self.hex_view.verticalScrollBar()
             delta = event.angleDelta().y()
             if delta != 0:
-                num_ticks = delta / 120.0
-                from PySide6.QtCore import Qt as _Qt
-                mods = event.modifiers()
-                if mods & _Qt.KeyboardModifier.ControlModifier:
-                    multiplier = 250 # Ctrl + Wheel = Ultra fast jump scroll
-                elif mods & _Qt.KeyboardModifier.ShiftModifier:
-                    multiplier = 64  # Shift + Wheel = Page scroll
-                else:
-                    multiplier = 16  # Normal wheel reading scroll
-                step = int(num_ticks * multiplier)
-                if step == 0:
-                    step = 1 if delta > 0 else -1
+                step = 15 if delta > 0 else -15  # 15 rows per tick (normal reading speed)
                 new_val = max(scroll_bar.minimum(), min(scroll_bar.maximum(), scroll_bar.value() - step))
                 scroll_bar.setValue(new_val)
                 event.accept()
         self.hex_view.wheelEvent = normal_wheel_event
-        self.hex_view.viewport().wheelEvent = normal_wheel_event
         
         # Super-fast jump scroll speed for the scrollbar itself
         scroll_bar = self.hex_view.verticalScrollBar()
@@ -2425,42 +2391,26 @@ class HexEditorTab(QWidget):
 
         # ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Linear (Sequential) Selection ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬
         # Override mouse events so dragging selects row-by-row (linear),
-        # not a rectangular block. Optimized with O(1) QItemSelection ranges.
+        # not a rectangular block.
         self._sel_anchor_offset = None   # byte offset where drag started
-        self._last_drag_offset = None
-        self._cached_sel_range = None
 
         def _linear_select(start_offset, end_offset):
-            """Select all bytes between start_offset and end_offset linearly with O(1) ranges."""
+            """Select all bytes between start_offset and end_offset linearly."""
             from PySide6.QtCore import QItemSelection, QItemSelectionRange, QItemSelectionModel
             if start_offset > end_offset:
-                sel_start, sel_end = end_offset, start_offset
-            else:
-                sel_start, sel_end = start_offset, end_offset
-                
-            self._cached_sel_range = (sel_start, sel_end - sel_start + 1)
-            
-            r_start = sel_start // 16
-            c_start = sel_start % 16
-            r_end = sel_end // 16
-            c_end = sel_end % 16
-            
-            model = self.hex_model
+                start_offset, end_offset = end_offset, start_offset
+            self._cached_sel_range = (start_offset, end_offset - start_offset + 1)
             selection = QItemSelection()
-            
-            if r_start == r_end:
-                # Same row: single range
-                selection.append(QItemSelectionRange(model.index(r_start, c_start), model.index(r_start, c_end)))
-            elif r_end == r_start + 1:
-                # Adjacent rows: 2 ranges
-                selection.append(QItemSelectionRange(model.index(r_start, c_start), model.index(r_start, 15)))
-                selection.append(QItemSelectionRange(model.index(r_end, 0), model.index(r_end, c_end)))
-            else:
-                # 3 or more rows: exactly 3 ranges! O(1) constant time regardless of selection size!
-                selection.append(QItemSelectionRange(model.index(r_start, c_start), model.index(r_start, 15)))
-                selection.append(QItemSelectionRange(model.index(r_start + 1, 0), model.index(r_end - 1, 15)))
-                selection.append(QItemSelectionRange(model.index(r_end, 0), model.index(r_end, c_end)))
-                
+            curr = start_offset
+            while curr <= end_offset:
+                row = curr // 16
+                start_col = curr % 16
+                end_this_row = min(end_offset, (row + 1) * 16 - 1)
+                end_col = end_this_row % 16
+                tl = self.hex_model.index(row, start_col)
+                br = self.hex_model.index(row, end_col)
+                selection.append(QItemSelectionRange(tl, br))
+                curr = end_this_row + 1
             self.hex_view.selectionModel().select(
                 selection, QItemSelectionModel.SelectionFlag.ClearAndSelect
             )
@@ -2489,7 +2439,6 @@ class HexEditorTab(QWidget):
 
         def _hex_mouse_press(event):
             from PySide6.QtCore import Qt as _Qt
-            self.hex_view.setFocus()
             offset = _get_offset_from_pos(event.pos())
             if offset is not None:
                 if event.button() == _Qt.MouseButton.RightButton:
@@ -2501,19 +2450,16 @@ class HexEditorTab(QWidget):
                         return
                     # Right-clicked OUTSIDE selection -> select the single clicked byte
                     self._sel_anchor_offset = offset
-                    self._last_drag_offset = offset
                     _linear_select(offset, offset)
                     event.accept()
                     return
                 elif event.button() == _Qt.MouseButton.LeftButton:
                     self._sel_anchor_offset = offset
-                    self._last_drag_offset = offset
                     _linear_select(offset, offset)
                     event.accept()
                     return
             else:
                 self._sel_anchor_offset = None
-                self._last_drag_offset = None
                 type(self.hex_view).mousePressEvent(self.hex_view, event)
 
         def _hex_mouse_move(event):
@@ -2521,8 +2467,7 @@ class HexEditorTab(QWidget):
             if (event.buttons() & _Qt.MouseButton.LeftButton) and self._sel_anchor_offset is not None:
                 curr_offset = _get_offset_from_pos(event.pos())
                 if curr_offset is not None:
-                    # Avoid redundant selection rebuilds when moving within the same cell
-                    if curr_offset == self._last_drag_offset:
+                    if curr_offset == getattr(self, '_last_drag_offset', None):
                         event.accept()
                         return
                     self._last_drag_offset = curr_offset
@@ -2541,7 +2486,7 @@ class HexEditorTab(QWidget):
         self.hex_view.mouseReleaseEvent = _hex_mouse_release
 
     def goto_offset(self, offset: int, length: int = 1):
-        """Scroll to the specified offset, center it, and select length bytes linearly in O(1)."""
+        """Scroll to the specified offset, center it, and select length bytes linearly."""
         if not hasattr(self, 'hex_model') or self.hex_model is None:
             return
         doc = getattr(self.hex_model, 'document', None)
@@ -2561,29 +2506,25 @@ class HexEditorTab(QWidget):
         model = self.hex_model
         sel_model = self.hex_view.selectionModel()
         
-        self._cached_sel_range = (offset, length)
-        
-        r_start = offset // 16
-        c_start = offset % 16
-        r_end = end // 16
-        c_end = end % 16
-        
         selection = QItemSelection()
-        if r_start == r_end:
-            selection.append(QItemSelectionRange(model.index(r_start, c_start), model.index(r_start, c_end)))
-        elif r_end == r_start + 1:
-            selection.append(QItemSelectionRange(model.index(r_start, c_start), model.index(r_start, 15)))
-            selection.append(QItemSelectionRange(model.index(r_end, 0), model.index(r_end, c_end)))
-        else:
-            selection.append(QItemSelectionRange(model.index(r_start, c_start), model.index(r_start, 15)))
-            selection.append(QItemSelectionRange(model.index(r_start + 1, 0), model.index(r_end - 1, 15)))
-            selection.append(QItemSelectionRange(model.index(r_end, 0), model.index(r_end, c_end)))
+        curr = offset
+        while curr <= end:
+            row = curr // 16
+            start_col = curr % 16
+            end_offset_this_row = min(end, (row + 1) * 16 - 1)
+            end_col = end_offset_this_row % 16
+            top_left = model.index(row, start_col)
+            bottom_right = model.index(row, end_col)
+            if top_left.isValid() and bottom_right.isValid():
+                selection.append(QItemSelectionRange(top_left, bottom_right))
+            curr = end_offset_this_row + 1
             
+        self._cached_sel_range = (offset, length)
         sel_model.select(selection, QItemSelectionModel.SelectionFlag.ClearAndSelect)
-        target_idx = model.index(r_start, c_start)
+        target_idx = model.index(offset // 16, offset % 16)
         if target_idx.isValid():
             sel_model.setCurrentIndex(target_idx, QItemSelectionModel.SelectionFlag.NoUpdate)
-            self.hex_view.scrollTo(model.index(r_start, 0),
+            self.hex_view.scrollTo(model.index(offset // 16, 0),
                                    QAbstractItemView.ScrollHint.PositionAtCenter)
         self.hex_view.viewport().update()
         self.hex_view.setFocus()
@@ -2596,6 +2537,7 @@ class HexEditorTab(QWidget):
     def _emit_selection(self, selected, deselected):
         if getattr(self, '_sel_anchor_offset', None) is None:
             self._cached_sel_range = None
+        self.hex_view.viewport().update()
         start, count = self.get_selected_range()
         from core_workspace import event_bus
         if start is not None and count is not None:
@@ -2735,25 +2677,16 @@ class HexEditorTab(QWidget):
     def get_selected_range(self):
         if getattr(self, '_cached_sel_range', None) is not None:
             return self._cached_sel_range
-        sel_ranges = self.hex_view.selectionModel().selection()
-        if not sel_ranges:
-            return None, None
-        min_offset = float('inf')
-        max_offset = -1
-        for rng in sel_ranges:
-            tl = rng.topLeft()
-            br = rng.bottomRight()
-            if tl.column() < 16:
-                first_b = tl.row() * 16 + tl.column()
-                last_b = br.row() * 16 + min(15, br.column())
-                if first_b < min_offset:
-                    min_offset = first_b
-                if last_b > max_offset:
-                    max_offset = last_b
-        if max_offset < 0 or min_offset == float('inf'):
-            return None, None
-        count = max_offset - min_offset + 1
-        self._cached_sel_range = (min_offset, count)
+        selection = self.hex_view.selectionModel().selectedIndexes()
+        if not selection: return None, None
+        offsets = []
+        for index in selection:
+            col = index.column()
+            if col < 16: offsets.append(index.row() * 16 + col)
+            else:
+                for c in range(16): offsets.append(index.row() * 16 + c)
+        if not offsets: return None, None
+        self._cached_sel_range = (min(offsets), max(offsets) - min(offsets) + 1)
         return self._cached_sel_range
 
     def copy_hex_data(self):
