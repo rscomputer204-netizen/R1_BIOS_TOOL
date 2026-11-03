@@ -1,12 +1,16 @@
 """
 dmi_injector.py  -  R1 BIOS Tool
-Injects DMI/SMBIOS string fields into a BIOS binary.
+Smart Selective DMI/SMBIOS Injection Engine.
 
-Supports three progressively aggressive strategies:
-  1. PROFILE OFFSET  -- use the exact byte offset saved in the .dmi profile
-  2. STRING SEARCH   -- find the original string in the target binary
-  3. SMBIOS ANCHOR   -- locate the SMBIOS structure and write into string slots
-                        (works on factory-clean / FF-wiped BIOS images)
+Features:
+  - Smart Differential Pre-Check: Checks target BIOS before writing.
+    * If field/block is already present and intact -> PRESERVES it untouched!
+    * If field/block is missing, blank (0x00/0xFF), or default placeholder -> INJECTS it!
+  - Supports three progressively aggressive injection strategies:
+    1. PROFILE OFFSET  -- use the exact byte offset saved in the .dmi profile
+    2. STRING SEARCH   -- find the original slot/placeholder in the target binary
+    3. SMBIOS ANCHOR   -- locate the SMBIOS structure and write into string slots
+                          (works on factory-clean / FF-wiped BIOS images)
 """
 
 import re
@@ -34,27 +38,185 @@ FIELD_TO_SMBIOS = {
     "Asset Tag":           (3, 0x08),
 }
 
+# Generic dummy / placeholder strings used by OEMs or factory unconfigured boards
+PLACEHOLDER_STRINGS = {
+    "default string", "to be filled by o.e.m.", "to be filled by oem",
+    "none", "system serial number", "system product name", "system version",
+    "product name", "all series", "chassis serial number", "base board serial number",
+    "0123456789", "1234567890", "invalid", "n/a", "not applicable", "unknown",
+    "00000000-0000-0000-0000-000000000000", "ffffffff-ffff-ffff-ffff-ffffffffffff",
+    "00:00:00:00:00:00", "ff:ff:ff:ff:ff:ff"
+}
+
 
 class DMIInjector:
 
     @staticmethod
-    def inject_fields(data: bytearray, fields: dict, regions_map: dict = None, raw_blocks: dict = None, all_occurrences: dict = None, log_cb=None) -> int:
-        def _log(m):
-            if log_cb: log_cb(m)
+    def _is_slot_blank_or_dummy(data: bytearray, off: int, length: int = 16) -> bool:
+        """
+        Checks if a target byte region is unprogrammed (all 0xFF),
+        zero-filled (all 0x00), or contains a generic OEM placeholder string.
+        """
+        if off < 0 or off >= len(data):
+            return False
+        chk_len = max(length, 16)
+        chunk = data[off : min(len(data), off + chk_len)]
+        if not chunk:
+            return False
 
-        # Strategy 0: Restore Raw EFI Variable Blocks (e.g. HP_MUD)
-        # This restores the full EFI variable structure, GUID, and headers
-        # if injecting into a factory-clean or wiped BIOS image
+        # All 0x00 or all 0xFF
+        if all(b == 0x00 for b in chunk) or all(b == 0xFF for b in chunk):
+            return True
+
+        # High density of 0x00 or 0xFF (>= 85%)
+        null_or_ff = sum(1 for b in chunk if b in (0x00, 0xFF))
+        if (null_or_ff / len(chunk)) >= 0.85:
+            return True
+
+        # Check for known OEM placeholder strings
+        for enc in ("utf-16le", "latin1", "utf-8"):
+            try:
+                txt = chunk.decode(enc, errors="ignore").split("\x00")[0].strip().lower()
+                if txt in PLACEHOLDER_STRINGS:
+                    return True
+            except Exception:
+                pass
+
+        return False
+
+    @staticmethod
+    def check_field_presence(data: bytearray, field_name: str, val_str: str,
+                             target_off: int = None, explicit_enc: str = None,
+                             end_off: int = None) -> tuple:
+        """
+        Smart Pre-Injection Differential Check:
+        Examines if the field value is already present and intact in the target BIOS.
+
+        Returns:
+            (status: str, msg: str, found_off: int)
+            status can be:
+              - 'ALREADY_PRESENT_OFFSET': Value is already at target_off.
+              - 'ALREADY_PRESENT_GLOBAL': Value is found elsewhere in target firmware.
+              - 'TARGET_BLANK': Target slot is blank (0x00/0xFF) or dummy placeholder.
+              - 'TARGET_DIFFERENT': Target has a different value (needs injection/restore).
+              - 'NOT_FOUND': Value is not present in target.
+        """
+        if not val_str or str(val_str).strip() in ("", "N/A", "None", "Unknown"):
+            return ("INVALID_VALUE", "Value is empty or unknown", None)
+
+        val_str = str(val_str).strip()
+        is_hex = bool(explicit_enc and explicit_enc.upper() in ("HEX", "BYTE", "RAW"))
+
+        ascii_b = val_str.encode("latin1", errors="replace")
+        utf16_b = val_str.encode("utf-16le")
+        hex_b = None
+
+        if is_hex or field_name == "MAC Address":
+            try:
+                clean_hex = re.sub(r'[^0-9a-fA-F]', '', val_str)
+                if len(clean_hex) % 2 == 0 and len(clean_hex) >= 4:
+                    hex_b = bytes.fromhex(clean_hex)
+            except Exception:
+                pass
+        elif field_name == "UUID" or re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', val_str):
+            try:
+                clean_hex = re.sub(r'[^0-9a-fA-F]', '', val_str)
+                if len(clean_hex) == 32:
+                    hex_b = bytes.fromhex(clean_hex)
+            except Exception:
+                pass
+
+        # 1. Check exact expected target_off first
+        if target_off is not None and 0 <= target_off < len(data):
+            # Check ASCII
+            v_len = len(ascii_b)
+            if target_off + v_len <= len(data) and data[target_off : target_off + v_len] == ascii_b:
+                return ("ALREADY_PRESENT_OFFSET", f"Matched ASCII at 0x{target_off:X}", target_off)
+
+            # Check UTF-16LE
+            u_len = len(utf16_b)
+            if target_off + u_len <= len(data) and data[target_off : target_off + u_len] == utf16_b:
+                return ("ALREADY_PRESENT_OFFSET", f"Matched UTF-16LE at 0x{target_off:X}", target_off)
+
+            # Check HEX
+            if hex_b and target_off + len(hex_b) <= len(data) and data[target_off : target_off + len(hex_b)] == hex_b:
+                return ("ALREADY_PRESENT_OFFSET", f"Matched HEX at 0x{target_off:X}", target_off)
+
+            # Check if target slot is blank / placeholder
+            slot_len = max(v_len, (end_off - target_off) if end_off and end_off > target_off else 16)
+            if DMIInjector._is_slot_blank_or_dummy(data, target_off, slot_len):
+                # Slot is blank, but verify if value exists elsewhere globally
+                p_asc = data.find(ascii_b) if len(ascii_b) >= 4 else -1
+                if p_asc != -1:
+                    return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_asc:X}", p_asc)
+                p_utf = data.find(utf16_b) if len(utf16_b) >= 8 else -1
+                if p_utf != -1:
+                    return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_utf:X}", p_utf)
+                if hex_b and len(hex_b) >= 6:
+                    p_hex = data.find(hex_b)
+                    if p_hex != -1:
+                        return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_hex:X}", p_hex)
+                return ("TARGET_BLANK", f"Target slot at 0x{target_off:X} is blank/erased", target_off)
+            else:
+                # Target slot has different data
+                p_asc = data.find(ascii_b) if len(ascii_b) >= 4 else -1
+                if p_asc != -1:
+                    return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_asc:X}", p_asc)
+                p_utf = data.find(utf16_b) if len(utf16_b) >= 8 else -1
+                if p_utf != -1:
+                    return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_utf:X}", p_utf)
+                return ("TARGET_DIFFERENT", f"Target has different data at 0x{target_off:X}", target_off)
+
+        # 2. If target_off is None, check globally
+        p_asc = data.find(ascii_b) if len(ascii_b) >= 4 else -1
+        if p_asc != -1:
+            return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_asc:X}", p_asc)
+        p_utf = data.find(utf16_b) if len(utf16_b) >= 8 else -1
+        if p_utf != -1:
+            return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_utf:X}", p_utf)
+        if hex_b and len(hex_b) >= 6:
+            p_hex = data.find(hex_b)
+            if p_hex != -1:
+                return ("ALREADY_PRESENT_GLOBAL", f"Value already exists at 0x{p_hex:X}", p_hex)
+
+        return ("NOT_FOUND", "Value not found in target binary", None)
+
+    @staticmethod
+    def inject_fields(data: bytearray, fields: dict, regions_map: dict = None,
+                      raw_blocks: dict = None, all_occurrences: dict = None,
+                      log_cb=None) -> int:
+        """
+        Smart Selective DMI Injection:
+        - Evaluates each field against target BIOS before writing.
+        - Preserves already-present, intact DMI data (skips overwriting).
+        - Injects only genuinely missing, blank, or different fields.
+        """
+        def _log(m):
+            if log_cb:
+                log_cb(m)
+
+        _log("<font color='#00f3ff'><b>[SMART DMI INJECTION]</b> Pre-checking target BIOS data...</font>")
+        _log("  - Only missing or blank fields will be injected; existing intact DMI will be preserved.")
+
+        preserved_count = 0
+        injected_count = 0
+        skipped_count = 0
+        block_preserved = 0
+        block_injected = 0
+        written_offsets = set()
+
+        # ─── STRATEGY 0: RAW EFI VARIABLE BLOCKS (e.g. HP_MUD, DELL_DVAR, LENOVO_VPD) ───
         if raw_blocks:
             for b_name, b_info in raw_blocks.items():
                 hex_data = b_info.get("hex", "")
-                if not hex_data: continue
+                if not hex_data:
+                    continue
                 block_bytes = bytes.fromhex(hex_data)
-                
+
                 target_b_off = None
                 rel_str = b_info.get("relative_offset", "")
                 reg_name = b_info.get("region", "")
-                
+
                 if rel_str and reg_name and regions_map:
                     for r_n, r_i in regions_map.items():
                         if r_n.upper() == reg_name.upper():
@@ -64,7 +226,7 @@ class DMIInjector:
                                 break
                             except Exception:
                                 pass
-                                
+
                 if target_b_off is None:
                     off_s = b_info.get("start_offset", "")
                     if off_s and str(off_s).strip() not in ("N/A", "None", ""):
@@ -73,14 +235,14 @@ class DMIInjector:
                         except Exception:
                             pass
 
-                # Dell DVAR auto-alignment: If target has DVAR at an offset shift, align to target DVAR
+                # Dell DVAR auto-alignment
                 if b_name == "DELL_DVAR":
                     t_dvar = data.find(b"DVAR")
                     if t_dvar != -1 and (t_dvar % 0x1000 == 0 or data[t_dvar:t_dvar+8].startswith(b"DVAR\xff\x0f")):
                         if 0 <= t_dvar + len(block_bytes) <= len(data):
                             target_b_off = t_dvar
 
-                # Lenovo VPD auto-alignment: If target has VPD at an offset shift, align to target VPD
+                # Lenovo VPD auto-alignment
                 if b_name == "LENOVO_VPD":
                     t_vpd = data.find(b"\xaa\x55VPD\x00")
                     if t_vpd == -1:
@@ -88,13 +250,13 @@ class DMIInjector:
                     if t_vpd != -1 and 0 <= t_vpd + len(block_bytes) <= len(data):
                         target_b_off = t_vpd
 
-                # Acer BVD auto-alignment: If target has $BVD$ at an offset shift, align to target $BVD$
+                # Acer BVD auto-alignment
                 if b_name == "ACER_BVD":
                     t_bvd = data.find(b"$BVD$")
                     if t_bvd != -1 and 0 <= t_bvd + len(block_bytes) <= len(data):
                         target_b_off = t_bvd
 
-                # Acer DMI variable store auto-alignment: If target has CustomDmiVar/DmiVar at an offset shift
+                # Acer DMI variable store auto-alignment
                 if b_name == "ACER_DMI":
                     for s in [b"CustomDmiVar", b"DmiVar", b'\x2F\x83\x90\x2F\x0B\x65\x13\x48\x8E\x5A\xA6\x1F\x03\x35\x80\x04']:
                         t_dmi = data.find(s)
@@ -127,32 +289,55 @@ class DMIInjector:
                         target_b_off = t_tag
 
                 if target_b_off is not None and 0 <= target_b_off + len(block_bytes) <= len(data):
-                    data[target_b_off : target_b_off + len(block_bytes)] = block_bytes
                     hx = f"<a href='hexjump:///0x{target_b_off:X}' style='color:#00f3ff;text-decoration:underline;'>0x{target_b_off:X}</a>"
-                    _log(f"  - <font color='#00ff41'><b>[STRUCTURE RESTORED]</b></font> {b_name} block ({len(block_bytes)}B) @ {hx}")
+                    target_chunk = data[target_b_off : target_b_off + len(block_bytes)]
 
-        injected = 0
-        written_offsets = set()
+                    # SMART CHECK: If target already has the exact identical block
+                    if target_chunk == block_bytes:
+                        _log(f"  - <font color='#00ff41'><b>[BLOCK PRESERVED]</b></font> {b_name} structure ({len(block_bytes)}B) already 100% identical @ {hx} (Untouched)")
+                        block_preserved += 1
+                        continue
 
+                    # SMART CHECK: If target block is NOT wiped and already populated
+                    is_wiped = all(b in (0x00, 0xFF) for b in target_chunk)
+                    null_or_ff_count = sum(1 for b in target_chunk if b in (0x00, 0xFF))
+                    if not is_wiped and (null_or_ff_count / len(target_chunk)) < 0.70:
+                        # Target already has active EFI data in this block!
+                        # Check if any key field value (like Serial Number) from fields is already inside target block
+                        field_found_in_target = False
+                        for fn, fv in fields.items():
+                            val_check = str(fv.get("value", "")).strip()
+                            if len(val_check) >= 6:
+                                if val_check.encode("utf-16le") in target_chunk or val_check.encode("latin1") in target_chunk:
+                                    field_found_in_target = True
+                                    break
+                        if field_found_in_target:
+                            _log(f"  - <font color='#00ff41'><b>[BLOCK PRESERVED]</b></font> {b_name} is already valid and populated in target @ {hx} (Untouched)")
+                            block_preserved += 1
+                            continue
+
+                    # Target block is wiped or missing -> Restore it!
+                    data[target_b_off : target_b_off + len(block_bytes)] = block_bytes
+                    _log(f"  - <font color='#ffd600'><b>[BLOCK RESTORED]</b></font> {b_name} structure ({len(block_bytes)}B) restored @ {hx}")
+                    block_injected += 1
+
+        # ─── STRATEGY 1, 2, 3: INDIVIDUAL DMI FIELDS ───
         for field_name, finfo in fields.items():
             val = finfo.get("value")
             if not val or str(val).strip() in ("", "N/A", "None", "Unknown"):
                 continue
             val_str = str(val).strip()
-            
+
             off_str = finfo.get("offset", "")
             end_str = finfo.get("end_offset", "")
             rel_str = finfo.get("relative_offset", "")
             reg_name = finfo.get("region", "")
             explicit_enc = finfo.get("encoding", None)
 
-            ok = False
-
-            # Strategy 1: Profile offset (with region-relative recalculation if target region moved)
+            # Resolve expected target offset
             target_off = None
             target_end = None
 
-            # Calculate relative offset if region matches
             if rel_str and reg_name and regions_map:
                 for r_n, r_i in regions_map.items():
                     if r_n.upper() == reg_name.upper():
@@ -167,7 +352,6 @@ class DMIInjector:
                         except Exception:
                             pass
 
-            # Fallback to direct absolute profile offset
             if target_off is None and off_str and str(off_str).strip() not in ("N/A", "UNKNOWN", "None", ""):
                 try:
                     s = str(off_str).strip()
@@ -178,6 +362,28 @@ class DMIInjector:
                 except Exception:
                     pass
 
+            # ─── SMART DIFFERENTIAL PRE-CHECK ───
+            status, detail_msg, found_off = DMIInjector.check_field_presence(
+                data, field_name, val_str, target_off=target_off,
+                explicit_enc=explicit_enc, end_off=target_end
+            )
+
+            # If field is already present in target BIOS -> PRESERVE IT UNTOUCHED!
+            if status in ("ALREADY_PRESENT_OFFSET", "ALREADY_PRESENT_GLOBAL"):
+                hx = f"<a href='hexjump:///0x{found_off:X}' style='color:#00ff41;text-decoration:underline;'>0x{found_off:X}</a>"
+                _log(
+                    f"  - <font color='#00ff41'><b>[EXISTS - PRESERVED]</b></font> "
+                    f"{field_name} = '{val_str}' already intact @ {hx} (Untouched)"
+                )
+                preserved_count += 1
+                if found_off is not None:
+                    written_offsets.add(found_off)
+                continue
+
+            # Field is MISSING or TARGET IS BLANK/DIFFERENT -> Selectively inject it!
+            ok = False
+
+            # Strategy 1: Profile offset (with region-relative recalculation)
             if target_off is not None:
                 lbl = f"profile relative({reg_name})" if rel_str and regions_map else "profile offset"
                 ok = DMIInjector._write_at(
@@ -188,7 +394,7 @@ class DMIInjector:
                 if ok:
                     written_offsets.add(target_off)
 
-            # Strategy 2: search binary
+            # Strategy 2: search binary for slot / placeholder / MSDM / PPID
             if not ok:
                 ok = DMIInjector._search_and_write(data, val_str, field_name, log_cb)
 
@@ -197,14 +403,15 @@ class DMIInjector:
                 ok = DMIInjector._smbios_inject(data, field_name, val_str, log_cb)
 
             if ok:
-                injected += 1
+                injected_count += 1
             else:
                 _log(
                     f"  - <font color='#ff4444'><b>[SKIPPED]</b></font> "
-                    f"{field_name} = '{val_str}': could not locate in target binary."
+                    f"{field_name} = '{val_str}': could not locate slot in target binary."
                 )
+                skipped_count += 1
 
-            # Synchronize all secondary / mirror / board occurrences for this field
+            # ─── Synchronize secondary / mirror occurrences ───
             if all_occurrences and field_name in all_occurrences:
                 for occ in all_occurrences[field_name]:
                     occ_off_str = occ.get("offset", "")
@@ -238,15 +445,25 @@ class DMIInjector:
 
                     if target_occ_off is not None and target_occ_off not in written_offsets:
                         lbl_occ = f"mirror occurrence ({occ_reg})" if occ_type != "board" else f"board SKU ({occ_reg})"
+                        # Pre-check mirror slot
+                        m_status, _, m_found = DMIInjector.check_field_presence(
+                            data, f"{field_name} ({occ_type})", write_val,
+                            target_off=target_occ_off, explicit_enc=occ_enc
+                        )
+                        if m_status in ("ALREADY_PRESENT_OFFSET", "ALREADY_PRESENT_GLOBAL"):
+                            preserved_count += 1
+                            written_offsets.add(target_occ_off)
+                            continue
+
                         occ_ok = DMIInjector._write_at(
                             data, target_occ_off, write_val, f"{field_name} ({occ_type})",
                             explicit_enc=occ_enc, label=lbl_occ, log_cb=log_cb
                         )
                         if occ_ok:
                             written_offsets.add(target_occ_off)
-                            injected += 1
+                            injected_count += 1
 
-        # Synchronize any extra fields present in all_occurrences that weren't in fields
+        # ─── Synchronize extra fields in all_occurrences ───
         if all_occurrences:
             for extra_key, occ_list in all_occurrences.items():
                 if extra_key in fields:
@@ -282,20 +499,42 @@ class DMIInjector:
 
                     if target_occ_off is not None and target_occ_off not in written_offsets:
                         lbl_occ = f"extra DMI ({occ_reg})"
+                        m_status, _, _ = DMIInjector.check_field_presence(
+                            data, extra_key, occ_val,
+                            target_off=target_occ_off, explicit_enc=occ_enc
+                        )
+                        if m_status in ("ALREADY_PRESENT_OFFSET", "ALREADY_PRESENT_GLOBAL"):
+                            preserved_count += 1
+                            written_offsets.add(target_occ_off)
+                            continue
+
                         occ_ok = DMIInjector._write_at(
                             data, target_occ_off, occ_val, extra_key,
                             explicit_enc=occ_enc, label=lbl_occ, log_cb=log_cb
                         )
                         if occ_ok:
                             written_offsets.add(target_occ_off)
-                            injected += 1
+                            injected_count += 1
 
-        return injected
+        # ─── SUMMARY REPORT ───
+        _log("<font color='#00c8ff'><b>" + "━" * 52 + "</b></font>")
+        _log("<b>📊 SMART DMI INJECTION REPORT</b>")
+        _log(f"  • Already Present (Preserved): <font color='#00ff41'><b>{preserved_count} field(s)</b></font> (Untouched)")
+        _log(f"  • Missing / Blank (Injected):   <font color='#ffd600'><b>{injected_count} field(s)</b></font> (Injected)")
+        if block_preserved or block_injected:
+            _log(f"  • Raw Blocks Preserved:         <font color='#00ff41'><b>{block_preserved} block(s)</b></font>")
+            _log(f"  • Raw Blocks Restored:          <font color='#ffd600'><b>{block_injected} block(s)</b></font>")
+        if skipped_count:
+            _log(f"  • Skipped / Unlocated:          <font color='#ff4444'><b>{skipped_count} field(s)</b></font>")
+        _log("<font color='#00c8ff'><b>" + "━" * 52 + "</b></font>")
+
+        return injected_count
 
     @staticmethod
     def _write_at(data, off, val_str, field_name, end_off=None, explicit_enc=None, label="offset", log_cb=None):
         def _log(m):
-            if log_cb: log_cb(m)
+            if log_cb:
+                log_cb(m)
         if off < 0 or off >= len(data):
             return False
 
@@ -357,7 +596,7 @@ class DMIInjector:
         if ok:
             bounds_str = f" [0x{off:X} - 0x{off+write_len:X}] ({write_len}B)"
             _log(
-                f"  - <font color='#00ff41'><b>Injected [{enc}]</b></font> "
+                f"  - <font color='#ffd600'><b>[INJECTED {enc}]</b></font> "
                 f"via {label}: {field_name} = '{val_str}' @ {hx}{bounds_str}"
             )
         else:
@@ -370,7 +609,8 @@ class DMIInjector:
     @staticmethod
     def _search_and_write(data, val_str, field_name, log_cb=None):
         def _log(m):
-            if log_cb: log_cb(m)
+            if log_cb:
+                log_cb(m)
 
         # 1. Direct exact string search (ASCII or UTF-16LE)
         for enc_bytes, enc_name in [
@@ -417,7 +657,7 @@ class DMIInjector:
                         return DMIInjector._write_at(data, slot_off, val_str, field_name, end_off=slot_off + 7,
                                                      label="Service Tag label slot", log_cb=log_cb)
 
-        # 5. Targeted replacement for Lenovo MTM / Product Number (20L5..., 81DE... pattern)
+        # 5. Targeted replacement for Lenovo MTM / Product Number
         if field_name in ["MTM", "Product Number"] and re.match(r'^(?:20[A-Z0-9]{8}|21[A-Z0-9]{8}|8[0-3][A-Z0-9]{8})$', val_str):
             m = re.search(rb'\b(?:20[A-Z0-9]{8}|21[A-Z0-9]{8}|8[0-3][A-Z0-9]{8})\b', bytes(data))
             if m:
@@ -444,7 +684,7 @@ class DMIInjector:
                 return DMIInjector._write_at(data, found, val_str, field_name, end_off=found + len(val_str),
                                              label="Lenovo Board Product slot", log_cb=log_cb)
 
-        # 8. Targeted replacement for Acer 22-character Serial Number (NX..., NH..., UN..., etc.)
+        # 8. Targeted replacement for Acer 22-character Serial Number
         if field_name in ["Serial Number", "System Serial Number"] and len(val_str) == 22:
             for pref in [b'NX', b'NH', b'UN', b'DT', b'NC', b'LU', b'LX']:
                 m = re.search(rb'\b' + re.escape(pref) + rb'[A-Z0-9]{20}\b', bytes(data))
@@ -456,7 +696,6 @@ class DMIInjector:
 
         # 9. Targeted replacement for Acer SNID (11 or 12 digits)
         if field_name == "SNID" or (re.match(r'^[0-9]{11,12}$', val_str) and field_name != "UUID"):
-            # Check for explicit SNID label first
             for lbl in [b'SNID:', b'SNID =', b'SNID ']:
                 p = data.find(lbl)
                 if p != -1:
@@ -467,7 +706,6 @@ class DMIInjector:
                         _log(f"  - <font color='#ffd600'>[ACER SNID LABEL]</font> Found '{lbl.decode()}' @ 0x{p:X} -> writing to 0x{slot_off:X}...")
                         return DMIInjector._write_at(data, slot_off, val_str, field_name, end_off=slot_off + len(val_str),
                                                      label="Acer SNID label slot", log_cb=log_cb)
-            # Fallback search for existing 11-12 digit sequence
             m = re.search(rb'\b[0-9]{11,12}\b', bytes(data))
             if m:
                 found = m.start()
@@ -475,36 +713,42 @@ class DMIInjector:
                 return DMIInjector._write_at(data, found, val_str, field_name, end_off=found + len(val_str),
                                              label="Acer SNID slot", log_cb=log_cb)
 
-        # 10. Targeted replacement for ASUS Serial Number (label-based or ASUSTeK proximity)
+        # 10. Targeted replacement for ASUS Serial Number
         if field_name in ["Serial Number", "System Serial Number"] and len(val_str) >= 10:
-            # A. Check for S/N label in target
-            for lbl in [b'Serial Number:', b'Serial Number', b'S/N:']:
+            for lbl in [b'S/N:', b'S/N =', b'S/N ', b'Serial Number:', b'Serial Number =']:
                 p = data.find(lbl)
                 if p != -1:
                     slot_off = p + len(lbl)
-                    while slot_off < len(data) and data[slot_off] in (0x20, 0x3A, 0x00, 0x09):
+                    while slot_off < len(data) and data[slot_off] in (0x20, 0x3A, 0x00):
                         slot_off += 1
-                    sn_m = re.match(rb'[A-Z0-9]{8,20}', bytes(data[slot_off: slot_off + 24]))
-                    if sn_m:
-                        _log(f"  - <font color='#ffd600'>[ASUS SN LABEL]</font> Found '{lbl.decode()}' label @ 0x{p:X} -> writing to 0x{slot_off:X}...")
+                    if slot_off + len(val_str) <= len(data):
+                        _log(f"  - <font color='#ffd600'>[ASUS S/N LABEL]</font> Found '{lbl.decode()}' @ 0x{p:X} -> writing to 0x{slot_off:X}...")
                         return DMIInjector._write_at(data, slot_off, val_str, field_name, end_off=slot_off + len(val_str),
-                                                     label="ASUS Serial label slot", log_cb=log_cb)
-            # B. Search near ASUSTeK string
-            for sig in [b'ASUSTeK', b'ASUSTeK COMPUTER']:
-                p = data.find(sig)
-                if p != -1:
-                    prox = bytes(data[max(0, p - 256): min(len(data), p + 512)])
-                    m = re.search(rb'\b([A-Z0-9]{10,20})\b', prox)
+                                                     label="ASUS S/N label slot", log_cb=log_cb)
+
+            for anchor in [b'ASUSTeK COMPUTER INC.', b'ASUSTeK']:
+                pos = 0
+                while True:
+                    p = data.find(anchor, pos)
+                    if p == -1:
+                        break
+                    pos = p + len(anchor)
+                    window = bytes(data[p : min(len(data), p + 0x2000)])
+                    m = re.search(rb'\b[A-Za-z0-9]{10,16}\b', window)
                     if m:
-                        abs_off = max(0, p - 256) + m.start()
+                        rel_off = m.start()
+                        abs_off = p + rel_off
                         _log(f"  - <font color='#ffd600'>[ASUS SN PROXIMITY]</font> Found serial near ASUSTeK @ 0x{abs_off:X} - replacing...")
                         return DMIInjector._write_at(data, abs_off, val_str, field_name, end_off=abs_off + len(val_str),
                                                      label="ASUS Serial proximity slot", log_cb=log_cb)
 
+        return False
+
     @staticmethod
     def _smbios_inject(data, field_name, val_str, log_cb=None):
         def _log(m):
-            if log_cb: log_cb(m)
+            if log_cb:
+                log_cb(m)
 
         if field_name not in FIELD_TO_SMBIOS:
             return False
@@ -594,9 +838,7 @@ class DMIInjector:
             if b in (0x00, 0xFF):
                 nxt = content[pos + 1] if pos + 1 < limit else 0x00
                 if b == 0xFF or nxt == 0x00:
-                    # End of string area or FF padding
                     return pos if cur <= target_idx else None
-                # Single null separator
                 if cur == target_idx:
                     return pos
                 cur += 1

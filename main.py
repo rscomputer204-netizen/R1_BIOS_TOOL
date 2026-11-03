@@ -7747,10 +7747,16 @@ class BiosServiceTool(QMainWindow):
                 self.btn_apply_dmi.setEnabled(False)
             self.staged_dmi_profile = None
 
-            self.log_to_terminal(
-                f"[SUCCESS] DMI Injection Complete! <font color='#00ff41'><b>{injected_count} fields</b></font> "
-                f"successfully injected into {os.path.basename(self.current_bios_file)} ✅"
-            )
+            if injected_count > 0:
+                self.log_to_terminal(
+                    f"[SUCCESS] Smart DMI Injection Complete! <font color='#00ff41'><b>{injected_count} missing field(s)</b></font> "
+                    f"successfully injected into {os.path.basename(self.current_bios_file)} ✅"
+                )
+            else:
+                self.log_to_terminal(
+                    f"[SUCCESS] Smart DMI Evaluation Complete! All DMI fields were already intact in {os.path.basename(self.current_bios_file)}. "
+                    f"<font color='#00ff41'><b>Existing valid data was preserved without unnecessary overwrites.</b></font> ✅"
+                )
 
             # 6. AUTOMATIC SAVE DIALOG TRIGGER
             from PySide6.QtWidgets import QFileDialog, QMessageBox
