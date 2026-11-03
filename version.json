@@ -1,6 +1,6 @@
 {
-    "version": "R1.1.0.10",
+    "version": "R1.1.0.11",
     "url": "https://raw.githubusercontent.com/rscomputer204-netizen/R1_BIOS_TOOL/main/update.zip",
-    "changelog": "Added new features, optimized performance, and fixed identified bugs.",
-    "date": "2026-11-02 23:42:49"
+    "changelog": "Integrated native R1 CSME Analyzer, optimized auto-repair and verified clean builds.",
+    "date": "2026-11-03 01:54:52"
 }

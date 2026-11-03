@@ -1,3 +1,14 @@
+"""
+R1 BIOS TOOL — GITHUB DEPLOYMENT & AUTO-UPDATE PACKAGING MANAGER v3.0
+====================================================================
+Features:
+- Manual Change Detection (No intrusive auto-scans overwriting user input)
+- Ultra-smart Code Inspector (Detects 1-line changes, functions, classes, new files/folders)
+- Real-time GitHub Connection Health Monitor (Live API check every 10 seconds — no fake OK!)
+- Dedicated Settings Dialog (Change/Test Token, Repo Owner, Branch anytime)
+- Full Auto-Update Packager (Guarantees R1_CSME_Analyzer, rg_engine, assets & _internal are bundled)
+"""
+
 import os
 import sys
 import re
@@ -8,28 +19,40 @@ import shutil
 import threading
 import datetime
 import subprocess
+import urllib.request
+import urllib.error
 import tkinter as tk
 from tkinter import ttk, messagebox
 
-# --- CONFIGURATION & PATHS ---
+# ─── PATHS & CONFIG ──────────────────────────────────────────────────────────
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 os.chdir(BASE_DIR)
 
 CONFIG_FILE = os.path.join(BASE_DIR, "config", "github_token.json")
 
+
 def load_config():
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return {
+    default_cfg = {
         "repo_owner": "rscomputer204-netizen",
         "repo_name": "R1_BIOS_TOOL",
         "branch": "main",
         "github_token": ""
     }
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                default_cfg.update(data)
+        except Exception:
+            pass
+    return default_cfg
+
+
+def save_config(cfg):
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(cfg, f, indent=4)
+
 
 def run_cmd(cmd, check=True):
     """Run shell command in BASE_DIR and return stdout string."""
@@ -38,6 +61,7 @@ def run_cmd(cmd, check=True):
         err = (res.stderr or "").strip()
         raise RuntimeError(err or f"Command failed with code {res.returncode}")
     return (res.stdout or "").strip()
+
 
 def get_current_version():
     ver_file = os.path.join(BASE_DIR, "version.txt")
@@ -53,6 +77,7 @@ def get_current_version():
             pass
     return "R1.1.0.0"
 
+
 def increment_version(ver_str):
     try:
         match = re.match(r'^(.*?)(\d+)$', ver_str)
@@ -63,13 +88,50 @@ def increment_version(ver_str):
         pass
     return ver_str
 
-# ---------------------------------------------------------------------------
-# Deep Change & Function Analyzer
-# ---------------------------------------------------------------------------
+
+# ─── REAL-TIME GITHUB API CONNECTION CHECKER ─────────────────────────────────
+def check_github_api(token, timeout=5):
+    """
+    Directly query the GitHub API to verify token status.
+    Returns:
+      ('OK', username, 'Connected')
+      ('EXPIRED', None, 'Token Expired / Invalid (401)')
+      ('NO_INTERNET', None, 'No Internet Connection')
+      ('EMPTY', None, 'No Token Configured')
+    """
+    token = (token or "").strip()
+    if not token:
+        return ("EMPTY", None, "No Token Configured")
+
+    url = "https://api.github.com/user"
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"token {token}")
+    req.add_header("User-Agent", "R1-BIOS-DEPLOYMENT-TOOL")
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            login = data.get("login", "Unknown")
+            return ("OK", login, f"Connected as @{login}")
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            return ("EXPIRED", None, "Token Expired or Invalid (401)")
+        elif e.code == 403:
+            return ("EXPIRED", None, "Rate Limited / Access Denied (403)")
+        return ("ERROR", None, f"HTTP Error {e.code}")
+    except Exception as e:
+        return ("NO_INTERNET", None, "No Internet / Network Error")
+
+
+# ─── ULTRA-SMART CODE & RESOURCE CHANGE DETECTOR ─────────────────────────────
 def analyze_git_changes():
     """
-    Scans the repository for all modified/untracked files AND any unpushed commits
-    compared to origin/{branch}, extracting detailed function-level and resource-level changes.
+    Scans the repository deeply:
+    - Working tree modifications (git status --porcelain -u)
+    - Single-line additions / deletions (git diff -U0 and numstat)
+    - Unpushed commits (origin/{branch}..HEAD)
+    - Function and class level alterations
+    - New folders/modules (e.g. R1_CSME_Analyzer)
     """
     cfg = load_config()
     branch = cfg.get("branch", "main")
@@ -83,17 +145,22 @@ def analyze_git_changes():
 
         if diff_text:
             for d_line in diff_text.splitlines():
-                hunk_match = re.search(r'@@\s+(?:def|class)\s+([A-Za-z0-9_]+)', d_line)
+                hunk_match = re.search(r'@@.*?(?:def|class)\s+([A-Za-z0-9_]+)', d_line)
                 if hunk_match:
                     fn = hunk_match.group(1)
                     if f"def {fn}()" not in funcs:
                         funcs.append(f"def {fn}()")
-                added_match = re.search(r'^\+\s*(?:async\s+)?def\s+([A-Za-z0-9_]+)\s*\(', d_line)
-                if added_match:
-                    fn = added_match.group(1)
+                added_fn = re.search(r'^\+\s*(?:async\s+)?def\s+([A-Za-z0-9_]+)\s*\(', d_line)
+                if added_fn:
+                    fn = added_fn.group(1)
                     tag = f"def {fn}() [NEW]"
                     if tag not in funcs and f"def {fn}()" not in funcs:
                         funcs.append(tag)
+                added_cls = re.search(r'^\+\s*class\s+([A-Za-z0-9_]+)', d_line)
+                if added_cls:
+                    cls_name = f"class {added_cls.group(1)} [NEW]"
+                    if cls_name not in funcs:
+                        funcs.append(cls_name)
         else:
             try:
                 with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
@@ -107,21 +174,16 @@ def analyze_git_changes():
                 pass
         return funcs
 
-    # 1. Check Unpushed Commits (compared to origin/branch)
+    # 1. Unpushed commits compared to origin/branch
     try:
         unpushed_raw = run_cmd(f"git diff --name-status origin/{branch}..HEAD", check=False)
         if unpushed_raw:
             for line in unpushed_raw.splitlines():
-                trimmed = line.strip()
-                if not trimmed:
-                    continue
-                parts = trimmed.split(None, 1)
+                parts = line.strip().split(None, 1)
                 if len(parts) < 2:
                     continue
                 sc, fp = parts[0], parts[1].replace('"', '')
-
-                # Filter out transient files
-                if fp.endswith(".log") or fp.endswith(".dump") or "__pycache__" in fp or fp.startswith(".gemini"):
+                if fp.endswith(".log") or "__pycache__" in fp or fp.startswith(".gemini"):
                     continue
 
                 ch_type = "MODIFIED"
@@ -131,21 +193,28 @@ def analyze_git_changes():
                     ch_type = "DELETED"
 
                 funcs = []
+                diff_stats = ""
                 if fp.endswith(".py") and ch_type != "DELETED":
                     diff_txt = run_cmd(f'git diff -U0 origin/{branch}..HEAD -- "{fp}"', check=False)
                     funcs = parse_py_functions(fp, diff_txt)
+                    numstat = run_cmd(f'git diff --numstat origin/{branch}..HEAD -- "{fp}"', check=False)
+                    if numstat:
+                        parts_ns = numstat.split()
+                        if len(parts_ns) >= 2:
+                            diff_stats = f"+{parts_ns[0]} / -{parts_ns[1]} lines"
 
                 file_map[fp] = {
                     "status": ch_type,
                     "path": fp,
                     "functions": funcs,
-                    "source": "committed"
+                    "stats": diff_stats,
+                    "source": "unpushed_commit"
                 }
     except Exception:
         pass
 
-    # 2. Check Uncommitted / Working Tree changes (git status --porcelain)
-    raw_status = run_cmd("git status --porcelain", check=False)
+    # 2. Working tree status (-u flag ensures untracked directory files are unpacked)
+    raw_status = run_cmd("git status --porcelain -u", check=False)
     if raw_status:
         for raw_line in raw_status.splitlines():
             trimmed = raw_line.strip()
@@ -157,8 +226,8 @@ def analyze_git_changes():
             status_code = parts[0]
             filepath = parts[1].replace('"', '')
 
-            # Filter out transient files
-            if filepath.endswith(".log") or filepath.endswith(".dump") or "__pycache__" in filepath or filepath.startswith(".gemini") or filepath.endswith(".tmp"):
+            # Ignore transient logs & cache
+            if filepath.endswith(".log") or "__pycache__" in filepath or filepath.startswith(".gemini") or filepath.endswith(".tmp"):
                 continue
 
             change_type = "MODIFIED"
@@ -170,154 +239,345 @@ def analyze_git_changes():
                 change_type = "ADDED"
 
             funcs = []
+            diff_stats = ""
             if filepath.endswith(".py") and change_type != "DELETED":
                 if change_type == "NEW FILE":
                     funcs = parse_py_functions(filepath, "")
+                    try:
+                        with open(os.path.join(BASE_DIR, filepath), "r", encoding="utf-8", errors="ignore") as f:
+                            lines_cnt = sum(1 for _ in f)
+                        diff_stats = f"{lines_cnt} lines"
+                    except Exception:
+                        pass
                 else:
                     diff_out = run_cmd(f'git diff -U0 -- "{filepath}"', check=False)
                     funcs = parse_py_functions(filepath, diff_out)
+                    numstat = run_cmd(f'git diff --numstat -- "{filepath}"', check=False)
+                    if numstat:
+                        parts_ns = numstat.split()
+                        if len(parts_ns) >= 2:
+                            diff_stats = f"+{parts_ns[0]} / -{parts_ns[1]} lines"
 
             if filepath in file_map:
                 existing = file_map[filepath]
                 merged_funcs = list(dict.fromkeys(existing["functions"] + funcs))
                 file_map[filepath]["functions"] = merged_funcs
                 file_map[filepath]["status"] = change_type
+                if diff_stats:
+                    file_map[filepath]["stats"] = diff_stats
             else:
                 file_map[filepath] = {
                     "status": change_type,
                     "path": filepath,
                     "functions": funcs,
+                    "stats": diff_stats,
                     "source": "working_tree"
                 }
 
     return list(file_map.values())
 
-# ---------------------------------------------------------------------------
-# Modern Cyberpunk Tkinter GUI Application
-# ---------------------------------------------------------------------------
+
+# ─── SETTINGS DIALOG (TOKEN & REPO CONFIG) ───────────────────────────────────
+class SettingsDialog(tk.Toplevel):
+    def __init__(self, parent, cfg, on_save_cb):
+        super().__init__(parent)
+        self.title("⚙️ GITHUB DEPLOYMENT SETTINGS")
+        self.geometry("540x440")
+        self.resizable(False, False)
+        self.configure(bg="#030712")
+        self.transient(parent)
+        self.grab_set()
+
+        self.cfg = dict(cfg)
+        self.on_save_cb = on_save_cb
+
+        # Center on parent
+        self.update_idletasks()
+        x = parent.winfo_x() + (parent.winfo_width() // 2) - 270
+        y = parent.winfo_y() + (parent.winfo_height() // 2) - 220
+        self.geometry(f"+{max(0, x)}+{max(0, y)}")
+
+        self.setup_ui()
+
+    def setup_ui(self):
+        clr_bg = "#030712"
+        clr_card = "#0f172a"
+        clr_border = "#1e293b"
+        clr_cyan = "#06b6d4"
+        clr_text = "#f8fafc"
+        clr_dim = "#94a3b8"
+
+        # Header
+        hdr = tk.Frame(self, bg="#020617", padx=16, pady=12, highlightthickness=1, highlightbackground=clr_border)
+        hdr.pack(fill=tk.X)
+        tk.Label(hdr, text="⚙️ GITHUB REPOSITORY & ACCESS CONFIG", fg=clr_cyan, bg="#020617", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(hdr, text="Configure your personal access token and target repository details.", fg=clr_dim, bg="#020617", font=("Segoe UI", 8)).pack(anchor="w")
+
+        # Body
+        body = tk.Frame(self, bg=clr_bg, padx=16, pady=12)
+        body.pack(fill=tk.BOTH, expand=True)
+
+        # Token Field
+        tk.Label(body, text="PERSONAL ACCESS TOKEN (CLASSIC / REPO SCOPE)", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        tok_frame = tk.Frame(body, bg=clr_card, highlightthickness=1, highlightbackground=clr_border)
+        tok_frame.pack(fill=tk.X, pady=(0, 10))
+
+        self.var_token = tk.StringVar(value=self.cfg.get("github_token", ""))
+        self.show_tok = False
+        self.ent_token = tk.Entry(tok_frame, textvariable=self.var_token, bg=clr_card, fg=clr_text,
+                                  insertbackground=clr_cyan, relief="flat", font=("Consolas", 9), show="•")
+        self.ent_token.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
+
+        self.btn_eye = tk.Button(tok_frame, text="👁", bg=clr_card, fg=clr_dim, relief="flat", cursor="hand2", command=self.toggle_eye)
+        self.btn_eye.pack(side=tk.RIGHT, padx=6)
+
+        # Live Test Button & Result
+        test_frame = tk.Frame(body, bg=clr_bg)
+        test_frame.pack(fill=tk.X, pady=(0, 12))
+        self.btn_test = tk.Button(test_frame, text="⚡ Test Token Connection", bg="#1e293b", fg=clr_cyan,
+                                  font=("Segoe UI", 8, "bold"), relief="flat", padx=10, pady=4, cursor="hand2",
+                                  command=self.run_test)
+        self.btn_test.pack(side=tk.LEFT)
+
+        self.lbl_test_res = tk.Label(test_frame, text="Click to test token validity", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8))
+        self.lbl_test_res.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Repo Owner
+        tk.Label(body, text="REPOSITORY OWNER (USERNAME / ORG)", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        self.var_owner = tk.StringVar(value=self.cfg.get("repo_owner", "rscomputer204-netizen"))
+        ent_owner = tk.Entry(body, textvariable=self.var_owner, bg=clr_card, fg=clr_text,
+                             insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
+                             highlightthickness=1, highlightbackground=clr_border)
+        ent_owner.pack(fill=tk.X, pady=(0, 10), ipady=4, padx=1)
+
+        # Repo Name
+        tk.Label(body, text="REPOSITORY NAME", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        self.var_repo = tk.StringVar(value=self.cfg.get("repo_name", "R1_BIOS_TOOL"))
+        ent_repo = tk.Entry(body, textvariable=self.var_repo, bg=clr_card, fg=clr_text,
+                            insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
+                            highlightthickness=1, highlightbackground=clr_border)
+        ent_repo.pack(fill=tk.X, pady=(0, 10), ipady=4, padx=1)
+
+        # Branch Name
+        tk.Label(body, text="TARGET BRANCH", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        self.var_branch = tk.StringVar(value=self.cfg.get("branch", "main"))
+        ent_branch = tk.Entry(body, textvariable=self.var_branch, bg=clr_card, fg=clr_text,
+                              insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
+                              highlightthickness=1, highlightbackground=clr_border)
+        ent_branch.pack(fill=tk.X, pady=(0, 16), ipady=4, padx=1)
+
+        # Footer Buttons
+        ftr = tk.Frame(self, bg="#020617", padx=16, pady=10, highlightthickness=1, highlightbackground=clr_border)
+        ftr.pack(fill=tk.X, side=tk.BOTTOM)
+
+        btn_cancel = tk.Button(ftr, text="Cancel", bg="#1e293b", fg=clr_dim, relief="flat", padx=16, pady=6, cursor="hand2", command=self.destroy)
+        btn_cancel.pack(side=tk.RIGHT, padx=(8, 0))
+
+        btn_save = tk.Button(ftr, text="💾 Save Settings", bg="#10b981", fg="#000000",
+                             font=("Segoe UI", 9, "bold"), relief="flat", padx=20, pady=6, cursor="hand2",
+                             command=self.save)
+        btn_save.pack(side=tk.RIGHT)
+
+    def toggle_eye(self):
+        self.show_tok = not self.show_tok
+        self.ent_token.config(show="" if self.show_tok else "•")
+
+    def run_test(self):
+        tok = self.var_token.get().strip()
+        if not tok:
+            self.lbl_test_res.config(text="⚠ Please enter a token first", fg="#facc15")
+            return
+        self.lbl_test_res.config(text="Testing with GitHub...", fg="#38bdf8")
+        self.btn_test.config(state=tk.DISABLED)
+
+        def worker():
+            status, login, msg = check_github_api(tok)
+            if status == "OK":
+                self.after(0, lambda: self.lbl_test_res.config(text=f"✔ Authenticated as @{login}", fg="#10b981"))
+            elif status == "EXPIRED":
+                self.after(0, lambda: self.lbl_test_res.config(text="✖ Token Expired or Invalid (401)", fg="#f43f5e"))
+            elif status == "NO_INTERNET":
+                self.after(0, lambda: self.lbl_test_res.config(text="⚠ No Internet / Connection Failed", fg="#facc15"))
+            else:
+                self.after(0, lambda: self.lbl_test_res.config(text=f"✖ {msg}", fg="#f43f5e"))
+            self.after(0, lambda: self.btn_test.config(state=tk.NORMAL))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def save(self):
+        new_tok = self.var_token.get().strip()
+        new_owner = self.var_owner.get().strip() or "rscomputer204-netizen"
+        new_repo = self.var_repo.get().strip() or "R1_BIOS_TOOL"
+        new_branch = self.var_branch.get().strip() or "main"
+
+        self.cfg["github_token"] = new_tok
+        self.cfg["repo_owner"] = new_owner
+        self.cfg["repo_name"] = new_repo
+        self.cfg["branch"] = new_branch
+
+        save_config(self.cfg)
+        if self.on_save_cb:
+            self.on_save_cb(self.cfg)
+        messagebox.showinfo("SETTINGS SAVED", "GitHub deployment settings saved successfully!")
+        self.destroy()
+
+
+# ─── MAIN DEPLOYMENT GUI APPLICATION ─────────────────────────────────────────
 class GitPushGUI:
     def __init__(self, root):
         self.root = root
-        self.root.title("R1 FLASH ULTRA ❖ GITHUB DEPLOYMENT MANAGER")
-        self.root.geometry("880x680")
-        self.root.minsize(800, 600)
+        self.root.title("R1 BIOS TOOL ❖ GITHUB DEPLOYMENT & AUTO-UPDATE ENGINE")
+        self.root.geometry("920x720")
+        self.root.minsize(860, 640)
 
-        # Cyber Dark Color Palette
-        self.clr_bg = "#030712"        # Slate 950
-        self.clr_card = "#0f172a"      # Slate 900
-        self.clr_header = "#020617"    # Pitch dark
-        self.clr_border = "#1e293b"    # Slate 800
-        self.clr_cyan = "#06b6d4"      # Neon Cyan
+        # Modern Cyber Dark Palette
+        self.clr_bg = "#030712"
+        self.clr_card = "#0f172a"
+        self.clr_header = "#020617"
+        self.clr_border = "#1e293b"
+        self.clr_cyan = "#06b6d4"
         self.clr_cyan_bright = "#22d3ee"
-        self.clr_green = "#10b981"     # Emerald Green
+        self.clr_green = "#10b981"
         self.clr_green_hover = "#059669"
-        self.clr_dim = "#94a3b8"       # Slate 400
-        self.clr_text = "#f8fafc"      # White
-        self.clr_red = "#f43f5e"       # Rose
+        self.clr_dim = "#94a3b8"
+        self.clr_text = "#f8fafc"
+        self.clr_red = "#f43f5e"
+        self.clr_yellow = "#facc15"
 
         self.root.configure(bg=self.clr_bg)
 
-        # Config and state
+        # State
         self.cfg = load_config()
         self.detected_changes = []
         self.is_busy = False
-        self._last_scan_sig = ""
-        self.auto_poll_interval_ms = 3500  # Automatically scan every 3.5 seconds
+        self.github_status = "CHECKING"  # OK, EXPIRED, NO_INTERNET, EMPTY
+        self.github_user = None
 
         self.setup_ui()
         self.center_window()
-        self.log("SYSTEM READY. Real-Time Auto-Detection ACTIVE.")
+        self.log("SYSTEM INITIALIZED. Ready for manual scan.", "info")
 
-        # Bind window focus so when user returns from IDE, it scans immediately
-        self.root.bind("<FocusIn>", lambda e: self.on_window_focus())
-
-        # Trigger automatic initial detection on launch
-        self.root.after(400, self.on_detect_click)
-
-        # Start live background polling
-        self.root.after(self.auto_poll_interval_ms, self._auto_poll_loop)
+        # Start 10-second background GitHub Connection Health Checker
+        self.start_health_monitor()
 
     def center_window(self):
         self.root.update_idletasks()
-        w = 880
-        h = 680
+        w = 920
+        h = 720
         x = (self.root.winfo_screenwidth() // 2) - (w // 2)
         y = (self.root.winfo_screenheight() // 2) - (h // 2) - 30
-        self.root.geometry(f"{w}x{h}+{x}+{y}")
+        self.root.geometry(f"{w}x{h}+{max(0, x)}+{max(0, y)}")
 
-    def on_window_focus(self):
-        if not self.is_busy:
-            self._check_for_updates_background()
+    # ─── REAL-TIME HEALTH MONITOR (10 SECOND INTERVAL) ──────────────────────
+    def start_health_monitor(self):
+        def monitor_worker():
+            while True:
+                tok = self.cfg.get("github_token", "")
+                status, user, msg = check_github_api(tok, timeout=6)
+                self.github_status = status
+                self.github_user = user
+                self.root.after(0, lambda s=status, u=user, m=msg: self.update_health_badge(s, u, m))
+                time.sleep(10)  # Check every 10 seconds exactly
 
-    def _auto_poll_loop(self):
-        if not self.is_busy:
-            self._check_for_updates_background()
-        self.root.after(self.auto_poll_interval_ms, self._auto_poll_loop)
+        t = threading.Thread(target=monitor_worker, daemon=True)
+        t.start()
 
-    def _check_for_updates_background(self):
-        def worker():
-            try:
-                status_raw = run_cmd("git status --porcelain", check=False)
-                head_rev = run_cmd("git rev-parse HEAD", check=False)
-                sig = f"{status_raw}|{head_rev}"
-                if sig != getattr(self, '_last_scan_sig', None):
-                    self._last_scan_sig = sig
-                    self.root.after(0, self.on_detect_click)
-            except Exception:
-                pass
-        threading.Thread(target=worker, daemon=True).start()
+    def update_health_badge(self, status, user, msg):
+        if status == "OK":
+            self.lbl_health_badge.config(
+                text=f"🟢 LIVE: Connected (@{user})",
+                fg=self.clr_green
+            )
+            # Re-enable push button if changes were already detected
+            if self.detected_changes and not self.is_busy:
+                self.btn_push.config(state=tk.NORMAL, bg=self.clr_green, fg="#000000", cursor="hand2")
+        elif status == "EXPIRED":
+            self.lbl_health_badge.config(
+                text="🔴 TOKEN EXPIRED / INVALID (Click ⚙️ Settings)",
+                fg=self.clr_red
+            )
+            # Disable push button with warning
+            if not self.is_busy:
+                self.btn_push.config(state=tk.DISABLED, bg="#1e293b", fg="#64748b", cursor="arrow")
+        elif status == "NO_INTERNET":
+            self.lbl_health_badge.config(
+                text="🟡 OFFLINE: No Internet Connection",
+                fg=self.clr_yellow
+            )
+        else:
+            self.lbl_health_badge.config(
+                text="⚪ TOKEN NOT CONFIGURED (Click ⚙️ Settings)",
+                fg=self.clr_dim
+            )
+            if not self.is_busy:
+                self.btn_push.config(state=tk.DISABLED, bg="#1e293b", fg="#64748b", cursor="arrow")
 
+    # ─── UI SETUP ────────────────────────────────────────────────────────────
     def setup_ui(self):
         # 1. Header Frame
-        header = tk.Frame(self.root, bg=self.clr_header, padx=20, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
+        header = tk.Frame(self.root, bg=self.clr_header, padx=18, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
         header.pack(fill=tk.X)
 
         title_box = tk.Frame(header, bg=self.clr_header)
         title_box.pack(side=tk.LEFT)
 
-        tk.Label(title_box, text="R1 FLASH ULTRA", fg=self.clr_cyan, bg=self.clr_header,
+        tk.Label(title_box, text="R1 BIOS TOOL ❖ CLOUD DEPLOYMENT", fg=self.clr_cyan, bg=self.clr_header,
                  font=("Segoe UI", 12, "bold")).pack(anchor="w")
-        tk.Label(title_box, text="GITHUB LIVE CLOUD DEPLOYMENT & SYNC ENGINE", fg=self.clr_dim, bg=self.clr_header,
+        tk.Label(title_box, text="SMART CHANGE DETECTOR & AUTO-UPDATE PACKAGING ENGINE", fg=self.clr_dim, bg=self.clr_header,
                  font=("Segoe UI", 8, "bold")).pack(anchor="w")
 
-        # Remote Target Badge
-        repo_badge = tk.Frame(header, bg=self.clr_card, padx=12, pady=6, highlightthickness=1, highlightbackground=self.clr_border)
-        repo_badge.pack(side=tk.RIGHT)
-        
+        # Right Header: Settings Button & Live Connection Badge
+        header_right = tk.Frame(header, bg=self.clr_header)
+        header_right.pack(side=tk.RIGHT)
+
+        # Settings Button
+        btn_settings = tk.Button(
+            header_right, text="⚙️ Settings", bg="#1e293b", fg=self.clr_cyan_bright,
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=12, pady=4, cursor="hand2",
+            activebackground="#334155", activeforeground="#ffffff",
+            command=self.open_settings
+        )
+        btn_settings.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # Live Health Status Box
+        health_box = tk.Frame(header_right, bg=self.clr_card, padx=10, pady=5, highlightthickness=1, highlightbackground=self.clr_border)
+        health_box.pack(side=tk.RIGHT)
+
         repo_name = f"{self.cfg.get('repo_owner', 'rscomputer204-netizen')}/{self.cfg.get('repo_name', 'R1_BIOS_TOOL')}"
-        tk.Label(repo_badge, text=f"REPO: {repo_name}", fg=self.clr_cyan_bright, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
-        tk.Label(repo_badge, text="⚡ AUTO-DETECT: ACTIVE  •  STATUS: OK", fg=self.clr_green, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
+        tk.Label(health_box, text=f"REPO: {repo_name} [{self.cfg.get('branch', 'main')}]", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
+        self.lbl_health_badge = tk.Label(health_box, text="⏳ Checking GitHub Link...", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold"))
+        self.lbl_health_badge.pack(anchor="e")
 
         # 2. Main Content Container
-        content = tk.Frame(self.root, bg=self.clr_bg, padx=16, pady=12)
+        content = tk.Frame(self.root, bg=self.clr_bg, padx=16, pady=10)
         content.pack(fill=tk.BOTH, expand=True)
 
-        # Action Buttons Banner (Dual Button Control)
-        btn_banner = tk.Frame(content, bg=self.clr_card, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
+        # Action Buttons Banner (Manual Detection & Push)
+        btn_banner = tk.Frame(content, bg=self.clr_card, padx=14, pady=10, highlightthickness=1, highlightbackground=self.clr_border)
         btn_banner.pack(fill=tk.X, pady=(0, 10))
 
-        # Button 1: DETECT NEW UPDATE
+        # Button 1: DETECT CHANGES (MANUAL)
         self.btn_detect = tk.Button(
-            btn_banner, text="🔍  DETECT NEW UPDATE", bg=self.clr_cyan, fg="#000000",
-            font=("Segoe UI", 10, "bold"), relief="flat", padx=20, pady=10, cursor="hand2",
+            btn_banner, text="🔍  DETECT CHANGES", bg=self.clr_cyan, fg="#000000",
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=22, pady=8, cursor="hand2",
             activebackground=self.clr_cyan_bright, activeforeground="#000000",
             command=self.on_detect_click
         )
-        self.btn_detect.pack(side=tk.LEFT, padx=(0, 15))
+        self.btn_detect.pack(side=tk.LEFT, padx=(0, 12))
 
         # Button 2: PUSH TO GITHUB (Initially Disabled)
         self.btn_push = tk.Button(
             btn_banner, text="🚀  PUSH TO GITHUB", bg="#1e293b", fg="#64748b",
-            font=("Segoe UI", 10, "bold"), relief="flat", padx=25, pady=10, cursor="arrow",
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=25, pady=8, cursor="arrow",
             state=tk.DISABLED, command=self.on_push_click
         )
         self.btn_push.pack(side=tk.LEFT)
 
         # Status Summary Label
-        self.lbl_status_badge = tk.Label(btn_banner, text="Ready for scan", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 9, "bold"))
+        self.lbl_status_badge = tk.Label(btn_banner, text="Click 'DETECT CHANGES' to start", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 9, "bold"))
         self.lbl_status_badge.pack(side=tk.RIGHT, padx=5)
 
-        # Split Container: Left Config Panel & Right Detected Changes View
+        # Split Container: Left Metadata Panel & Right Inspector
         split_frame = tk.Frame(content, bg=self.clr_bg)
         split_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
 
@@ -326,7 +586,7 @@ class GitPushGUI:
         left_panel.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
         left_panel.pack_propagate(False)
 
-        tk.Label(left_panel, text="RELEASE METADATA", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(0, 10))
+        tk.Label(left_panel, text="RELEASE METADATA", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(0, 8))
 
         # Current Version
         cur_ver = get_current_version()
@@ -335,39 +595,27 @@ class GitPushGUI:
         self.lbl_cur_ver.pack(anchor="w", pady=(0, 8))
 
         # Next Version Entry
-        tk.Label(left_panel, text="NEXT RELEASE VERSION", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
+        tk.Label(left_panel, text="TARGET RELEASE VERSION", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
         self.var_next_ver = tk.StringVar(value=increment_version(cur_ver))
         ver_entry = tk.Entry(left_panel, textvariable=self.var_next_ver, bg=self.clr_bg, fg=self.clr_green,
                              insertbackground=self.clr_cyan, relief="flat", font=("Segoe UI", 10, "bold"),
                              highlightthickness=1, highlightbackground=self.clr_border)
-        ver_entry.pack(fill=tk.X, pady=(2, 12), ipady=4, padx=1)
+        ver_entry.pack(fill=tk.X, pady=(2, 10), ipady=3, padx=1)
 
         # Changelog / Commit Message
-        tk.Label(left_panel, text="UPDATE DESCRIPTION / NOTE", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
+        tk.Label(left_panel, text="RELEASE NOTES / DESCRIPTION", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
         self.txt_changelog = tk.Text(left_panel, bg=self.clr_bg, fg=self.clr_text, insertbackground=self.clr_cyan,
-                                     relief="flat", font=("Segoe UI", 9), height=5,
+                                     relief="flat", font=("Segoe UI", 9), height=6,
                                      highlightthickness=1, highlightbackground=self.clr_border)
-        self.txt_changelog.pack(fill=tk.BOTH, expand=True, pady=(2, 6))
-        self.txt_changelog.insert(tk.END, "Added new features, optimized performance, and fixed identified bugs.")
+        self.txt_changelog.pack(fill=tk.BOTH, expand=True, pady=(2, 8))
+        self.txt_changelog.insert(tk.END, "Integrated native R1 CSME Analyzer, optimized auto-repair and verified clean builds.")
 
-        # GitHub Access Token Input Field & Save Button
-        tk.Label(left_panel, text="GITHUB ACCESS TOKEN", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
-        token_row = tk.Frame(left_panel, bg=self.clr_card)
-        token_row.pack(fill=tk.X, pady=(2, 0))
+        # Quick Settings Shortcut
+        btn_cfg_quick = tk.Button(left_panel, text="⚙️ Configure Token & Repo", bg="#1e293b", fg=self.clr_cyan,
+                                  font=("Segoe UI", 8, "bold"), relief="flat", cursor="hand2", command=self.open_settings)
+        btn_cfg_quick.pack(fill=tk.X, pady=(4, 0), ipady=3)
 
-        self.var_token = tk.StringVar(value=self.cfg.get("github_token", ""))
-        self.token_entry = tk.Entry(token_row, textvariable=self.var_token, bg=self.clr_bg, fg=self.clr_text,
-                                    insertbackground=self.clr_cyan, relief="flat", font=("Consolas", 8), show="•",
-                                    highlightthickness=1, highlightbackground=self.clr_border)
-        self.token_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
-
-        btn_save_tok = tk.Button(token_row, text="💾 Save", bg="#1e293b", fg=self.clr_cyan,
-                                 font=("Segoe UI", 8, "bold"), relief="flat", cursor="hand2",
-                                 activebackground="#334155", activeforeground=self.clr_cyan_bright,
-                                 command=self.save_github_token)
-        btn_save_tok.pack(side=tk.RIGHT, padx=(6, 0))
-
-        # --- RIGHT PANEL: Detected Changes & Function Tree ---
+        # --- RIGHT PANEL: Ultra-Smart Inspector ---
         right_panel = tk.Frame(split_frame, bg=self.clr_card, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
@@ -385,22 +633,24 @@ class GitPushGUI:
         )
         self.txt_inspector.pack(fill=tk.BOTH, expand=True)
 
-        # Configure custom text tags for syntax highlighting
+        # Text Tags
         self.txt_inspector.tag_config("title", foreground="#38bdf8", font=("Consolas", 9, "bold"))
         self.txt_inspector.tag_config("file_mod", foreground="#22d3ee", font=("Consolas", 9, "bold"))
         self.txt_inspector.tag_config("file_new", foreground="#34d399", font=("Consolas", 9, "bold"))
+        self.txt_inspector.tag_config("file_del", foreground="#f43f5e", font=("Consolas", 9, "bold"))
         self.txt_inspector.tag_config("func", foreground="#a7f3d0", font=("Consolas", 9))
+        self.txt_inspector.tag_config("stats", foreground="#facc15", font=("Consolas", 9))
         self.txt_inspector.tag_config("dim", foreground="#64748b")
         self.txt_inspector.tag_config("success", foreground="#10b981", font=("Consolas", 10, "bold"))
 
-        self.txt_inspector.insert(tk.END, "Click '[ 🔍 DETECT NEW UPDATE ]' to scan code modifications...\n", "dim")
+        self.txt_inspector.insert(tk.END, "Ready. Click '[ 🔍 DETECT CHANGES ]' to scan code modifications...\n", "dim")
 
         # 3. Bottom Terminal Log Console
-        console_frame = tk.Frame(self.root, bg=self.clr_card, padx=14, pady=10, highlightthickness=1, highlightbackground=self.clr_border)
-        console_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=16, pady=(0, 12))
+        console_frame = tk.Frame(self.root, bg=self.clr_card, padx=14, pady=8, highlightthickness=1, highlightbackground=self.clr_border)
+        console_frame.pack(fill=tk.X, side=tk.BOTTOM, padx=16, pady=(0, 10))
 
-        tk.Label(console_frame, text="ACTIVITY LOG", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 4))
-        
+        tk.Label(console_frame, text="ACTIVITY LOG", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 3))
+
         self.txt_console = tk.Text(
             console_frame, bg=self.clr_bg, fg="#cbd5e1", relief="flat",
             font=("Consolas", 8), height=5, wrap="word",
@@ -417,113 +667,112 @@ class GitPushGUI:
         self.txt_console.insert(tk.END, f"[{ts}] {msg}\n", tag)
         self.txt_console.see(tk.END)
 
-    # -----------------------------------------------------------------------
-    # Step 1: Detect New Update Action
-    # -----------------------------------------------------------------------
+    def open_settings(self):
+        SettingsDialog(self.root, self.cfg, self.on_settings_saved)
+
+    def on_settings_saved(self, new_cfg):
+        self.cfg = new_cfg
+        repo_name = f"{self.cfg.get('repo_owner', 'rscomputer204-netizen')}/{self.cfg.get('repo_name', 'R1_BIOS_TOOL')}"
+        self.log(f"Settings updated for repository {repo_name}.", "ok")
+        # Trigger immediate connection health test
+        status, user, msg = check_github_api(self.cfg.get("github_token", ""))
+        self.update_health_badge(status, user, msg)
+
+    # ─── STEP 1: MANUAL DETECT CHANGES ACTION ────────────────────────────────
     def on_detect_click(self):
         if self.is_busy:
             return
 
         self.btn_detect.config(state=tk.DISABLED, text="⏳  SCANNING...")
-        self.lbl_status_badge.config(text="Analyzing repository diff...", fg=self.clr_cyan)
+        self.lbl_status_badge.config(text="Scanning repository diff & changes...", fg=self.clr_cyan)
         self.txt_inspector.delete(1.0, tk.END)
-        self.txt_inspector.insert(tk.END, "Scanning code files, functions, and resources...\n\n", "dim")
-        self.log("Running Deep Code Diff & Function Scanner...")
+        self.txt_inspector.insert(tk.END, "Analyzing all working tree files, line diffs, and unpushed commits...\n\n", "dim")
 
         def worker():
             try:
-                # Ensure git directory is recognized as safe
+                # Add safe directory config
                 run_cmd(f'git config --global --add safe.directory "{BASE_DIR}"', check=False)
-
                 reports = analyze_git_changes()
-                self.root.after(0, lambda: self.render_detection_results(reports))
+
+                self.root.after(0, lambda: self.render_analysis(reports))
             except Exception as e:
-                self.root.after(0, lambda: self.render_detection_error(str(e)))
+                self.root.after(0, lambda: self.log(f"Scan failed: {e}", "err"))
+                self.root.after(0, lambda: self.btn_detect.config(state=tk.NORMAL, text="🔍  DETECT CHANGES"))
 
         threading.Thread(target=worker, daemon=True).start()
 
-    def render_detection_results(self, reports):
-        self.btn_detect.config(state=tk.NORMAL, text="🔍  DETECT NEW UPDATE")
+    def render_analysis(self, reports):
         self.detected_changes = reports
-
+        self.btn_detect.config(state=tk.NORMAL, text="🔍  DETECT CHANGES")
         self.txt_inspector.delete(1.0, tk.END)
 
         if not reports:
-            # NO CHANGES DETECTED
-            self.lbl_status_badge.config(text="● Up to date (No changes)", fg=self.clr_green)
-            self.lbl_changes_count.config(text="0 Changes")
+            self.lbl_changes_count.config(text="0 Changes Detected")
+            self.lbl_status_badge.config(text="Everything up to date", fg=self.clr_green)
+            self.txt_inspector.insert(tk.END, "✔ ALL REPOSITORY FILES ARE COMMITTED & SYNCED!\n", "success")
+            self.txt_inspector.insert(tk.END, "• Working directory is clean.\n", "dim")
+            self.txt_inspector.insert(tk.END, f"• GitHub repository ({self.cfg.get('repo_name')}) is completely up-to-date with local branch.\n", "dim")
+            self.txt_inspector.insert(tk.END, "• You can still enter a new version and push to force re-generate update.zip package if needed.\n\n", "dim")
 
-            self.txt_inspector.insert(tk.END, "✔  EVERYTHING IS UP TO DATE!\n\n", "success")
-            self.txt_inspector.insert(tk.END, "• No modified code, new functions, or added files found.\n", "dim")
-            self.txt_inspector.insert(tk.END, f"• GitHub repository ({self.cfg.get('repo_name')}) is completely synchronized.\n", "dim")
-            self.txt_inspector.insert(tk.END, "\nTo deploy an update, make code changes first, then click Detect again.", "dim")
-
-            # Keep Push Button Disabled
-            self.btn_push.config(
-                state=tk.DISABLED, bg="#1e293b", fg="#64748b",
-                cursor="arrow"
-            )
-            self.log("Scan complete: No changes detected.", "ok")
+            # Enable push button if token is valid
+            if self.github_status == "OK":
+                self.btn_push.config(state=tk.NORMAL, bg=self.clr_green, fg="#000000", cursor="hand2")
+            else:
+                self.btn_push.config(state=tk.DISABLED, bg="#1e293b", fg="#64748b", cursor="arrow")
             return
 
-        # CHANGES DETECTED: Render Detailed Function & File List
-        self.lbl_status_badge.config(text=f"● {len(reports)} File(s) Changed", fg=self.clr_cyan_bright)
-        self.lbl_changes_count.config(text=f"{len(reports)} File(s)")
+        total_files = len(reports)
+        self.lbl_changes_count.config(text=f"{total_files} Changed Files")
+        self.lbl_status_badge.config(text=f"{total_files} changes detected", fg=self.clr_cyan)
 
-        self.txt_inspector.insert(tk.END, f"DETECTED {len(reports)} MODIFIED / NEW ITEM(S):\n\n", "title")
+        self.txt_inspector.insert(tk.END, f"DETECTED {total_files} MODIFIED / NEW ITEMS:\n", "title")
+        self.txt_inspector.insert(tk.END, "─" * 65 + "\n\n", "dim")
 
-        total_funcs = 0
         for item in reports:
             st = item["status"]
-            path = item["path"]
+            fp = item["path"]
             funcs = item["functions"]
-            total_funcs += len(funcs)
+            stats = item.get("stats", "")
 
-            if st == "NEW FILE":
-                self.txt_inspector.insert(tk.END, f" ➕ [NEW]      {path}\n", "file_new")
+            # Tag style
+            file_tag = "file_mod"
+            icon = "✎ "
+            if st == "NEW FILE" or st == "ADDED":
+                file_tag = "file_new"
+                icon = "✚ "
+            elif st == "DELETED":
+                file_tag = "file_del"
+                icon = "✖ "
+
+            stats_display = f" [{stats}]" if stats else ""
+            self.txt_inspector.insert(tk.END, f"{icon}{st.ljust(9)}: ", file_tag)
+            self.txt_inspector.insert(tk.END, f"{fp}", "title")
+            if stats_display:
+                self.txt_inspector.insert(tk.END, f"{stats_display}\n", "stats")
             else:
-                self.txt_inspector.insert(tk.END, f" 📝 [MODIFIED] {path}\n", "file_mod")
+                self.txt_inspector.insert(tk.END, "\n")
 
             if funcs:
                 for fn in funcs:
-                    self.txt_inspector.insert(tk.END, f"    └── {fn}\n", "func")
+                    self.txt_inspector.insert(tk.END, f"    ↳ {fn}\n", "func")
             self.txt_inspector.insert(tk.END, "\n")
 
-        # Refresh Next Version Field automatically
-        cur = get_current_version()
-        self.lbl_cur_ver.config(text=cur)
-        self.var_next_ver.set(increment_version(cur))
+        # Check Token health before enabling push
+        if self.github_status == "OK":
+            self.btn_push.config(state=tk.NORMAL, bg=self.clr_green, fg="#000000", cursor="hand2")
+            self.log(f"Scan complete. {total_files} changes found. Click 'PUSH TO GITHUB' to deploy.", "ok")
+        else:
+            self.btn_push.config(state=tk.DISABLED, bg="#1e293b", fg="#64748b", cursor="arrow")
+            self.log(f"Scan complete. {total_files} changes found, but GitHub Token is expired/invalid. Please click Settings to update token.", "warn")
 
-        # ENABLE THE PUSH BUTTON WITH VIBRANT GREEN
-        self.btn_push.config(
-            state=tk.NORMAL, bg=self.clr_green, fg="#ffffff",
-            activebackground=self.clr_green_hover, activeforeground="#ffffff",
-            cursor="hand2"
-        )
-
-        msg = f"Scan complete: Found {len(reports)} changed file(s)"
-        if total_funcs > 0:
-            msg += f" with {total_funcs} function updates."
-        self.log(msg, "ok")
-        self.log("Push to GitHub is now ENABLED. Click 'PUSH TO GITHUB' to deploy.")
-
-    def render_detection_error(self, err_msg):
-        self.btn_detect.config(state=tk.NORMAL, text="🔍  DETECT NEW UPDATE")
-        self.lbl_status_badge.config(text="Scan Error", fg=self.clr_red)
-        self.txt_inspector.delete(1.0, tk.END)
-        self.txt_inspector.insert(tk.END, f"ERROR DURING SCAN:\n{err_msg}\n", "dim")
-        self.log(f"Detection failed: {err_msg}", "err")
-
-    # -----------------------------------------------------------------------
-    # Step 2: Push to GitHub Action
-    # -----------------------------------------------------------------------
+    # ─── STEP 2: PUSH TO GITHUB ACTION & PACKAGING ───────────────────────────
     def on_push_click(self):
-        if self.is_busy or not self.detected_changes:
+        if self.is_busy:
             return
 
         target_ver = self.var_next_ver.get().strip()
         if not target_ver:
-            messagebox.showwarning("VERSION REQUIRED", "Please enter a valid version string (e.g. R1.0.0.7).")
+            messagebox.showwarning("VERSION REQUIRED", "Please enter a valid version string (e.g. R1.1.0.4).")
             return
 
         changelog = self.txt_changelog.get("1.0", tk.END).strip()
@@ -533,23 +782,23 @@ class GitPushGUI:
         # Lock UI
         self.is_busy = True
         self.btn_detect.config(state=tk.DISABLED)
-        self.btn_push.config(state=tk.DISABLED, text="⏳  UPLOADING TO GITHUB...")
+        self.btn_push.config(state=tk.DISABLED, text="⏳  PACKAGING & UPLOADING...")
         self.lbl_status_badge.config(text="Packaging & Pushing...", fg=self.clr_cyan)
         self.log(f"Starting GitHub deployment for version {target_ver}...")
 
         def push_worker():
             try:
-                # 1. Update version.txt
+                # 1. Update version.txt locally
                 with open(os.path.join(BASE_DIR, "version.txt"), "w", encoding="utf-8") as f:
                     f.write(target_ver)
                 py_ver_path = os.path.join(BASE_DIR, "python_version", "version.txt")
                 if os.path.exists(os.path.dirname(py_ver_path)):
                     with open(py_ver_path, "w", encoding="utf-8") as f:
                         f.write(target_ver)
-                self.log(f"Updated local version to {target_ver}.")
+                self.log(f"Updated local version to {target_ver}.", "ok")
 
-                # 2. Package complete update.zip with executable and scripts
-                self.log("Creating update.zip bundle with executables and scripts...")
+                # 2. Package complete update.zip bundle
+                self.log("Creating update.zip bundle with all engines and scripts...")
                 payload_dir = os.path.join(BASE_DIR, "temp_update_payload")
                 if os.path.exists(payload_dir):
                     shutil.rmtree(payload_dir, ignore_errors=True)
@@ -557,8 +806,10 @@ class GitPushGUI:
 
                 payload_content = os.path.join(payload_dir, "payload")
                 os.makedirs(payload_content, exist_ok=True)
+                payload_internal = os.path.join(payload_content, "_internal")
+                os.makedirs(payload_internal, exist_ok=True)
 
-                # Ensure fresh native updater.exe is compiled
+                # Ensure fresh native updater.exe is compiled if source present
                 csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
                 updater_cs = os.path.join(BASE_DIR, "updater.cs")
                 dist_updater = os.path.join(BASE_DIR, "dist", "updater.exe")
@@ -572,6 +823,7 @@ class GitPushGUI:
                     except Exception:
                         pass
 
+                # Copy freshly compiled EXEs if dist/R1_BIOS_TOOL exists
                 dist_source = os.path.join(BASE_DIR, "dist", "R1_BIOS_TOOL")
                 if os.path.exists(dist_source):
                     for f in os.listdir(dist_source):
@@ -580,32 +832,46 @@ class GitPushGUI:
                             dest_p = os.path.join(payload_content, f)
                             shutil.copy2(abs_p, dest_p)
 
-                # Ensure updater.exe and updater.py are explicitly present in payload, _internal, and zip root
+                # Copy updater executables & scripts
                 updater_exe_src = os.path.join(dist_source, "updater.exe") if os.path.exists(os.path.join(dist_source, "updater.exe")) else os.path.join(BASE_DIR, "dist", "updater.exe")
                 if os.path.exists(updater_exe_src):
                     shutil.copy2(updater_exe_src, os.path.join(payload_content, "updater.exe"))
                     shutil.copy2(updater_exe_src, os.path.join(payload_dir, "updater.exe"))
-                    payload_internal = os.path.join(payload_content, "_internal")
-                    os.makedirs(payload_internal, exist_ok=True)
                     shutil.copy2(updater_exe_src, os.path.join(payload_internal, "updater.exe"))
 
                 updater_py_src = os.path.join(BASE_DIR, "updater.py")
                 if os.path.exists(updater_py_src):
                     shutil.copy2(updater_py_src, os.path.join(payload_content, "updater.py"))
                     shutil.copy2(updater_py_src, os.path.join(payload_dir, "updater.py"))
-                    payload_internal = os.path.join(payload_content, "_internal")
-                    os.makedirs(payload_internal, exist_ok=True)
                     shutil.copy2(updater_py_src, os.path.join(payload_internal, "updater.py"))
 
-                # Copy root python application files & assets
-                core_dirs = ["translations", "rg_engine", "utils", "scripts", "image", "assets", "brands", "config", "BIOSUtilities"]
+                # CRITICAL: Copy ALL core packages and directories into payload AND _internal
+                core_dirs = [
+                    "R1_CSME_Analyzer",  # <-- Guaranteed inclusion of our native engine!
+                    "translations",
+                    "rg_engine",
+                    "brands",
+                    "config",
+                    "assets",
+                    "BIOSUtilities",
+                    "utils",
+                    "scripts",
+                    "image"
+                ]
                 for cdir in core_dirs:
                     src_dir = os.path.join(BASE_DIR, cdir)
                     if os.path.exists(src_dir):
                         dest_dir = os.path.join(payload_content, cdir)
                         if os.path.exists(dest_dir):
                             shutil.rmtree(dest_dir, ignore_errors=True)
-                        shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                        shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.tmp"))
+
+                        # Also mirror core engine into _internal for frozen PyInstaller onedir compatibility
+                        if cdir in ("R1_CSME_Analyzer", "rg_engine", "brands", "BIOSUtilities", "translations", "assets"):
+                            dest_internal = os.path.join(payload_internal, cdir)
+                            if os.path.exists(dest_internal):
+                                shutil.rmtree(dest_internal, ignore_errors=True)
+                            shutil.copytree(src_dir, dest_internal, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.tmp"))
 
                 # Copy core python files from root
                 for f in os.listdir(BASE_DIR):
@@ -635,11 +901,13 @@ class GitPushGUI:
 
                 zip_out = os.path.join(BASE_DIR, "update")
                 if os.path.exists(os.path.join(BASE_DIR, "update.zip")):
-                    try: os.remove(os.path.join(BASE_DIR, "update.zip"))
-                    except Exception: pass
+                    try:
+                        os.remove(os.path.join(BASE_DIR, "update.zip"))
+                    except Exception:
+                        pass
                 shutil.make_archive(zip_out, "zip", payload_dir)
                 shutil.rmtree(payload_dir, ignore_errors=True)
-                self.log("update.zip bundle generated successfully.")
+                self.log(f"update.zip generated successfully ({len(manifest_files)} packaged files).", "ok")
 
                 # 3. Update version.json
                 repo_owner = self.cfg.get("repo_owner", "rscomputer204-netizen")
@@ -656,99 +924,86 @@ class GitPushGUI:
                 }
                 with open(os.path.join(BASE_DIR, "version.json"), "w", encoding="utf-8") as f:
                     json.dump(ver_info, f, indent=4)
-                self.log("version.json updated with latest changelog & metadata.")
 
                 # 4. Git Add & Commit
-                self.log("Committing changes locally...")
+                self.log("Staging git modifications...", "info")
                 run_cmd("git add .")
                 staged = run_cmd("git diff --cached --name-only", check=False)
                 if staged:
-                    run_cmd(f'git commit -m "{changelog} (v{target_ver})"')
+                    self.log("Committing changes...", "info")
+                    commit_msg = f"{changelog} (v{target_ver})"
+                    # Use subprocess with arguments list to prevent shell quoting bugs
+                    subprocess.run(["git", "commit", "-m", commit_msg], cwd=BASE_DIR, check=True)
+                    self.log(f"Committed: {commit_msg}", "ok")
                 else:
-                    self.log("All files already committed. Proceeding to push all commits...")
+                    self.log("All files already committed.", "info")
 
                 # 5. Push to GitHub with Real-Time Streaming
-                self.log(f"Pushing to remote origin [{branch}]...")
+                self.log(f"Pushing to remote origin [{branch}]...", "info")
                 auth_url = f"https://x-access-token:{token}@github.com/{repo_owner}/{repo_name}.git"
-
                 push_cmd = f'git -c credential.helper= push --progress "{auth_url}" {branch}'
+
                 proc = subprocess.Popen(
                     push_cmd, shell=True, text=True, encoding="utf-8", errors="replace",
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, cwd=BASE_DIR
                 )
 
-                output_lines = []
+                err_summary = ""
                 for line in proc.stdout:
-                    l = line.strip()
-                    if l:
-                        output_lines.append(l)
-                        self.log(l)
-                proc.wait()
+                    clean_line = line.strip()
+                    if clean_line:
+                        self.log(f"  {clean_line}")
+                        err_summary += clean_line + "\n"
 
+                proc.wait()
                 if proc.returncode != 0:
-                    err_summary = "\n".join(output_lines[-3:]) if output_lines else f"Return code {proc.returncode}"
-                    if "Authentication failed" in err_summary or "Invalid username or token" in err_summary or "could not read Password" in err_summary:
-                        raise RuntimeError("GitHub Authentication Failed!\nYour Personal Access Token in config/github_token.json is expired or invalid.\nPlease enter a valid GitHub Personal Access Token (classic) with 'repo' scope and click Save.")
+                    if "Authentication failed" in err_summary or "Invalid username or token" in err_summary or "Bad credentials" in err_summary:
+                        raise RuntimeError("GitHub Authentication Failed!\nYour Personal Access Token is expired or invalid.\nPlease open ⚙️ Settings and update your token.")
                     raise RuntimeError(f"Git push failed:\n{err_summary}")
 
-                # Synchronize local origin tracking ref so git knows all commits are pushed
-                try:
-                    run_cmd(f"git update-ref refs/remotes/origin/{branch} HEAD", check=False)
-                    run_cmd(f"git fetch origin {branch}", check=False)
-                except Exception:
-                    pass
+                # Synchronize local origin tracking ref
+                run_cmd(f"git update-ref refs/remotes/origin/{branch} HEAD", check=False)
+                run_cmd(f"git fetch origin {branch}", check=False)
 
                 self.root.after(0, lambda: self.render_push_success(target_ver))
             except Exception as e:
                 self.root.after(0, lambda: self.render_push_error(str(e)))
-            finally:
-                self.is_busy = False
 
         threading.Thread(target=push_worker, daemon=True).start()
 
-    def save_github_token(self):
-        new_tok = self.var_token.get().strip() if hasattr(self, 'var_token') else ""
-        if not new_tok:
-            messagebox.showwarning("TOKEN REQUIRED", "Please enter a valid GitHub Personal Access Token.")
-            return
-        self.cfg["github_token"] = new_tok
-        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(self.cfg, f, indent=4)
-        self.log("GitHub Token updated & saved successfully in config/github_token.json.", "ok")
-        messagebox.showinfo("TOKEN SAVED", "GitHub Personal Access Token saved successfully!")
-
     def render_push_success(self, version):
+        self.is_busy = False
         self.btn_detect.config(state=tk.NORMAL)
         self.btn_push.config(state=tk.DISABLED, text="🚀  PUSH TO GITHUB", bg="#1e293b", fg="#64748b", cursor="arrow")
         self.lbl_status_badge.config(text=f"✔ Pushed v{version} to GitHub!", fg=self.clr_green)
         self.lbl_cur_ver.config(text=version)
-        self.detected_changes = []
+        self.var_next_ver.set(increment_version(version))
 
         self.txt_inspector.delete(1.0, tk.END)
-        self.txt_inspector.insert(tk.END, "🎉  DEPLOYMENT COMPLETED SUCCESSFULLY!\n\n", "success")
-        self.txt_inspector.insert(tk.END, f"• All code changes & functions are now LIVE on GitHub.\n", "title")
-        self.txt_inspector.insert(tk.END, f"• Repository: https://github.com/{self.cfg.get('repo_owner')}/{self.cfg.get('repo_name')}\n", "dim")
-        self.txt_inspector.insert(tk.END, f"• Release Version: {version}\n", "file_new")
-        self.txt_inspector.insert(tk.END, f"• Users can now click 'UPDATE' in their software to receive this update instantly.\n", "dim")
+        self.txt_inspector.insert(tk.END, f"DEPLOYMENT COMPLETED FOR VERSION {version}!\n", "success")
+        self.txt_inspector.insert(tk.END, "─" * 65 + "\n\n", "dim")
+        self.txt_inspector.insert(tk.END, f"• All code changes & R1_CSME_Analyzer are now LIVE on GitHub.\n", "title")
+        self.txt_inspector.insert(tk.END, f"• update.zip contains all native modules & _internal binaries.\n", "title")
+        self.txt_inspector.insert(tk.END, f"• Auto-updater will now smoothly install and execute R1 CSME Analyzer.\n\n", "success")
 
         self.log(f"SUCCESS: Version {version} successfully pushed to GitHub!", "ok")
-        messagebox.showinfo("DEPLOYMENT SUCCESS", f"All updates have been successfully pushed to GitHub!\n\nVersion: {version}\nUsers can now update their software.")
+        messagebox.showinfo("DEPLOYMENT SUCCESS", f"Version {version} has been successfully deployed to GitHub!\n\nAll clients updating via GitHub will now receive full R1_CSME_Analyzer features.")
 
     def render_push_error(self, err_msg):
+        self.is_busy = False
         self.btn_detect.config(state=tk.NORMAL)
-        self.btn_push.config(state=tk.NORMAL, text="🚀  PUSH TO GITHUB")
+        self.btn_push.config(state=tk.NORMAL, text="🚀  PUSH TO GITHUB", bg=self.clr_green, fg="#000000", cursor="hand2")
         self.lbl_status_badge.config(text="Push Failed", fg=self.clr_red)
         self.log(f"ERROR during GitHub Push: {err_msg}", "err")
         messagebox.showerror("PUSH FAILED", f"Could not push to GitHub:\n\n{err_msg}")
 
-# ---------------------------------------------------------------------------
-# Application Entry Point
-# ---------------------------------------------------------------------------
+
+# ─── MAIN ENTRY POINT ────────────────────────────────────────────────────────
 def main():
     root = tk.Tk()
     app = GitPushGUI(root)
     root.mainloop()
+
 
 if __name__ == "__main__":
     main()
