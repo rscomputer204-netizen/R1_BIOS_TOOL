@@ -848,6 +848,7 @@ class GitPushGUI:
                 # CRITICAL: Copy ALL core packages and directories into payload AND _internal
                 core_dirs = [
                     "R1_CSME_Analyzer",  # <-- Guaranteed inclusion of our native engine!
+                    "R1_Universal_Extractor",  # <-- Native Universal Extractor engine!
                     "translations",
                     "rg_engine",
                     "brands",
@@ -867,7 +868,7 @@ class GitPushGUI:
                         shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.tmp"))
 
                         # Also mirror core engine into _internal for frozen PyInstaller onedir compatibility
-                        if cdir in ("R1_CSME_Analyzer", "rg_engine", "brands", "BIOSUtilities", "translations", "assets"):
+                        if cdir in ("R1_CSME_Analyzer", "R1_Universal_Extractor", "rg_engine", "brands", "BIOSUtilities", "translations", "assets"):
                             dest_internal = os.path.join(payload_internal, cdir)
                             if os.path.exists(dest_internal):
                                 shutil.rmtree(dest_internal, ignore_errors=True)

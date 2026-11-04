@@ -445,10 +445,10 @@ else:
 
 banner("ALL DONE!")
 print(f"""
-  Step 1/4  ✅  Main Application compiled
-  Step 2/4  ✅  pyrunner.exe compiled
-  Step 3/4  ✅  External runtime directories copied
-  Step 4/4  {'✅  Installer created → dist\\' + INSTALLER_NAME + '.exe' if iscc_path else '⚠️  Inno Setup not found — installer skipped'}
+  Step 1/4  [OK]  Main Application compiled
+  Step 2/4  [OK]  pyrunner.exe compiled
+  Step 3/4  [OK]  External runtime directories copied
+  Step 4/4  {'  [OK]  Installer created -> dist\\' + INSTALLER_NAME + '.exe' if iscc_path else '  [!]   Inno Setup not found - installer skipped'}
 
   > Compiled app  : dist/{APP_NAME}/
   > EXE installer : dist/{INSTALLER_NAME}.exe
