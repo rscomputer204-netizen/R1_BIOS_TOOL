@@ -1,22 +1,33 @@
+"""
+report_settings_ui.py
+======================
+Professional Cyber Blue UI for Report Display Settings.
+Controls which analysis sections are displayed in the terminal.
+"""
+
 import os
 import json
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                               QPushButton, QCheckBox, QFrame, QGroupBox,
-                               QScrollArea, QWidget)
+from PySide6.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel,
+    QPushButton, QCheckBox, QFrame, QScrollArea, QWidget
+)
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QFont, QCursor
 
 
 class ReportSettingsManager:
+    """Manages persistent report display preferences."""
+
     def __init__(self, root_dir):
         self.config_path = os.path.join(root_dir, 'config', 'report_settings.json')
         self.default_settings = {
-            "show_spi_region_map":  True,   # SPI Region Map (Descriptor, BIOS, ME, GbE...) — ON by default
+            "show_spi_region_map":  True,   # SPI Region Map (Descriptor, BIOS, ME, GbE...) - ON by default
             "show_flash_partition": False,  # Flash Partition Table (FPT)
             "show_bpdt":            False,  # Boot Partition Descriptor Table (BPDT/IFWI)
             "show_cse_layout":      False,  # CSE Layout Table (Code/Data partitions)
-            "show_normal_analysis": True,   # Normal Analyze (Basic MEAnalyzer run) — ON by default
+            "show_normal_analysis": True,   # Normal Analyze (Basic MEAnalyzer run) - ON by default
             "show_bios_analysis":   False,  # BIOS Analysis Report (ME Family/Version/SKU...)
-            "show_pmc_pchc_phy":    True,  # PMC / PCHC / PHY Independent firmware info
+            "show_pmc_pchc_phy":    True,   # PMC / PCHC / PHY Independent firmware info
             "show_me_warnings":     False,  # ME Firmware Notes / Warnings / Errors
             "show_microcode":       False,  # Intel Microcode Audit (via MCExtractor)
         }
@@ -53,261 +64,353 @@ class ReportSettingsManager:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# STYLESHEET
+# ─────────────────────────────────────────────────────────────────────────────
 
-_STYLE = """
+_DIALOG_STYLE = """
 QDialog {
-    background-color: #171a1d;
+    background-color: #0b0f15;
     color: #e2e8f0;
-    font-family: 'Segoe UI', sans-serif;
+    font-family: 'Segoe UI', -apple-system, sans-serif;
 }
-QScrollArea { background: transparent; border: none; }
-QScrollArea > QWidget > QWidget { background: transparent; }
-QLabel  { color: #e2e8f0; }
-QGroupBox {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #252a2e, stop:1 #1c2024);
-    color: #4cd3e3;
-    font-weight: bold;
-    font-size: 13px;
-    border: 1px solid #2d363f;
+QScrollArea {
+    background: transparent;
+    border: none;
+}
+QScrollArea > QWidget > QWidget {
+    background: transparent;
+}
+QScrollBar:vertical {
+    background: #090d13;
+    width: 8px;
+    margin: 0;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical {
+    background: #1e293b;
+    min-height: 25px;
+    border-radius: 4px;
+}
+QScrollBar::handle:vertical:hover {
+    background: #0284c7;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+"""
+
+_CARD_STYLE = """
+QFrame#ReportCard {
+    background: #0e1520;
+    border: 1px solid #1a2536;
     border-radius: 8px;
-    margin-top: 14px;
-    padding-top: 16px;
 }
-QGroupBox::title {
-    subcontrol-origin: margin;
-    left: 10px;
-    padding: 0 6px;
+QFrame#ReportItem {
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    padding: 2px 4px;
 }
+QFrame#ReportItem:hover {
+    background: #131d2b;
+}
+"""
+
+_CHECKBOX_STYLE = """
 QCheckBox {
     color: #e2e8f0;
     font-size: 13px;
-    padding: 6px 4px;
+    font-weight: 700;
     spacing: 10px;
-    font-weight: 500;
 }
 QCheckBox::indicator {
-    width: 18px;
-    height: 18px;
+    width: 17px;
+    height: 17px;
     border-radius: 4px;
-    border: 1px solid #333d47;
-    background: #14171a;
+    border: 1px solid #1e293b;
+    background: #090e15;
+}
+QCheckBox::indicator:hover {
+    border: 1px solid #00f3ff;
+    background: #0e1724;
 }
 QCheckBox::indicator:checked {
-    background: #2ac4db;
-    border: 1px solid #0ef6fd;
-    image: none;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0052cc, stop:1 #00f3ff);
+    border: 1px solid #00f3ff;
 }
-QPushButton {
-    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3c444a, stop:1 #2d3338);
-    color: #c8d6e0;
-    border: 1px solid #4a545c;
-    border-radius: 6px;
-    padding: 8px 20px;
-    font-weight: bold;
-    font-size: 12px;
-}
-QPushButton:hover { background-color: #47525a; color: #ffffff; }
-QPushButton#btnSave {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #8fe3ea, stop:0.4 #3598a6, stop:1 #247d8a);
-    color: #0d171c;
-    border: 1px solid #0ef6fd;
-    font-weight: 800;
-}
-QPushButton#btnSave:hover { background: #0ef6fd; color: #000000; }
-QPushButton#btnAll {
-    background-color: #172522;
-    color: #00ff88;
-    border: 1px solid #1f4a3c;
-    border-radius: 4px;
-    padding: 6px 14px;
-    font-size: 11px;
-    font-weight: bold;
-}
-QPushButton#btnAll:hover { background-color: #1f4a3c; color: #ffffff; }
-QPushButton#btnNone {
-    background-color: #2a1c1d;
-    color: #ff5252;
-    border: 1px solid #4a2123;
-    border-radius: 4px;
-    padding: 6px 14px;
-    font-size: 11px;
-    font-weight: bold;
-}
-QPushButton#btnNone:hover { background-color: #4a2123; color: #ffffff; }
 """
 
+_BUTTON_STYLE = """
+QPushButton {
+    font-family: 'Segoe UI', sans-serif;
+    font-weight: 700;
+    border-radius: 5px;
+    padding: 7px 16px;
+    font-size: 11px;
+    letter-spacing: 0.5px;
+}
+QPushButton#btnSelectAction {
+    background: #0f1824;
+    color: #38bdf8;
+    border: 1px solid #0284c7;
+}
+QPushButton#btnSelectAction:hover {
+    background: #162438;
+    border: 1px solid #00f3ff;
+    color: #ffffff;
+}
+QPushButton#btnCancel {
+    background: #111824;
+    border: 1px solid #1e293b;
+    color: #94a3b8;
+}
+QPushButton#btnCancel:hover {
+    background: #182232;
+    color: #ffffff;
+    border: 1px solid #334155;
+}
+QPushButton#btnSave {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0052cc, stop:1 #00f3ff);
+    color: #05131e;
+    border: none;
+    font-weight: 800;
+    font-size: 12px;
+    padding: 9px 24px;
+}
+QPushButton#btnSave:hover {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #0066ff, stop:1 #38bdf8);
+    color: #ffffff;
+}
+"""
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIALOG IMPLEMENTATION
 # ─────────────────────────────────────────────────────────────────────────────
 
 class ReportSettingsDialog(QDialog):
+    """Modern, professional settings dialog for selecting terminal report sections."""
+
     def __init__(self, manager, parent=None):
         super().__init__(parent)
         self.manager = manager
         self._build_ui()
         self._load_states()
 
-    # ── Build UI ─────────────────────────────────────────────────────────────
     def _build_ui(self):
         self.setWindowTitle("Report Display Settings")
-        self.setMinimumWidth(540)
-        self.setMinimumHeight(620)
-        self.setStyleSheet(_STYLE)
+        self.setMinimumWidth(560)
+        self.setMinimumHeight(660)
+        self.resize(580, 700)
+        self.setStyleSheet(_DIALOG_STYLE + _CARD_STYLE + _CHECKBOX_STYLE + _BUTTON_STYLE)
 
         root = QVBoxLayout(self)
-        root.setContentsMargins(26, 22, 26, 18)
-        root.setSpacing(8)
+        root.setContentsMargins(24, 20, 24, 18)
+        root.setSpacing(12)
 
-        # ── Header ───────────────────────────────────────────────────────────
-        title = QLabel("Report Display Settings")
-        title.setStyleSheet("font-size: 18px; font-weight: 800; color: #4cd3e3; font-family: 'Segoe UI', sans-serif; letter-spacing: 1px;")
-        root.addWidget(title)
+        # 1. Header Section
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(4)
+
+        title = QLabel("REPORT DISPLAY SETTINGS", self)
+        title.setStyleSheet("font-size: 16px; font-weight: 900; color: #00f3ff; letter-spacing: 1.5px;")
 
         desc = QLabel(
-            "Choose which reports to display in the terminal after a scan.\n"
-            "Each checkbox controls exactly one independent report — no mixing."
+            "Select which analysis modules to display in the terminal log after loading a BIOS image.\n"
+            "Each option controls an independent report section.",
+            self
         )
-        desc.setStyleSheet("color: #94a3b8; font-size: 11px;")
+        desc.setStyleSheet("color: #7dd3fc; font-size: 11px; line-height: 1.4;")
         desc.setWordWrap(True)
-        root.addWidget(desc)
 
-        # ── Select All / None buttons ─────────────────────────────────────────
+        header_layout.addWidget(title)
+        header_layout.addWidget(desc)
+        root.addLayout(header_layout)
+
+        # 2. Quick Selection Bar
         quick_row = QHBoxLayout()
-        btn_all  = QPushButton("✔ Select All")
-        btn_none = QPushButton("✘ Deselect All")
-        btn_all.setObjectName("btnAll")
-        btn_none.setObjectName("btnNone")
+        btn_all = QPushButton("SELECT ALL", self)
+        btn_all.setObjectName("btnSelectAction")
+        btn_all.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_all.clicked.connect(self._select_all)
+
+        btn_none = QPushButton("DESELECT ALL", self)
+        btn_none.setObjectName("btnSelectAction")
+        btn_none.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_none.clicked.connect(self._select_none)
+
         quick_row.addWidget(btn_all)
         quick_row.addWidget(btn_none)
         quick_row.addStretch()
         root.addLayout(quick_row)
 
-        div = QFrame(); div.setFrameShape(QFrame.Shape.HLine)
-        div.setStyleSheet("color: #2d363f; max-height: 1px; border: none; background-color: #2d363f;"); root.addWidget(div)
+        # Divider
+        divider = QFrame(self)
+        divider.setFrameShape(QFrame.Shape.HLine)
+        divider.setStyleSheet("background-color: #1a2536; max-height: 1px; border: none;")
+        root.addWidget(divider)
 
-        # ── Scrollable area for checkboxes ───────────────────────────────────
-        scroll = QScrollArea()
+        # 3. Scrollable Area for Report Groups
+        scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         scroll_content = QWidget()
         scroll_layout = QVBoxLayout(scroll_content)
-        scroll_layout.setContentsMargins(0, 0, 0, 0)
-        scroll_layout.setSpacing(6)
+        scroll_layout.setContentsMargins(0, 0, 4, 0)
+        scroll_layout.setSpacing(12)
         scroll.setWidget(scroll_content)
 
-        # ── Group 1: Flash Map ────────────────────────────────────────────────
-        g1 = QGroupBox("🗺  Flash Memory Map")
-        l1 = QVBoxLayout(g1); l1.setSpacing(2); l1.setContentsMargins(14, 14, 14, 10)
-
-        self.cb_region = self._cb(
+        # ── Group 1: Flash Memory Map ──
+        c1, l1 = self._create_card("FLASH MEMORY MAP")
+        self.cb_region = self._add_option(
+            l1,
             "SPI Region Map",
-            "Flash memory layout — Descriptor, BIOS, ME/CsME, GbE, Platform Data, EC...",
-            "#00c8ff", l1
+            "Flash memory layout - Intel Flash Descriptor, BIOS Region, ME/CSME, GbE, EC & Platform Data",
+            is_accent=True
         )
-        scroll_layout.addWidget(g1)
+        scroll_layout.addWidget(c1)
 
-        # ── Group 2: Partition Tables ─────────────────────────────────────────
-        g2 = QGroupBox("📋  Partition Tables  (requires ME Analyzer -dfpt)")
-        l2 = QVBoxLayout(g2); l2.setSpacing(2); l2.setContentsMargins(14, 14, 14, 10)
+        # ── Group 2: Partition Tables ──
+        c2, l2 = self._create_card("PARTITION TABLES", hint="Requires ME Analyzer -dfpt")
+        self.cb_fpt = self._add_option(
+            l2,
+            "Flash Partition Table (FPT)",
+            "Detailed ME partition entries - Name, Offset, Size, Flags & End physical address"
+        )
+        self.cb_bpdt = self._add_option(
+            l2,
+            "Boot Partition Descriptor Table (BPDT / IFWI)",
+            "IFWI boot partition structures - SMIP, RBEP, FTPR, NFTP, DLMP, OBBP"
+        )
+        self.cb_cse = self._add_option(
+            l2,
+            "CSE Layout Table (LT)",
+            "Code and Data partition layout - RoM, Data, Boot, Config offsets and boundaries"
+        )
+        scroll_layout.addWidget(c2)
 
-        self.cb_fpt = self._cb(
-            "Flash Partition Table  (FPT)",
-            "ME firmware partition entries — Name, Offset, Size, End address",
-            "#FFA500", l2
+        # ── Group 3: Firmware Analysis ──
+        c3, l3 = self._create_card("FIRMWARE ANALYSIS", hint="Powered by R1 CSME Analyzer")
+        self.cb_normal = self._add_option(
+            l3,
+            "Normal Raw Analysis",
+            "Direct analyzer stream - Full comprehensive technical log",
+            is_accent=True
         )
-        l2.addSpacing(6)
-        self.cb_bpdt = self._cb(
-            "Boot Partition Descriptor Table  (BPDT / IFWI)",
-            "BPDT sub-partitions — SMIP, RBEP, FTPR, NFTP, DLMP, OBBP...",
-            "#FF6B35", l2
+        self.cb_mea = self._add_option(
+            l3,
+            "BIOS & ME Analysis Summary",
+            "Core identification - Family, Version, SKU, Release, Platform, Production Date, SVN, VCN"
         )
-        l2.addSpacing(6)
-        self.cb_cse = self._cb(
-            "CSE Layout Table  (LT)",
-            "Code & Data partition layout — RoM, Data, Boot, Config offsets & sizes",
-            "#FFD700", l2
+        self.cb_pmc = self._add_option(
+            l3,
+            "PMC / PCHC / PHY Independent Firmware",
+            "Power Management Controller, PCH Configuration & USB Type-C PHY firmware states",
+            is_accent=True
         )
-        scroll_layout.addWidget(g2)
+        self.cb_warnings = self._add_option(
+            l3,
+            "Firmware Health & Security Warnings",
+            "Integrity checks, advisory notes, mismatch warnings and error flags"
+        )
+        scroll_layout.addWidget(c3)
 
-        # ── Group 3: Firmware Analysis ────────────────────────────────────────
-        g3 = QGroupBox("🔍  Firmware Analysis  (requires ME Analyzer)")
-        l3 = QVBoxLayout(g3); l3.setSpacing(2); l3.setContentsMargins(14, 14, 14, 10)
-
-        self.cb_normal = self._cb(
-            "Normal Analyze",
-            "Basic scan without command-line arguments — only passes the file path",
-            "#A855F7", l3
+        # ── Group 4: CPU Microcode ──
+        c4, l4 = self._create_card("CPU MICROCODE AUDIT", hint="Powered by MCExtractor Engine")
+        self.cb_micro = self._add_option(
+            l4,
+            "Intel / AMD Microcode Audit",
+            "Embedded processor microcode entries - CPUID, Platform, Revision, Date & Checksum"
         )
-        l3.addSpacing(6)
-        self.cb_mea = self._cb(
-            "BIOS / ME Analysis Report",
-            "Family, Version, SKU, Release, Type, Platform, Date, SVN, VCN, LBG...",
-            "#00ff88", l3
-        )
-        l3.addSpacing(6)
-        self.cb_pmc = self._cb(
-            "PMC / PCHC / PHY  Independent Firmware",
-            "Power Mgmt Controller, PCH Config, USB Type-C PHY firmware details",
-            "#00f3ff", l3
-        )
-        l3.addSpacing(6)
-        self.cb_warnings = self._cb(
-            "ME Firmware Notes & Warnings",
-            "All Note/Warning/Error/Advisory messages detected by ME Analyzer",
-            "#FF4444", l3
-        )
-        scroll_layout.addWidget(g3)
-
-        # ── Group 4: CPU Microcode ────────────────────────────────────────────
-        g4 = QGroupBox("🧮  CPU Microcode  (requires MCExtractor)")
-        l4 = QVBoxLayout(g4); l4.setSpacing(2); l4.setContentsMargins(14, 14, 14, 10)
-
-        self.cb_micro = self._cb(
-            "Intel Microcode Audit",
-            "Embedded CPU microcode entries — CPUID, Platform, Revision, Date, Checksum",
-            "#ff88ff", l4
-        )
-        scroll_layout.addWidget(g4)
+        scroll_layout.addWidget(c4)
 
         scroll_layout.addStretch()
         root.addWidget(scroll, 1)
 
-        # ── Buttons ───────────────────────────────────────────────────────────
-        div2 = QFrame(); div2.setFrameShape(QFrame.Shape.HLine)
-        div2.setStyleSheet("color: #1f2233;"); root.addWidget(div2)
+        # 4. Bottom Footer & Action Buttons
+        footer_divider = QFrame(self)
+        footer_divider.setFrameShape(QFrame.Shape.HLine)
+        footer_divider.setStyleSheet("background-color: #1a2536; max-height: 1px; border: none;")
+        root.addWidget(footer_divider)
 
         btn_row = QHBoxLayout()
-        btn_cancel = QPushButton("Cancel")
+        btn_cancel = QPushButton("CANCEL", self)
+        btn_cancel.setObjectName("btnCancel")
+        btn_cancel.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_cancel.clicked.connect(self.reject)
-        btn_save = QPushButton("Save Settings")
+
+        btn_save = QPushButton("SAVE SETTINGS", self)
         btn_save.setObjectName("btnSave")
+        btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
         btn_save.clicked.connect(self._save_and_close)
+
+        btn_row.addStretch()
         btn_row.addWidget(btn_cancel)
         btn_row.addWidget(btn_save)
         root.addLayout(btn_row)
 
-    @staticmethod
-    def _cb(title_text, sub_text, color, layout):
-        """Create a checkbox with a coloured title and descriptive subtitle."""
-        row = QVBoxLayout()
-        row.setSpacing(1)
+    def _create_card(self, title_text: str, hint: str = ""):
+        """Creates a modern styled card frame with a clean header."""
+        card = QFrame(self)
+        card.setObjectName("ReportCard")
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(14, 12, 14, 12)
+        layout.setSpacing(8)
 
-        cb = QCheckBox(title_text)
-        cb.setStyleSheet(f"color: {color}; font-weight: bold;")
+        hdr_row = QHBoxLayout()
+        title_lbl = QLabel(title_text, card)
+        title_lbl.setStyleSheet("color: #00f3ff; font-weight: 800; font-size: 11px; letter-spacing: 1px;")
+        hdr_row.addWidget(title_lbl)
+
+        if hint:
+            hint_lbl = QLabel(hint, card)
+            hint_lbl.setStyleSheet("color: #475569; font-size: 10px; font-weight: 600;")
+            hdr_row.addStretch()
+            hdr_row.addWidget(hint_lbl)
+        else:
+            hdr_row.addStretch()
+
+        layout.addLayout(hdr_row)
+
+        card_div = QFrame(card)
+        card_div.setFrameShape(QFrame.Shape.HLine)
+        card_div.setStyleSheet("background-color: #16202c; max-height: 1px; border: none;")
+        layout.addWidget(card_div)
+
+        return card, layout
+
+    def _add_option(self, parent_layout: QVBoxLayout, title: str, subtitle: str, is_accent: bool = False) -> QCheckBox:
+        """Adds a unified, cleanly aligned checkbox item row."""
+        item_frame = QFrame(self)
+        item_frame.setObjectName("ReportItem")
+
+        item_layout = QVBoxLayout(item_frame)
+        item_layout.setContentsMargins(4, 4, 4, 4)
+        item_layout.setSpacing(2)
+
+        cb = QCheckBox(title, item_frame)
         cb.setCursor(Qt.CursorShape.PointingHandCursor)
+        if is_accent:
+            cb.setStyleSheet("color: #00f3ff; font-size: 12px; font-weight: 700; spacing: 10px;")
+        else:
+            cb.setStyleSheet("color: #e2e8f0; font-size: 12px; font-weight: 600; spacing: 10px;")
 
-        hint = QLabel(f"    {sub_text}")
-        hint.setStyleSheet("color: #555; font-size: 11px;")
+        hint = QLabel(subtitle, item_frame)
+        hint.setStyleSheet("color: #7e8f9f; font-size: 11px; padding-left: 27px; line-height: 1.3;")
         hint.setWordWrap(True)
 
-        row.addWidget(cb)
-        row.addWidget(hint)
-        layout.addLayout(row)
+        item_layout.addWidget(cb)
+        item_layout.addWidget(hint)
+
+        parent_layout.addWidget(item_frame)
         return cb
 
     def _all_checkboxes(self):
-        return [self.cb_region, self.cb_fpt, self.cb_bpdt, self.cb_cse,
-                self.cb_normal, self.cb_mea, self.cb_pmc, self.cb_warnings, self.cb_micro]
+        return [
+            self.cb_region, self.cb_fpt, self.cb_bpdt, self.cb_cse,
+            self.cb_normal, self.cb_mea, self.cb_pmc, self.cb_warnings, self.cb_micro
+        ]
 
     def _select_all(self):
         for cb in self._all_checkboxes():
@@ -317,18 +420,17 @@ class ReportSettingsDialog(QDialog):
         for cb in self._all_checkboxes():
             cb.setChecked(False)
 
-    # ── Load / Save ───────────────────────────────────────────────────────────
     def _load_states(self):
         s = self.manager.settings if self.manager else {}
-        self.cb_region.setChecked(s.get("show_spi_region_map",  True))
-        self.cb_fpt.setChecked(   s.get("show_flash_partition", False))
-        self.cb_bpdt.setChecked(  s.get("show_bpdt",            False))
-        self.cb_cse.setChecked(   s.get("show_cse_layout",      False))
-        self.cb_normal.setChecked(s.get("show_normal_analysis",  False))
-        self.cb_mea.setChecked(   s.get("show_bios_analysis",   True))
-        self.cb_pmc.setChecked(   s.get("show_pmc_pchc_phy",    False))
-        self.cb_warnings.setChecked(s.get("show_me_warnings",   True))
-        self.cb_micro.setChecked( s.get("show_microcode",       False))
+        self.cb_region.setChecked(s.get("show_spi_region_map", True))
+        self.cb_fpt.setChecked(s.get("show_flash_partition", False))
+        self.cb_bpdt.setChecked(s.get("show_bpdt", False))
+        self.cb_cse.setChecked(s.get("show_cse_layout", False))
+        self.cb_normal.setChecked(s.get("show_normal_analysis", True))
+        self.cb_mea.setChecked(s.get("show_bios_analysis", False))
+        self.cb_pmc.setChecked(s.get("show_pmc_pchc_phy", True))
+        self.cb_warnings.setChecked(s.get("show_me_warnings", False))
+        self.cb_micro.setChecked(s.get("show_microcode", False))
 
     def _save_and_close(self):
         new_settings = {
