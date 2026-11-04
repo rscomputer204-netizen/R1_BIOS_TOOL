@@ -5331,11 +5331,6 @@ class BiosServiceTool(QMainWindow):
         self.btn_merge.setStyleSheet(cyber_btn_style)
         self.btn_merge.setObjectName("MergeButton")
 
-        self.btn_dell_pfs_extract = QPushButton("DELL PFS EXTRACT")
-        self.btn_dell_pfs_extract.setEnabled(True)
-        self.btn_dell_pfs_extract.clicked.connect(self.dell_pfs_extract_handler)
-        self.btn_dell_pfs_extract.setStyleSheet(cyber_btn_style)
-
         self.btn_ec_finder = QPushButton("EC FINDER")
         self.btn_ec_finder.setEnabled(True)
         self.btn_ec_finder.clicked.connect(self.ec_finder_handler)
@@ -5369,7 +5364,6 @@ class BiosServiceTool(QMainWindow):
         sidebar_layout.addWidget(self.btn_advanced_extract)
         sidebar_layout.addWidget(self.btn_universal_extract)
         sidebar_layout.addWidget(self.btn_merge)
-        sidebar_layout.addWidget(self.btn_dell_pfs_extract)
         sidebar_layout.addWidget(self.btn_ec_finder)
         sidebar_layout.addWidget(self.btn_settings)
         
@@ -6883,64 +6877,6 @@ class BiosServiceTool(QMainWindow):
             self.log_to_terminal("[ACTION] Opening 2 EC Finder (Smart Carver)...")
             dlg = SmartECFinderDialog(self)
             dlg.exec()
-
-    def dell_pfs_extract_handler(self):
-        """Opens glossy drop-zone dialog, then runs Dell PFS extraction."""
-        from extractor_dialog import ExtractorDropDialog
-        from PySide6.QtWidgets import QDialog
-
-        script_path = os.path.join(str(get_app_root()), "external", "Dell_PFS", "Dell_PFS_Extract.py")
-        if not os.path.exists(script_path):
-            self.log_to_terminal("[ERROR] Dell PFS Extractor script not found in external/Dell_PFS/")
-            return
-
-        dialog = ExtractorDropDialog(
-            title="DELL PFS EXTRACTOR",
-            subtitle="Drop a Dell BIOS executable (.exe) to extract its firmware packages",
-            accepted_exts=[".exe"],
-            parent=self
-        )
-
-        # Pre-fill if a .exe BIOS file is already loaded
-        if hasattr(self, 'current_bios_file') and self.current_bios_file and \
-                self.current_bios_file.lower().endswith(".exe"):
-            dialog._on_file_received(self.current_bios_file)
-
-        if dialog.exec() != QDialog.Accepted or not dialog.selected_file:
-            self.log_to_terminal("[INFO] Dell PFS Extraction cancelled.")
-            return
-
-        target_file = dialog.selected_file
-        self.log_to_terminal(f"[ACTION] Dell PFS Extracting: {os.path.basename(target_file)}")
-        self.is_task_running = True
-        self._handle_loading_state(True, "Extracting Dell PFS...")
-
-        def _run_dell_extract():
-            import subprocess
-            try:
-                result = subprocess.run(
-                    [sys.executable, script_path, target_file],
-                    capture_output=True, text=True
-                )
-                for line in result.stdout.splitlines():
-                    if line.strip():
-                        self.log_to_terminal(f"  > {line.strip()}")
-                for line in result.stderr.splitlines():
-                    if line.strip():
-                        self.log_to_terminal(f"  [ERR] {line.strip()}")
-                if result.returncode == 0:
-                    self.log_to_terminal("[SUCCESS] Dell PFS Extraction completed.")
-                else:
-                    self.log_to_terminal(f"[ERROR] Dell PFS failed (code {result.returncode}).")
-            except Exception as e:
-                self.log_to_terminal(f"[ERROR] Dell PFS extraction error: {e}")
-            finally:
-                QMetaObject.invokeMethod(self, "initiate_loader_stop",
-                    Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1000))
-
-        threading.Thread(target=_run_dell_extract, daemon=True).start()
-
-
 
     def universal_extract_handler(self):
         """Opens R1 Native Universal BIOS Extractor window."""
