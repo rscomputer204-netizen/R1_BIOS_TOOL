@@ -68,6 +68,7 @@ BUNDLE_DATA_DIRS = [
     ("brands", "brands"),                               # Brand plugins folder
     ("rg_engine", "rg_engine"),                         # BIOS RG Fix engine modules
     ("R1_CSME_Analyzer", "R1_CSME_Analyzer"),           # Native R1 CSME Analyzer engine
+    ("R1_Universal_Extractor", "R1_Universal_Extractor"), # Native R1 Universal BIOS Extractor
 ]
 
 # External folders NOT bundled into the exe but placed next to it in dist/

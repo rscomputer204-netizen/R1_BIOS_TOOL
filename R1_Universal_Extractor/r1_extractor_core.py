@@ -384,27 +384,63 @@ class R1ExtractorCore:
     # -----------------------------------------------------------------
     @classmethod
     def _recursive_sub_extract(cls, root_dir: str, log: Callable[[str], None], depth: int = 0):
-        """If 7-Zip or installer extracted nested CAB, SFX or ZIP files, unpack them too."""
+        """
+        If 7-Zip or installer extracted nested CAB, SFX, ZIP, or embedded .exe
+        (common in Lenovo, Acer, HP flasher utilities), recursively unpack and inspect them.
+        """
         if depth > 2:
             return
 
-        nested_exts = (".cab", ".zip", ".msi", ".tar")
+        nested_archives = (".cab", ".zip", ".msi", ".tar")
+        p7z = cls.get_7z_path()
+
         for root, dirs, files in os.walk(root_dir):
             for file in files:
-                if any(file.lower().endswith(ext) for ext in nested_exts):
-                    nested_path = os.path.join(root, file)
+                ext = os.path.splitext(file)[1].lower()
+                nested_path = os.path.join(root, file)
+
+                # 1. Nested Archives (CAB, ZIP, MSI, TAR)
+                if ext in nested_archives and p7z:
                     nested_out = os.path.join(root, f"{os.path.splitext(file)[0]}_unpacked")
                     if not os.path.isdir(nested_out):
-                        p7z = cls.get_7z_path()
-                        if p7z:
-                            try:
-                                cmd = [p7z, "x", nested_path, f"-o{nested_out}", "-y"]
-                                subprocess.run(cmd, capture_output=True, timeout=30)
-                                if os.path.isdir(nested_out) and os.listdir(nested_out):
-                                    log(f"  [NESTED] Unpacked sub-archive: {file}")
-                                    cls._recursive_sub_extract(nested_out, log, depth + 1)
-                            except Exception:
-                                pass
+                        try:
+                            cmd = [p7z, "x", nested_path, f"-o{nested_out}", "-y"]
+                            subprocess.run(cmd, capture_output=True, timeout=30)
+                            if os.path.isdir(nested_out) and os.listdir(nested_out):
+                                log(f"  [NESTED ARCHIVE] Unpacked: {file}")
+                                cls._recursive_sub_extract(nested_out, log, depth + 1)
+                        except Exception:
+                            pass
+
+                # 2. Nested Flasher Executables (e.g. InsydeFlash.exe, H2OFFT, Lenovo/Acer installers)
+                elif ext == ".exe" and depth < 2:
+                    try:
+                        sz = os.path.getsize(nested_path)
+                    except OSError:
+                        sz = 0
+
+                    if sz > 2 * 1024 * 1024:
+                        nested_out = os.path.join(root, f"{os.path.splitext(file)[0]}_extracted")
+                        if not os.path.isdir(nested_out):
+                            unpacked_ok = False
+                            if p7z:
+                                try:
+                                    cmd = [p7z, "x", nested_path, f"-o{nested_out}", "-y"]
+                                    res = subprocess.run(cmd, capture_output=True, timeout=30)
+                                    if res.returncode == 0 and os.path.isdir(nested_out) and os.listdir(nested_out):
+                                        log(f"  [NESTED EXE UNPACK] Extracted embedded payload from {file}")
+                                        unpacked_ok = True
+                                        cls._recursive_sub_extract(nested_out, log, depth + 1)
+                                except Exception:
+                                    pass
+
+                            if not unpacked_ok:
+                                try:
+                                    carved = cls._try_tier4_deep_carve(nested_path, root, log)
+                                    if carved:
+                                        log(f"  [NESTED CARVE] Carved {len(carved)} ROM(s) from embedded {file}")
+                                except Exception:
+                                    pass
 
     # -----------------------------------------------------------------
     # Output Classification

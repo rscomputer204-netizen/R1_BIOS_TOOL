@@ -66,6 +66,7 @@ class R1ExtractorWindow(QMainWindow):
     log_signal = Signal(str)
     progress_signal = Signal(int)
     extraction_finished = Signal(dict)
+    bios_selected = Signal(str)
 
     def __init__(self, target_file: str = None, parent=None):
         super().__init__(parent)
@@ -259,6 +260,45 @@ class R1ExtractorWindow(QMainWindow):
         self.file_list.doubleClicked.connect(self._on_item_double_clicked)
         res_layout.addWidget(res_lbl)
         res_layout.addWidget(self.file_list)
+
+        cand_btn_box = QHBoxLayout()
+        self.btn_load_in_tool = QPushButton("?? LOAD INTO R1 TOOL")
+        self.btn_load_in_tool.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff0055, stop:1 #ff5500);
+                color: #ffffff;
+                font-weight: bold;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff3377, stop:1 #ffaa00);
+            }
+        """)
+        self.btn_load_in_tool.clicked.connect(self._load_selected_candidate)
+
+        self.btn_reveal = QPushButton("?? SHOW IN FOLDER")
+        self.btn_reveal.setStyleSheet("""
+            QPushButton {
+                background: #141a20;
+                color: #00f3ff;
+                border: 1px solid #1f2933;
+                border-radius: 4px;
+                padding: 6px 12px;
+                font-size: 11px;
+            }
+            QPushButton:hover {
+                background: #1b242d;
+                border: 1px solid #00f3ff;
+            }
+        """)
+        self.btn_reveal.clicked.connect(self._reveal_selected_candidate)
+
+        cand_btn_box.addWidget(self.btn_load_in_tool)
+        cand_btn_box.addWidget(self.btn_reveal)
+        res_layout.addLayout(cand_btn_box)
+
         splitter.addWidget(res_box)
 
         splitter.setSizes([550, 400])
@@ -375,11 +415,28 @@ class R1ExtractorWindow(QMainWindow):
         if os.path.isdir(out_dir):
             os.startfile(out_dir)
 
+    def _load_selected_candidate(self):
+        item = self.file_list.currentItem()
+        if not item:
+            return
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if path and os.path.isfile(path):
+            self.log(f"[ACTION] Loading candidate into R1 BIOS Tool: {os.path.basename(path)}")
+            self.bios_selected.emit(path)
+
+    def _reveal_selected_candidate(self):
+        item = self.file_list.currentItem()
+        if not item:
+            return
+        path = item.data(Qt.ItemDataRole.UserRole)
+        if path and os.path.isfile(path):
+            subprocess.run(["explorer", f"/select,{os.path.abspath(path)}"])
+
     def _on_item_double_clicked(self, item):
         path = item.data(Qt.ItemDataRole.UserRole)
         if path and os.path.isfile(path):
-            # Select/highlight in explorer
-            subprocess.run(["explorer", f"/select,{os.path.abspath(path)}"])
+            self.log(f"[ACTION] Loading candidate into R1 BIOS Tool: {os.path.basename(path)}")
+            self.bios_selected.emit(path)
 
 
 def main():
@@ -392,3 +449,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

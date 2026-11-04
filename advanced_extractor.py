@@ -39,83 +39,21 @@ class AdvancedExtractor:
     @staticmethod
     def run_universal_extract(file_path: str, output_dir: str, terminal_callback):
         """
-        Attempts to extract a file using all available BIOSUtilities.
+        Attempts to extract a file using the Native R1 5-Tier Universal BIOS Extractor Engine.
         """
         if not os.path.exists(file_path):
             if terminal_callback:
                 terminal_callback("[ERROR] File not found.")
             return False
 
-        base_name = os.path.basename(file_path)
-        safe_name = os.path.splitext(base_name)[0]
-        extraction_path = os.path.join(output_dir, f"{safe_name}_extracted")
-        
-        if terminal_callback:
-            terminal_callback(f"[INFO] Initializing Advanced Extraction for: {base_name}")
-            terminal_callback(f"[INFO] Target Directory: {extraction_path}")
-
-        found_format = False
-        
-        # We need to capture the output of BIOSUtilities which uses print()
-        class TerminalStream(io.TextIOBase):
-            def __init__(self, callback):
-                self.callback = callback
-            def write(self, s):
-                if s.strip():
-                    self.callback(f"[ADVANCED] {s.strip()}")
-                return len(s)
-
-        # Iterate through utilities
-        for utility_class in AdvancedExtractor.UTILITIES:
-            try:
-                # Instantiate utility
-                # Note: padding is set to 0 for GUI use
-                utility = utility_class(
-                    input_object=file_path, 
-                    extract_path=extraction_path, 
-                    padding=0
-                )
-
-                # Check if format is supported by this utility
-                if not utility.check_format():
-                    continue
-
-                found_format = True
-                if terminal_callback:
-                    terminal_callback(f"[SUCCESS] Detected Format: {utility.TITLE}")
-                    terminal_callback("[INFO] Starting extraction process...")
-
-                # Redirect stdout to capture internal logs from the library
-                with contextlib.redirect_stdout(TerminalStream(terminal_callback)):
-                    is_parsed = utility.parse_format()
-                
-                if is_parsed:
-                    if terminal_callback:
-                        terminal_callback(f"[SUCCESS] Extraction completed successfully: {extraction_path}")
-                    return True
-                else:
-                    if terminal_callback:
-                        terminal_callback("[ERROR] Extraction failed during parsing.")
-                    return False
-                    
-            except Exception as e:
-                if terminal_callback:
-                    terminal_callback(f"[ERROR] Utility {utility_class.__name__} crashed: {str(e)}")
-                continue
-
-        if not found_format:
+        try:
+            from R1_Universal_Extractor.r1_extractor_core import R1ExtractorCore
+            res = R1ExtractorCore.extract(file_path, output_dir, logger=terminal_callback)
+            return bool(res.get("success", False))
+        except Exception as e:
             if terminal_callback:
-                terminal_callback("[INFO] No advanced BIOS format detected. Attempting Universal Archive Unpack (7-Zip)...")
-            
-            # 7-Zip Fallback
-            if AdvancedExtractor.run_7z_fallback(file_path, extraction_path, terminal_callback):
-                return True
-
-            if terminal_callback:
-                terminal_callback("[WARNING] Universal Unpack failed or no recognizable BIOS files found inside.")
+                terminal_callback(f"[ERROR] Native Universal Extractor error: {e}")
             return False
-            
-        return False
 
     @staticmethod
     def run_7z_fallback(file_path: str, extraction_path: str, terminal_callback):

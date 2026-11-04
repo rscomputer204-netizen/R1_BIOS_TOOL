@@ -103,3 +103,6 @@ config/github_token.json
 # Web bundle binaries (keep html/css/js assets)
 web/*.exe
 web/*.zip
+
+R1_Universal_Extractor/TEST_OUTPUT_*
+R1_Universal_Extractor/TEST_WORKSPACE/

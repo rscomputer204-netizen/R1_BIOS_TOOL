@@ -6942,38 +6942,30 @@ class BiosServiceTool(QMainWindow):
 
 
     def universal_extract_handler(self):
-        """Opens glossy drop-zone dialog, then launches Universal Extractor with selected file."""
-        from extractor_dialog import ExtractorDropDialog
-        from PySide6.QtWidgets import QDialog
-        import subprocess
-
-        ue_path = os.path.join(str(get_app_root()), "external", "UniExtract", "UniExtract.exe")
-        if not os.path.exists(ue_path):
-            self.log_to_terminal(f"[ERROR] Universal Extractor not found at: {ue_path}")
-            return
-
-        dialog = ExtractorDropDialog(
-            title="UNIVERSAL EXTRACTOR",
-            subtitle="Drop any BIOS installer or executable to extract its contents",
-            accepted_exts=[".exe", ".bin", ".rom", ".zip", ".7z", ".msi"],
-            parent=self
-        )
-
-        # Pre-fill if a file is already loaded
-        if hasattr(self, 'current_bios_file') and self.current_bios_file:
-            dialog._on_file_received(self.current_bios_file)
-
-        if dialog.exec() != QDialog.Accepted or not dialog.selected_file:
-            self.log_to_terminal("[INFO] Universal Extract cancelled.")
-            return
-
-        target_file = dialog.selected_file
-        self.log_to_terminal(f"[ACTION] Universal Extractor launching for: {os.path.basename(target_file)}")
+        """Opens R1 Native Universal BIOS Extractor window."""
         try:
-            subprocess.Popen([ue_path, target_file])
-            self.log_to_terminal("[SUCCESS] Universal Extractor opened.")
+            from R1_Universal_Extractor.r1_extractor_gui import R1ExtractorWindow
+
+            target = str(self.current_bios_file) if (hasattr(self, 'current_bios_file') and self.current_bios_file) else None
+            if not hasattr(self, '_r1_extractor_win') or self._r1_extractor_win is None:
+                self._r1_extractor_win = R1ExtractorWindow(target_file=target, parent=self)
+                self._r1_extractor_win.bios_selected.connect(self._on_extracted_bios_selected)
+            else:
+                if target:
+                    self._r1_extractor_win.set_input_file(target)
+
+            self._r1_extractor_win.show()
+            self._r1_extractor_win.raise_()
+            self._r1_extractor_win.activateWindow()
+            self.log_to_terminal("[ACTION] R1 Native Universal Extractor opened.")
         except Exception as e:
-            self.log_to_terminal(f"[ERROR] Failed to launch Universal Extractor: {e}")
+            self.log_to_terminal(f"[ERROR] Failed to open R1 Universal Extractor: {e}")
+
+    def _on_extracted_bios_selected(self, file_path: str):
+        """Loads an extracted BIOS image directly into the main tool."""
+        if file_path and os.path.isfile(file_path):
+            self.log_to_terminal(f"[SUCCESS] Loading extracted firmware image: {os.path.basename(file_path)}")
+            self.load_bios_file(file_path)
 
 
     def merge_handler(self):
