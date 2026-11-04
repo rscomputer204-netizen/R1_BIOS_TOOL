@@ -5120,12 +5120,6 @@ class BiosServiceTool(QMainWindow):
         self.btn_save_fix.clicked.connect(self.save_and_fix_handler)
         self.btn_save_fix.setStyleSheet(cyber_btn_style)
 
-        # Sub-buttons for developers or cases where auto fails
-        self.btn_advanced_extract = QPushButton("MANUAL EXTRACT")
-        self.btn_advanced_extract.setEnabled(False)
-        self.btn_advanced_extract.clicked.connect(self.advanced_extract_click_handler)
-        self.btn_advanced_extract.setStyleSheet(cyber_btn_style)
-
         self.btn_universal_extract = QPushButton("UNIVERSAL EXTRACT")
         self.btn_universal_extract.setEnabled(True)
         self.btn_universal_extract.clicked.connect(self.universal_extract_handler)
@@ -5167,7 +5161,6 @@ class BiosServiceTool(QMainWindow):
         
         sidebar_layout.addStretch()
         sidebar_layout.addWidget(self.label_tools)
-        sidebar_layout.addWidget(self.btn_advanced_extract)
         sidebar_layout.addWidget(self.btn_universal_extract)
         sidebar_layout.addWidget(self.btn_merge)
         sidebar_layout.addWidget(self.btn_ec_finder)
@@ -5716,7 +5709,6 @@ class BiosServiceTool(QMainWindow):
         self.btn_extract_dmi.setText(t("btn_extract_dmi"))
         self.btn_apply_patches.setText("BIOS V TEST")
         self.btn_save_fix.setText(t("btn_save_fix"))
-        self.btn_advanced_extract.setText(t("btn_manual_extract"))
         self.btn_settings.setText(t("btn_settings"))
         if hasattr(self, 'btn_language'):
             self.btn_language.setText(t("btn_language") + f" [{lm.current_lang.upper()}]")
@@ -6154,14 +6146,7 @@ class BiosServiceTool(QMainWindow):
         if hasattr(self, 'btn_save'):
             self.btn_save.setEnabled(has_file)
         
-        # Manual extract as a fallback for packages
-        if has_file and self.current_bios_file:
-            ext = os.path.splitext(self.current_bios_file)[1].lower()
-            if hasattr(self, 'btn_advanced_extract'):
-                self.btn_advanced_extract.setEnabled(ext in ['.exe', '.cap', '.pfs', '.pkg'])
-        else:
-            if hasattr(self, 'btn_advanced_extract'):
-                self.btn_advanced_extract.setEnabled(False)
+
 
     def automated_repair_bios(self, manual_components=None):
         """
@@ -7568,38 +7553,6 @@ class BiosServiceTool(QMainWindow):
             QMessageBox.critical(self, "Injection Error", f"Failed to inject DMI:\n{e}")
 
 
-
-    def advanced_extract_click_handler(self):
-        self.log_to_terminal("[INFO] ADVANCED EXTRACT button clicked")
-        if not self.current_bios_file: return
-        current_bios = str(self.current_bios_file)
-
-        destination = QFileDialog.getExistingDirectory(self, "Select Destination Folder", self.last_directory)
-        if not destination: return
-            
-        self.last_directory = destination
-            
-        self.is_task_running = True
-        self._handle_loading_state(True, "Universal Extraction...")
-        self.progress_signal.emit(15)
-
-        def _run_extract():
-            try:
-                self.progress_signal.emit(40)
-                success = AdvancedExtractor.run_universal_extract(current_bios, destination, self.log_to_terminal)
-                self.progress_signal.emit(100)
-                if success and os.path.isdir(destination):
-                    try:
-                        os.startfile(destination)
-                        self.log_to_terminal(f"[AUTO OPEN] Opened destination folder: {os.path.basename(destination)}")
-                    except Exception:
-                        pass
-            except Exception as e:
-                self.log_to_terminal(f"[ERROR] Extraction failed: {str(e)}")
-            finally:
-                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
-
-        threading.Thread(target=_run_extract, daemon=True).start()
 
     def clear_terminal_and_logs(self):
         """
