@@ -664,198 +664,6 @@ class AnimatedToolbarMenu(QWidget):
         pass
 
 
-class ThemeToggleSwitch(QWidget):
-    """A premium pill-shaped toggle switch for Dark / Light mode."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._is_light = False
-        self._knob_x = 4   # Current knob X position (animated)
-        self.setFixedSize(75, 36)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setToolTip("Toggle Dark / Light mode")
-
-        # Animation for the knob
-        self._anim = QPropertyAnimation(self, b"knob_x", self)
-        self._anim.setDuration(200)
-        self._anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
-
-    def get_knob_x(self):
-        return self._knob_x
-
-    def set_knob_x(self, val):
-        self._knob_x = val
-        self.update()
-
-    knob_x = Property(int, get_knob_x, set_knob_x)
-
-    def set_state(self, is_light: bool, animate=True):
-        self._is_light = is_light
-        w = self.width()
-        h = self.height()
-        knob_size = h - 4
-        end_x = w - knob_size - 2 if is_light else 2
-        if animate:
-            self._anim.stop()
-            self._anim.setStartValue(self._knob_x)
-            self._anim.setEndValue(end_x)
-            self._anim.start()
-        else:
-            self._knob_x = end_x
-            self.update()
-
-    def mousePressEvent(self, event):
-        self._is_light = not self._is_light
-        self.set_state(self._is_light)
-        # Notify main window
-        main = self.window()
-        if hasattr(main, 'apply_theme'):
-            main.apply_theme(self._is_light)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        w = self.width()
-        h = self.height()
-        radius = h // 2
-        knob_size = h - 4
-
-        # Track colors
-        if self._is_light:
-            track_color = QColor("#3b82f6")    # Blue for light mode
-            knob_color  = QColor("#ffffff")
-            text_color  = QColor("#ffffff")
-            label = "LIGHT"
-        else:
-            track_color = QColor("#1a1d2e")    # Dark for dark mode
-            knob_color  = QColor("#00f3ff")
-            text_color  = QColor("#00f3ff")
-            label = "DARK"
-
-        # Draw track (pill)
-        track_path = QPainterPath()
-        track_path.addRoundedRect(0, 0, w, h, radius, radius)
-        painter.fillPath(track_path, track_color)
-
-        # Border glow
-        from PySide6.QtGui import QPen
-        border_pen = QPen(knob_color, 1)
-        painter.setPen(border_pen)
-        painter.drawPath(track_path)
-
-        # Draw label text (opposite side of knob)
-        font = QFont("Orbitron", 5, QFont.Weight.Bold)
-        painter.setFont(font)
-        painter.setPen(text_color)
-        if self._is_light:
-            # knob on right ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ text on left
-            painter.drawText(4, 0, self._knob_x - 2, h, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, label)
-        else:
-            # knob on left ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ text on right
-            text_x = self._knob_x + knob_size + 2
-            painter.drawText(text_x, 0, w - text_x - 2, h, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, label)
-
-        # Draw knob circle
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(knob_color)
-        painter.drawEllipse(self._knob_x, 2, knob_size, knob_size)
-
-        painter.end()
-
-
-class HexToggleSwitch(QWidget):
-    """A premium pill-shaped toggle switch for Hex Viewer."""
-    def __init__(self, parent=None):
-        super().__init__(parent)
-        self._is_on = False
-        self._knob_x = 4
-        self.setFixedSize(75, 36)
-        self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setToolTip("Toggle Hex Viewer (Detached)")
-
-        self._anim = QPropertyAnimation(self, b"knob_x", self)
-        self._anim.setDuration(200)
-        self._anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
-
-    def get_knob_x(self):
-        return self._knob_x
-
-    def set_knob_x(self, val):
-        self._knob_x = val
-        self.update()
-
-    knob_x = Property(int, get_knob_x, set_knob_x)
-
-    def set_state(self, is_on: bool, animate=True):
-        self._is_on = is_on
-        w = self.width()
-        h = self.height()
-        knob_size = h - 4
-        end_x = w - knob_size - 2 if is_on else 2
-        if animate:
-            self._anim.stop()
-            self._anim.setStartValue(self._knob_x)
-            self._anim.setEndValue(end_x)
-            self._anim.start()
-        else:
-            self._knob_x = end_x
-            self.update()
-
-    def mousePressEvent(self, event):
-        self._is_on = not self._is_on
-        self.set_state(self._is_on)
-        main = self.window()
-        if hasattr(main, 'toggle_hex_viewer_mode'):
-            main.toggle_hex_viewer_mode(self._is_on)
-            from PySide6.QtCore import QSettings
-            settings = QSettings("R1AILAB", "BIOS_TOOL")
-            settings.setValue("detached_hex_viewer", self._is_on)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        w = self.width()
-        h = self.height()
-        radius = h // 2
-        knob_size = h - 4
-
-        if self._is_on:
-            track_color = QColor("#00f3ff")
-            knob_color  = QColor("#0e0f1a")
-            text_color  = QColor("#0e0f1a")
-            label = "HEX ON"
-        else:
-            track_color = QColor("#1a1d2e")
-            knob_color  = QColor("#00f3ff")
-            text_color  = QColor("#00f3ff")
-            label = "HEX OFF"
-
-        track_path = QPainterPath()
-        track_path.addRoundedRect(0, 0, w, h, radius, radius)
-        painter.fillPath(track_path, track_color)
-
-        from PySide6.QtGui import QPen
-        border_pen = QPen(QColor("#00f3ff"), 1)
-        painter.setPen(border_pen)
-        painter.drawPath(track_path)
-
-        font = QFont("Orbitron", 5, QFont.Weight.Bold)
-        painter.setFont(font)
-        painter.setPen(text_color)
-        if self._is_on:
-            painter.drawText(4, 0, self._knob_x - 2, h, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, label)
-        else:
-            text_x = self._knob_x + knob_size + 2
-            painter.drawText(text_x, 0, w - text_x - 2, h, Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignRight, label)
-
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(knob_color)
-        painter.drawEllipse(self._knob_x, 2, knob_size, knob_size)
-
-        painter.end()
-
-
 class HexWidgetEventFilter(QObject):
     def __init__(self, main_window):
         super().__init__(main_window)
@@ -865,8 +673,6 @@ class HexWidgetEventFilter(QObject):
         if event.type() == QEvent.Type.Close and obj == self.main_window.hex_widget:
             # Re-dock it
             self.main_window.toggle_hex_viewer_mode(False)
-            if hasattr(self.main_window, 'hex_toggle'):
-                self.main_window.hex_toggle.set_state(False, animate=True)
             from PySide6.QtCore import QSettings
             settings = QSettings("R1AILAB", "BIOS_TOOL")
             settings.setValue("detached_hex_viewer", False)
@@ -5367,22 +5173,7 @@ class BiosServiceTool(QMainWindow):
         sidebar_layout.addWidget(self.btn_ec_finder)
         sidebar_layout.addWidget(self.btn_settings)
         
-        # Add Theme Toggle Switch (single pill button)
-        self.theme_toggle = ThemeToggleSwitch()
-        self.theme_toggle.set_state(getattr(self, 'is_light_mode', False), animate=False)
-        
-        # Add Hex Toggle Switch (Default to off on startup so Terminal Log is active)
-        self.hex_toggle = HexToggleSwitch()
-        self.hex_toggle.set_state(False, animate=False)
 
-        toggle_wrapper = QHBoxLayout()
-        toggle_wrapper.addStretch()
-        toggle_wrapper.addWidget(self.theme_toggle)
-        toggle_wrapper.addSpacing(10)
-        toggle_wrapper.addWidget(self.hex_toggle)
-        toggle_wrapper.addStretch()
-        sidebar_layout.addLayout(toggle_wrapper)
-        sidebar_layout.addSpacing(10)
         
         # Wrap sidebar in QScrollArea
         scroll_area = QScrollArea()
@@ -5416,10 +5207,7 @@ class BiosServiceTool(QMainWindow):
         settings = QSettings("R1AILAB", "BIOS_TOOL")
         settings.setValue("light_mode", self.is_light_mode)
         
-        # Sync toggle switch visual state
-        if hasattr(self, 'theme_toggle'):
-            self.theme_toggle._is_light = self.is_light_mode
-            self.theme_toggle.set_state(self.is_light_mode)
+
         
         # Force refresh hex tabs if they exist
         if hasattr(self, 'hex_tabs'):
@@ -5491,8 +5279,7 @@ class BiosServiceTool(QMainWindow):
         if hasattr(self, 'btn_tab_body'):
             self.btn_tab_body.setStyleSheet(active_style if is_body else inactive_style)
 
-        if hasattr(self, 'hex_toggle') and self.hex_toggle._is_on != is_hex:
-            self.hex_toggle.set_state(is_hex, animate=True)
+
         from PySide6.QtCore import QSettings
         settings = QSettings("R1AILAB", "BIOS_TOOL")
         settings.setValue("detached_hex_viewer", is_hex)
