@@ -1,6 +1,7 @@
 
 
 
+
 # Main Entry Point
 import sys
 import os
@@ -7864,6 +7865,12 @@ class BiosServiceTool(QMainWindow):
                 self.progress_signal.emit(40)
                 success = AdvancedExtractor.run_universal_extract(current_bios, destination, self.log_to_terminal)
                 self.progress_signal.emit(100)
+                if success and os.path.isdir(destination):
+                    try:
+                        os.startfile(destination)
+                        self.log_to_terminal(f"[AUTO OPEN] Opened destination folder: {os.path.basename(destination)}")
+                    except Exception:
+                        pass
             except Exception as e:
                 self.log_to_terminal(f"[ERROR] Extraction failed: {str(e)}")
             finally:

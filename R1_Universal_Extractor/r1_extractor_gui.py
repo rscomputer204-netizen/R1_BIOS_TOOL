@@ -499,6 +499,14 @@ class R1ExtractorWindow(QMainWindow):
         if self.file_list.count() > 0:
             self.file_list.setCurrentRow(0)
 
+        # Automatically open the output folder where files were saved
+        if summary.get("success") and self._output_dir and os.path.isdir(self._output_dir):
+            try:
+                os.startfile(self._output_dir)
+                self.log(f"[AUTO OPEN] Opened output folder: {os.path.basename(self._output_dir)}")
+            except Exception as e:
+                self.log(f"[WARNING] Could not auto-open folder: {e}")
+
     def _open_output_dir(self):
         out_dir = self._output_dir
         if out_dir and os.path.isdir(out_dir):
