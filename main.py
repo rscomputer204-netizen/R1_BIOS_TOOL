@@ -8067,11 +8067,8 @@ class BiosServiceTool(QMainWindow):
                             self.hex_tabs.currentWidget().hex_model.set_regions(regions)
                         self.module_buttons_signal.emit(regions)
                         
-                        # Auto decompile setup
-                        self.auto_decompile_pending = True
-                        mea_py = os.path.join(str(get_app_root()), "ME Analyzer", "MEA.py")
-                        if not os.path.exists(mea_py):
-                            self.run_auto_decompile()
+                        # Decompilation is intentionally deferred until Clean ME (SMART ME FIX) is clicked
+                        self.auto_decompile_pending = False
                     else:
                         self.current_regions_map = {}
                         self.module_buttons_signal.emit({})
@@ -8122,45 +8119,8 @@ class BiosServiceTool(QMainWindow):
         self.initiate_loader_stop(500) 
 
     def run_auto_decompile(self):
-        """Internal helper to run automatic decompilation for workspace readiness."""
-        if not getattr(self, "auto_decompile_pending", False):
-            return
-            
-        if not self.current_bios_file or not self.current_regions_map:
-            self.auto_decompile_pending = False
-            return
-            
-        self.auto_decompile_pending = False
-        self.log_to_terminal("-" * 30)
-        self.log_to_terminal("[INFO] Initializing automatic BIOS decompilation...")
-        
-        try:
-            # 1. Parse Version from MEA History
-            mea_meta = parse_mea_output(self.mea_history)
-            me_version = mea_meta.get("version")
-            
-            if not me_version:
-                self.log_to_terminal("[ERROR] Automatic Version Detection Failed. Check patterns in mea_parser.py.")
-                self.log_to_terminal(f"[DEBUG] Captured MEA History length: {len(self.mea_history)}")
-                return
-
-            self.log_to_terminal(f"[INFO] Detected ME Version: {me_version}")
-            self.log_to_terminal(f"[INFO] Targeting Workspace: {self.workspace_dir}")
-            
-            # 2. Run decompiler using ONLY Intel FIT (Mandatory)
-            decomp_target = fit_automator.execute_fit_decompile(self.current_bios_file, me_version, self.workspace_dir, self.log_to_terminal)
-            
-            if decomp_target and os.path.exists(decomp_target):
-                self.log_to_terminal("-" * 30)
-                self.log_to_terminal(f"[SUCCESS] INTERNAL WORKSPACE READY: {os.path.basename(decomp_target)}")
-            else:
-                self.log_to_terminal("[WARN] Standard Intel FIT Decompile failed (Image corruption detected).")
-                self.log_to_terminal("[TIP] You can try manual repair by clicking the 'SMART ME FIX' button.")
-                self.skip_auto_repair = False
-                
-        except Exception as e:
-            self.log_to_terminal(f"[ERROR] Auto-decompile process crashed: {str(e)}")
-
+        """Deprecated: Auto-decompilation on initial file load is disabled.
+        Decompilation is triggered on-demand during the Clean ME (SMART ME FIX) pipeline."""
         pass
 
     def handle_mea_output(self, ui_lines, file_lines):
