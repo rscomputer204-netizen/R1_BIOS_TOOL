@@ -53,10 +53,10 @@ except ImportError:
 class R1ExtractorCore:
     """Multi-tiered universal extractor for BIOS updates, installers, and firmware images."""
 
-    # External CLI helpers bundled with R1 BIOS TOOL
-    _BIN_DIR = os.path.join(PROJECT_ROOT, "external", "UniExtract", "bin")
-    _7Z_PATH = os.path.join(_BIN_DIR, "7z.exe")
-    _INNOUNP_PATH = os.path.join(_BIN_DIR, "innounp.exe")
+    # Native CLI helpers bundled directly with R1 Universal Extractor
+    _NATIVE_BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
+    _7Z_PATH = os.path.join(_NATIVE_BIN_DIR, "7z.exe")
+    _INNOUNP_PATH = os.path.join(_NATIVE_BIN_DIR, "innounp.exe")
 
     FD_MAGIC = b"\x5A\xA5\xF0\x0F"
     UEFI_FVH_MAGIC = b"_FVH"

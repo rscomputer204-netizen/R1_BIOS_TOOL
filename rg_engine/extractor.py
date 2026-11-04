@@ -27,17 +27,15 @@ def extract_bios_package(exe_path, log_callback=print):
 
     os.makedirs(dest_dir, exist_ok=True)
 
-    from path_utils import get_app_root
-    ue_path = os.path.join(get_app_root(), "external", "UniExtract", "UniExtract.exe")
-
-    if not os.path.exists(ue_path):
-        raise FileNotFoundError("Universal Extractor not bundled in external/UniExtract/")
-
     log_callback(f"Extracting Package to: {dest_dir}")
     
     try:
-        subprocess.run([ue_path, exe_path, dest_dir], check=False)
-        log_callback("Extraction Complete.")
+        from R1_Universal_Extractor.r1_extractor_core import R1ExtractorCore
+        result = R1ExtractorCore.extract(exe_path, dest_dir, logger=log_callback)
+        if result.get("success"):
+            log_callback("Extraction Complete.")
+        else:
+            log_callback("[WARNING] Extraction completed with warnings.")
     except Exception as e:
         log_callback(f"[ERROR] Extraction failed: {e}")
         raise
