@@ -18,8 +18,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOCAL_SCRIPTS_DIR = os.path.join(BASE_DIR, "AutoPatch_Scripts")
 LOCAL_MANIFEST = os.path.join(LOCAL_SCRIPTS_DIR, "manifest.json")
 CACHE_DIR = os.path.join(BASE_DIR, "data", "autopatch")
-REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/rscomputer204-netizen/R1_BIOS_TOOL/main/AutoPatch_Scripts/manifest.json"
-REMOTE_RAW_BASE = "https://raw.githubusercontent.com/rscomputer204-netizen/R1_BIOS_TOOL/main/AutoPatch_Scripts/"
+REMOTE_MANIFEST_URL = "https://raw.githubusercontent.com/rscomputer204-netizen/R1_AutoPatch_Database/main/manifest.json"
+REMOTE_RAW_BASE = "https://raw.githubusercontent.com/rscomputer204-netizen/R1_AutoPatch_Database/main/"
 
 
 class AutoPatchEngine:

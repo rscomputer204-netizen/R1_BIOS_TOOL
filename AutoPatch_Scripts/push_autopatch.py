@@ -363,19 +363,72 @@ def apply_patch(bios_data: bytearray, metadata: dict = None) -> tuple[bool, byte
         manifest = update_manifest()
         self.status_var.set("Manifest updated. Staging and committing to GitHub...")
         
-        # Check git status
         try:
-            subprocess.run(["git", "add", "AutoPatch_Scripts"], cwd=ROOT_DIR, check=True)
-            commit_msg = f"AutoPatch update: synchronized {len(manifest)} scripts in manifest"
-            subprocess.run(["git", "commit", "-m", commit_msg], cwd=ROOT_DIR, capture_output=True)
-            
-            res = subprocess.run(["git", "push", "origin", "main"], cwd=ROOT_DIR, capture_output=True, text=True)
-            if res.returncode == 0:
-                self.status_var.set("Successfully pushed AutoPatch scripts to GitHub!")
-                messagebox.showinfo("GitHub Deploy", "AutoPatch scripts & manifest successfully pushed to GitHub!\nAll client machines can now access these patches.")
-            else:
-                self.status_var.set("Git push returned non-zero. Check console.")
-                messagebox.showwarning("Notice", f"Git output:\n{res.stdout}\n{res.stderr}")
+            cfg = {}
+            if os.path.exists(CONFIG_FILE):
+                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+
+            token = cfg.get("github_token", "")
+            repo_owner = "rscomputer204-netizen"
+            repo_name = "R1_AutoPatch_Database"
+            branch = "main"
+
+            if not token:
+                messagebox.showerror("Error", "No GitHub token found in config/github_token.json!")
+                return
+
+            import tempfile
+            import shutil
+
+            temp_dir = tempfile.mkdtemp(prefix="autopatch_deploy_")
+            try:
+                # Copy everything from BASE_DIR except __pycache__ and temp
+                for item in os.listdir(BASE_DIR):
+                    if item.startswith(".") or item == "__pycache__":
+                        continue
+                    s = os.path.join(BASE_DIR, item)
+                    d = os.path.join(temp_dir, item)
+                    if os.path.isdir(s):
+                        shutil.copytree(s, d, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+                    else:
+                        shutil.copy2(s, d)
+
+                # Ensure README exists
+                readme = os.path.join(temp_dir, "README.md")
+                if not os.path.exists(readme):
+                    with open(readme, "w", encoding="utf-8") as f:
+                        f.write("# R1 AutoPatch Database\nCloud repository of BIOS fix and patch scripts for R1 BIOS TOOL.\n")
+
+                # Git commit & push
+                subprocess.run(["git", "init"], cwd=temp_dir, check=True, capture_output=True)
+                subprocess.run(["git", "config", "user.name", "R1 LAB"], cwd=temp_dir, check=True, capture_output=True)
+                subprocess.run(["git", "config", "user.email", "r1lab@bios-tool.local"], cwd=temp_dir, check=True, capture_output=True)
+                subprocess.run(["git", "checkout", "-b", branch], cwd=temp_dir, check=True, capture_output=True)
+                subprocess.run(["git", "add", "."], cwd=temp_dir, check=True, capture_output=True)
+                
+                commit_msg = f"AutoPatch Cloud Sync: {len(manifest)} scripts updated"
+                subprocess.run(["git", "commit", "-m", commit_msg], cwd=temp_dir, check=True, capture_output=True)
+
+                auth_url = f"https://x-access-token:{token}@github.com/{repo_owner}/{repo_name}.git"
+                res = subprocess.run(
+                    f'git -c credential.helper= push -u "{auth_url}" {branch} --force',
+                    shell=True, capture_output=True, text=True, cwd=temp_dir
+                )
+
+                if res.returncode == 0:
+                    self.status_var.set(f"Successfully deployed {len(manifest)} patches to GitHub!")
+                    messagebox.showinfo(
+                        "Cloud Deploy Success",
+                        f"AutoPatch scripts and manifest successfully pushed to:\nhttps://github.com/{repo_owner}/{repo_name}\n\nAll client machines can now access these patches instantly!"
+                    )
+                else:
+                    self.status_var.set(f"Push failed with code {res.returncode}")
+                    messagebox.showerror("Push Error", f"Git output:\n{res.stdout}\n{res.stderr}")
+
+            finally:
+                shutil.rmtree(temp_dir, ignore_errors=True)
+
         except Exception as e:
             self.status_var.set(f"Push error: {e}")
             messagebox.showerror("Error", f"Failed to push to GitHub:\n{e}")

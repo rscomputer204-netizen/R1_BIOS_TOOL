@@ -16,7 +16,7 @@
       32
     ],
     "script_file": "patches/dell/dell_endpoint_error_fix.py",
-    "last_modified": "2026-11-04 23:54:35"
+    "last_modified": "2026-11-04 23:59:52"
   },
   {
     "id": "hp_delay_30s_fix",
@@ -34,7 +34,7 @@
       32
     ],
     "script_file": "patches/hp/hp_delay_30s_fix.py",
-    "last_modified": "2026-11-04 23:54:55"
+    "last_modified": "2026-11-04 23:59:52"
   },
   {
     "id": "lenovo_t480_ram_disable",
@@ -51,7 +51,7 @@
       16
     ],
     "script_file": "patches/lenovo/lenovo_t480_ram_disable.py",
-    "last_modified": "2026-11-04 23:54:22"
+    "last_modified": "2026-11-04 23:59:52"
   },
   {
     "id": "me_manufacturing_mode_clear",
@@ -71,6 +71,6 @@
       32
     ],
     "script_file": "patches/universal/me_manufacturing_mode_clear.py",
-    "last_modified": "2026-11-04 23:54:46"
+    "last_modified": "2026-11-04 23:59:52"
   }
 ]
