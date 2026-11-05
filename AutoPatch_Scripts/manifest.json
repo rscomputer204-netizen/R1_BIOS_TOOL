@@ -1,1 +1,76 @@
-[]
+[
+  {
+    "id": "dell_endpoint_error_fix",
+    "brand": "DELL",
+    "model": "Latitude / Inspiron / Vostro (All Intel 8th-11th Gen)",
+    "board_code": "Universal Dell Platforms",
+    "title": "CSME EndPoint Error Fix",
+    "category": "Error Fix",
+    "symptom": "Shows '[ME Error] EndPoint error occurred' or fails to pass CSME initial handshake on POST",
+    "description": "Resets the CSME EndPoint error flag in the descriptor/ME region and restores clean host firmware communication.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_endpoint_error_fix.py",
+    "last_modified": "2026-11-05 05:43:07"
+  },
+  {
+    "id": "hp_delay_30s_fix",
+    "brand": "HP",
+    "model": "ProBook 450/440/430 G5/G6/G7 & EliteBook 840/850 G5/G6",
+    "board_code": "HP Commercial Notebooks",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Power button lights up immediately, but screen remains completely black for 30 to 45 seconds before showing HP logo",
+    "description": "Resets the HP ME configuration timeout and initializes ME/BIOS fast boot flags to eliminate the 30-second POST delay.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_delay_30s_fix.py",
+    "last_modified": "2026-11-05 05:43:07"
+  },
+  {
+    "id": "lenovo_t480_ram_disable",
+    "brand": "LENOVO",
+    "model": "ThinkPad T480 / T480s",
+    "board_code": "NM-B481 / NM-B561",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard RAM faulty / 3-5 Beeps / Black screen until onboard RAM is removed",
+    "description": "Disables soldered onboard DDR4 memory channel in BIOS memory mapping tables, allowing normal boot via SODIMM slot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      16
+    ],
+    "script_file": "patches/lenovo/lenovo_t480_ram_disable.py",
+    "last_modified": "2026-11-05 05:43:07"
+  },
+  {
+    "id": "me_manufacturing_mode_clear",
+    "brand": "UNIVERSAL",
+    "model": "All Intel Core 4th to 14th Gen",
+    "board_code": "Universal",
+    "title": "Manufacturing Mode 0x33 Warning Clear",
+    "category": "General",
+    "symptom": "",
+    "description": "Sets the ME Manufacturing Mode flag to closed/disabled in Flash Partition Table and NVAR settings to suppress the 0x33 warning.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      4,
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/me_manufacturing_mode_clear.py",
+    "last_modified": "2026-11-05 05:58:47"
+  }
+]

@@ -4,8 +4,11 @@ R1 AUTOPATCH ❖ SCRIPT & CLOUD REPOSITORY MANAGER
 Dedicated visual deployment and patch management suite for R1_AutoPatch_Database.
 Features:
 - Live GitHub API connection health monitor
+- Full-width spacious script inventory table with live search
+- Right-click context menu on any patch to Edit Metadata, Open Code, or Delete
+- Modal popup dialog for editing Title, Description, Symptom, Model, Brand, etc.
+- Smart DELETE button that highlights ONLY when a row is selected
 - "NEW UPDATE DETECT" scans for newly added, modified, or deleted scripts
-- In-place metadata editor (Edit Title, Description, Symptom, Model, etc.)
 - Unlocks "PUSH TO GITHUB" only after change detection
 - Real-time streaming GitHub deployment terminal
 """
@@ -172,10 +175,10 @@ class AutoPatchManagerApp:
     def __init__(self, root):
         self.root = root
         self.root.title("R1 AutoPatch ❖ Script & Cloud Repository Manager")
-        self.root.geometry("1100x750")
-        self.root.minsize(980, 640)
+        self.root.geometry("1100x720")
+        self.root.minsize(980, 600)
 
-        # Colors matching push_to_github.py Cyber Blue theme
+        # Colors matching Cyber Blue theme
         self.clr_bg = "#0b1017"
         self.clr_card = "#111927"
         self.clr_header = "#0e1520"
@@ -206,7 +209,7 @@ class AutoPatchManagerApp:
 
         tk.Label(title_box, text="R1 AUTOPATCH ❖ SCRIPT & CLOUD MANAGER", fg=self.clr_cyan_bright, bg=self.clr_header,
                  font=("Segoe UI", 13, "bold")).pack(anchor="w")
-        tk.Label(title_box, text="DYNAMIC BIOS PATCH INVENTORY, IN-PLACE METADATA EDITOR & REPO DEPLOYER", fg=self.clr_dim, bg=self.clr_header,
+        tk.Label(title_box, text="DYNAMIC BIOS PATCH INVENTORY, RIGHT-CLICK METADATA EDITOR & CLOUD DEPLOYER", fg=self.clr_dim, bg=self.clr_header,
                  font=("Segoe UI", 8, "bold")).pack(anchor="w")
 
         # Right Header: Connection Health Badge
@@ -230,14 +233,14 @@ class AutoPatchManagerApp:
         )
         self.btn_detect.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Button 2: Delete Script
-        btn_del = tk.Button(
-            action_bar, text="🗑 DELETE SCRIPT", bg="#2a1515", fg="#f87171",
-            font=("Segoe UI", 9, "bold"), relief="flat", padx=14, pady=7, cursor="hand2",
-            activebackground="#451a1a", activeforeground="#ffffff",
+        # Button 2: Delete Script (DISABLED BY DEFAULT, highlights ONLY when a row is selected!)
+        self.btn_del = tk.Button(
+            action_bar, text="🗑 DELETE SCRIPT", bg="#1e293b", fg="#64748b",
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=16, pady=7, cursor="arrow",
+            state=tk.DISABLED,
             command=self.delete_selected_script
         )
-        btn_del.pack(side=tk.LEFT, padx=(0, 14))
+        self.btn_del.pack(side=tk.LEFT, padx=(0, 14))
 
         # Button 3: PUSH TO GITHUB (Disabled until updates detected)
         self.btn_push = tk.Button(
@@ -254,125 +257,67 @@ class AutoPatchManagerApp:
         )
         self.lbl_inv_status.pack(side=tk.RIGHT, padx=5)
 
-        # ── 3. Main Split Container (Left: Inventory Table, Right: In-Place Editor)
+        # ── 3. Full-Width Script Inventory Table (Right side edit panel REMOVED!)
         content_frame = tk.Frame(self.root, bg=self.clr_bg)
         content_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 10))
 
-        # --- LEFT PANEL: Script Inventory ---
-        left_frame = tk.Frame(content_frame, bg=self.clr_card, width=540, padx=12, pady=10, highlightthickness=1, highlightbackground=self.clr_border)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+        table_card = tk.Frame(content_frame, bg=self.clr_card, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
+        table_card.pack(fill=tk.BOTH, expand=True)
 
-        # Search bar row
-        search_row = tk.Frame(left_frame, bg=self.clr_card)
-        search_row.pack(fill=tk.X, pady=(0, 8))
+        # Search Bar & Instructions Row
+        search_row = tk.Frame(table_card, bg=self.clr_card)
+        search_row.pack(fill=tk.X, pady=(0, 10))
 
-        tk.Label(search_row, text="SEARCH:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+        tk.Label(search_row, text="SEARCH CATALOG:", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 8))
         self.var_search = tk.StringVar()
         self.var_search.trace_add("write", lambda *args: self.filter_tree())
-        ent_search = tk.Entry(search_row, textvariable=self.var_search, bg="#080c12", fg=self.clr_cyan_bright, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_search = tk.Entry(search_row, textvariable=self.var_search, bg="#080c12", fg=self.clr_cyan_bright, font=("Segoe UI", 10), relief="solid", bd=1)
         ent_search.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        btn_refresh = tk.Button(search_row, text="↻ Refresh", bg="#1e293b", fg=self.clr_text, font=("Segoe UI", 8), relief="flat", padx=8, command=self.refresh_inventory)
+        tk.Label(search_row, text="💡 Tip: Right-click any row to Edit Metadata or Open Code", fg="#64748b", bg=self.clr_card, font=("Segoe UI", 8, "italic")).pack(side=tk.RIGHT, padx=(12, 0))
+
+        btn_refresh = tk.Button(search_row, text="↻ Refresh", bg="#1e293b", fg=self.clr_text, font=("Segoe UI", 8, "bold"), relief="flat", padx=10, pady=3, command=self.refresh_inventory)
         btn_refresh.pack(side=tk.RIGHT, padx=(8, 0))
 
-        # Treeview
+        # Spacious Treeview
         tree_style = ttk.Style()
         tree_style.theme_use("clam")
-        tree_style.configure("Treeview", background="#080c12", foreground="#e2e8f0", fieldbackground="#080c12", rowheight=26, font=("Segoe UI", 9))
+        tree_style.configure("Treeview", background="#080c12", foreground="#e2e8f0", fieldbackground="#080c12", rowheight=28, font=("Segoe UI", 9))
         tree_style.configure("Treeview.Heading", background="#1a2536", foreground="#00f3ff", font=("Segoe UI", 9, "bold"))
-        tree_style.map("Treeview", background=[("selected", "#1b314f")], foreground=[("selected", "#ffffff")])
+        tree_style.map("Treeview", background=[("selected", "#18324f")], foreground=[("selected", "#ffffff")])
 
-        columns = ("brand", "model", "title", "category")
-        self.tree = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
+        columns = ("brand", "model", "title", "category", "symptom")
+        self.tree = ttk.Treeview(table_card, columns=columns, show="headings", selectmode="browse")
         self.tree.heading("brand", text="Brand")
-        self.tree.heading("model", text="Model")
-        self.tree.heading("title", text="Title")
+        self.tree.heading("model", text="Target Model / Board")
+        self.tree.heading("title", text="Patch Title")
         self.tree.heading("category", text="Category")
+        self.tree.heading("symptom", text="Observed Problem / Symptom")
 
-        self.tree.column("brand", width=75, anchor="center")
-        self.tree.column("model", width=140)
-        self.tree.column("title", width=190)
-        self.tree.column("category", width=95, anchor="center")
+        self.tree.column("brand", width=90, anchor="center")
+        self.tree.column("model", width=220)
+        self.tree.column("title", width=240)
+        self.tree.column("category", width=110, anchor="center")
+        self.tree.column("symptom", width=360)
 
-        tree_scroll = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree.yview)
-        self.tree.configure(yscrollcommand=tree_scroll.set)
+        tree_scroll_y = ttk.Scrollbar(table_card, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=tree_scroll_y.set)
         self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
+        tree_scroll_y.pack(side=tk.RIGHT, fill=tk.Y)
 
+        # Bindings
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
-        self.tree.bind("<Double-1>", lambda e: self.open_selected_code())
+        self.tree.bind("<Double-1>", lambda e: self.open_edit_popup())
+        self.tree.bind("<Button-3>", self.show_context_menu)  # Right-click
 
-        # --- RIGHT PANEL: In-Place Metadata Editor ---
-        right_frame = tk.Frame(content_frame, bg=self.clr_card, width=460, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH)
-        right_frame.pack_propagate(False)
+        # ── 4. Right-Click Context Menu ────────────────────────────────────
+        self.context_menu = tk.Menu(self.root, tearoff=0, bg="#111927", fg="#e2e8f0", activebackground="#00adb5", activeforeground="#0b1017", font=("Segoe UI", 9))
+        self.context_menu.add_command(label="✎  Edit Metadata (Popup)...", command=self.open_edit_popup)
+        self.context_menu.add_command(label="⚡  Open Code in Editor", command=self.open_selected_code)
+        self.context_menu.add_separator()
+        self.context_menu.add_command(label="🗑  Delete Script", command=self.delete_selected_script)
 
-        tk.Label(right_frame, text="EDIT SCRIPT METADATA", fg=self.clr_cyan_bright, bg=self.clr_card, font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 6))
-
-        # Form Entries
-        self.edit_vars = {
-            "title": tk.StringVar(),
-            "brand": tk.StringVar(),
-            "model": tk.StringVar(),
-            "board_code": tk.StringVar(),
-            "category": tk.StringVar(),
-            "version": tk.StringVar(),
-        }
-
-        form_grid = tk.Frame(right_frame, bg=self.clr_card)
-        form_grid.pack(fill=tk.X, pady=(0, 6))
-
-        # Title
-        tk.Label(form_grid, text="Patch Title:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).grid(row=0, column=0, sticky="w", pady=2)
-        tk.Entry(form_grid, textvariable=self.edit_vars["title"], bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1).grid(row=0, column=1, sticky="ew", pady=2, padx=(6, 0))
-
-        # Brand & Category row
-        tk.Label(form_grid, text="Brand / Cat:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).grid(row=1, column=0, sticky="w", pady=2)
-        row1_box = tk.Frame(form_grid, bg=self.clr_card)
-        row1_box.grid(row=1, column=1, sticky="ew", pady=2, padx=(6, 0))
-
-        cmb_brand = ttk.Combobox(row1_box, textvariable=self.edit_vars["brand"], values=["DELL", "LENOVO", "HP", "ASUS", "ACER", "APPLE", "UNIVERSAL"], width=10, state="readonly")
-        cmb_brand.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
-
-        cmb_cat = ttk.Combobox(row1_box, textvariable=self.edit_vars["category"], values=["RAM Disable", "Delay Fix", "Error Fix", "TPM Clear", "Power-On Lock", "General"], width=12)
-        cmb_cat.pack(side=tk.RIGHT, fill=tk.X, expand=True)
-
-        # Model & Board Code
-        tk.Label(form_grid, text="Model / Board:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).grid(row=2, column=0, sticky="w", pady=2)
-        row2_box = tk.Frame(form_grid, bg=self.clr_card)
-        row2_box.grid(row=2, column=1, sticky="ew", pady=2, padx=(6, 0))
-        tk.Entry(row2_box, textvariable=self.edit_vars["model"], bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
-        tk.Entry(row2_box, textvariable=self.edit_vars["board_code"], bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1, width=12).pack(side=tk.RIGHT)
-
-        form_grid.columnconfigure(1, weight=1)
-
-        # Symptom
-        tk.Label(right_frame, text="Symptom / Observed Issue:", fg="#eab308", bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(4, 2))
-        self.txt_symptom = tk.Text(right_frame, bg="#080c12", fg="#fef08a", font=("Segoe UI", 9), height=2, relief="solid", bd=1)
-        self.txt_symptom.pack(fill=tk.X, pady=(0, 4))
-
-        # Description
-        tk.Label(right_frame, text="Description / Action:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(2, 2))
-        self.txt_desc = tk.Text(right_frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), height=4, relief="solid", bd=1)
-        self.txt_desc.pack(fill=tk.X, pady=(0, 8))
-
-        # Save Button
-        btn_save = tk.Button(
-            right_frame, text="💾 SAVE SCRIPT METADATA", bg=self.clr_cyan, fg="#0b1017",
-            font=("Segoe UI", 9, "bold"), relief="flat", padx=12, pady=7, cursor="hand2",
-            activebackground=self.clr_cyan_bright, activeforeground="#0b1017",
-            command=self.save_metadata_changes
-        )
-        btn_save.pack(fill=tk.X, pady=(0, 6))
-
-        # Helper note
-        tk.Label(
-            right_frame,
-            text="Tip: Double-click any script in the table to open its code in your editor.",
-            fg="#64748b", bg=self.clr_card, font=("Segoe UI", 8, "italic")
-        ).pack(anchor="w")
-
-        # ── 4. Bottom Real-time Deployment Terminal ────────────────────────
+        # ── 5. Bottom Real-time Deployment Terminal ────────────────────────
         term_frame = tk.Frame(self.root, bg=self.clr_card, padx=12, pady=8, highlightthickness=1, highlightbackground=self.clr_border)
         term_frame.pack(fill=tk.X, padx=16, pady=(0, 12))
 
@@ -407,45 +352,176 @@ class AutoPatchManagerApp:
         self.tree_item_map = {}
 
         for p in self.patches_list:
-            haystack = f"{p.get('brand','')} {p.get('model','')} {p.get('title','')} {p.get('category','')}".lower()
+            haystack = f"{p.get('brand','')} {p.get('model','')} {p.get('title','')} {p.get('category','')} {p.get('symptom','')}".lower()
             if q and q not in haystack:
                 continue
 
             item_id = self.tree.insert("", tk.END, values=(
                 p.get("brand", "ALL"),
-                p.get("model", ""),
+                f"{p.get('model', '')} ({p.get('board_code', 'N/A')})",
                 p.get("title", ""),
-                p.get("category", "")
+                p.get("category", ""),
+                p.get("symptom", "N/A")
             ))
             self.tree_item_map[item_id] = p
 
-        # Auto select first
-        children = self.tree.get_children()
-        if children:
-            self.tree.selection_set(children[0])
-            self.on_tree_select(None)
+        # Reset selection state
+        self.current_selected_patch = None
+        self.update_delete_button_state()
 
     def on_tree_select(self, event):
         sel = self.tree.selection()
         if not sel:
+            self.current_selected_patch = None
+            self.update_delete_button_state()
             return
         p = self.tree_item_map.get(sel[0])
-        if not p:
+        if p:
+            self.current_selected_patch = p
+            self.update_delete_button_state()
+
+    def update_delete_button_state(self):
+        """Enable DELETE button ONLY when a valid row is selected."""
+        if self.current_selected_patch:
+            self.btn_del.configure(
+                state=tk.NORMAL,
+                bg="#3d1818",
+                fg="#f87171",
+                cursor="hand2"
+            )
+        else:
+            self.btn_del.configure(
+                state=tk.DISABLED,
+                bg="#1e293b",
+                fg="#64748b",
+                cursor="arrow"
+            )
+
+    def show_context_menu(self, event):
+        """Displays right-click popup menu on the clicked tree row."""
+        row_id = self.tree.identify_row(event.y)
+        if row_id:
+            self.tree.selection_set(row_id)
+            self.on_tree_select(None)
+            self.context_menu.tk_popup(event.x_root, event.y_root)
+
+    def open_edit_popup(self):
+        """Opens a modal popup dialog to edit Title, Description, Model, Brand, etc."""
+        if not self.current_selected_patch:
+            messagebox.showwarning("Notice", "Please select a script from the table first.")
             return
 
-        self.current_selected_patch = p
-        self.edit_vars["title"].set(p.get("title", ""))
-        self.edit_vars["brand"].set(p.get("brand", "UNIVERSAL"))
-        self.edit_vars["model"].set(p.get("model", ""))
-        self.edit_vars["board_code"].set(p.get("board_code", "N/A"))
-        self.edit_vars["category"].set(p.get("category", "General"))
-        self.edit_vars["version"].set(p.get("version", "1.0.0"))
+        p = self.current_selected_patch
+        script_rel = p.get("script_file")
+        full_py_path = os.path.join(SCRIPT_DIR, script_rel.replace("/", os.sep))
 
-        self.txt_symptom.delete("1.0", tk.END)
-        self.txt_symptom.insert("1.0", p.get("symptom", "N/A"))
+        dlg = tk.Toplevel(self.root)
+        dlg.title(f"Edit Patch — {p.get('title')}")
+        dlg.geometry("560x580")
+        dlg.configure(bg=self.clr_bg)
+        dlg.transient(self.root)
+        dlg.grab_set()
 
-        self.txt_desc.delete("1.0", tk.END)
-        self.txt_desc.insert("1.0", p.get("description", ""))
+        frame = tk.Frame(dlg, bg=self.clr_bg, padx=20, pady=16)
+        frame.pack(fill=tk.BOTH, expand=True)
+
+        tk.Label(frame, text="EDIT SCRIPT METADATA", fg=self.clr_cyan_bright, bg=self.clr_bg, font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 10))
+
+        # Title
+        tk.Label(frame, text="Patch Title:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(4, 1))
+        var_title = tk.StringVar(value=p.get("title", ""))
+        ent_title = tk.Entry(frame, textvariable=var_title, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_title.pack(fill=tk.X)
+
+        # Brand & Category row
+        row_bc = tk.Frame(frame, bg=self.clr_bg)
+        row_bc.pack(fill=tk.X, pady=(6, 0))
+
+        col_b = tk.Frame(row_bc, bg=self.clr_bg)
+        col_b.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
+        tk.Label(col_b, text="Brand:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 1))
+        var_brand = tk.StringVar(value=p.get("brand", "UNIVERSAL"))
+        cmb_brand = ttk.Combobox(col_b, textvariable=var_brand, values=["DELL", "LENOVO", "HP", "ASUS", "ACER", "APPLE", "UNIVERSAL"], state="readonly")
+        cmb_brand.pack(fill=tk.X)
+
+        col_c = tk.Frame(row_bc, bg=self.clr_bg)
+        col_c.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        tk.Label(col_c, text="Category:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 1))
+        var_cat = tk.StringVar(value=p.get("category", "General"))
+        cmb_cat = ttk.Combobox(col_c, textvariable=var_cat, values=["RAM Disable", "Delay Fix", "Error Fix", "TPM Clear", "Power-On Lock", "General"])
+        cmb_cat.pack(fill=tk.X)
+
+        # Model & Board Code row
+        row_mb = tk.Frame(frame, bg=self.clr_bg)
+        row_mb.pack(fill=tk.X, pady=(6, 0))
+
+        col_m = tk.Frame(row_mb, bg=self.clr_bg)
+        col_m.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
+        tk.Label(col_m, text="Model Name:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 1))
+        var_model = tk.StringVar(value=p.get("model", ""))
+        ent_model = tk.Entry(col_m, textvariable=var_model, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_model.pack(fill=tk.X)
+
+        col_bd = tk.Frame(row_mb, bg=self.clr_bg)
+        col_bd.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+        tk.Label(col_bd, text="Board Part Number:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 1))
+        var_board = tk.StringVar(value=p.get("board_code", "N/A"))
+        ent_board = tk.Entry(col_bd, textvariable=var_board, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_board.pack(fill=tk.X)
+
+        # Symptom
+        tk.Label(frame, text="Symptom / Observed Issue:", fg="#eab308", bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(6, 1))
+        txt_symp = tk.Text(frame, bg="#080c12", fg="#fef08a", font=("Segoe UI", 9), height=3, relief="solid", bd=1)
+        txt_symp.insert("1.0", p.get("symptom", "N/A"))
+        txt_symp.pack(fill=tk.X)
+
+        # Description
+        tk.Label(frame, text="Description / Action:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(6, 1))
+        txt_desc = tk.Text(frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), height=5, relief="solid", bd=1)
+        txt_desc.insert("1.0", p.get("description", ""))
+        txt_desc.pack(fill=tk.X, pady=(0, 14))
+
+        # Save Action
+        def _save():
+            new_title = var_title.get().strip()
+            if not new_title:
+                messagebox.showerror("Validation", "Patch title cannot be empty!")
+                return
+
+            updated_info = dict(p)
+            updated_info["title"] = new_title
+            updated_info["brand"] = var_brand.get().strip().upper()
+            updated_info["category"] = var_cat.get().strip()
+            updated_info["model"] = var_model.get().strip()
+            updated_info["board_code"] = var_board.get().strip()
+            updated_info["symptom"] = txt_symp.get("1.0", tk.END).strip()
+            updated_info["description"] = txt_desc.get("1.0", tk.END).strip()
+
+            ok, msg = update_script_patch_info(full_py_path, updated_info)
+            if ok:
+                update_manifest()
+                self.refresh_inventory()
+                self.log(f"Updated metadata for: {new_title}")
+                dlg.destroy()
+                messagebox.showinfo("Success", f"Metadata saved successfully!\nScript updated: {os.path.basename(full_py_path)}")
+            else:
+                messagebox.showerror("Error", f"Failed to save:\n{msg}")
+
+        btn_row = tk.Frame(frame, bg=self.clr_bg)
+        btn_row.pack(fill=tk.X)
+
+        tk.Button(
+            btn_row, text="💾 SAVE CHANGES", bg=self.clr_cyan, fg="#0b1017",
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=16, pady=8, cursor="hand2",
+            activebackground=self.clr_cyan_bright, activeforeground="#0b1017",
+            command=_save
+        ).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 8))
+
+        tk.Button(
+            btn_row, text="Cancel", bg="#1e293b", fg=self.clr_dim,
+            font=("Segoe UI", 10), relief="flat", padx=16, pady=8, cursor="hand2",
+            command=dlg.destroy
+        ).pack(side=tk.RIGHT)
 
     def on_detect_updates(self):
         """
@@ -528,32 +604,6 @@ class AutoPatchManagerApp:
         self.log(f"[READY] manifest.json updated. 'PUSH TO GITHUB' button is now UNLOCKED!", "ok")
         self.log("=======================================================\n", "info")
 
-    def save_metadata_changes(self):
-        if not self.current_selected_patch:
-            messagebox.showwarning("Notice", "Please select a script from the table first.")
-            return
-
-        script_rel = self.current_selected_patch.get("script_file")
-        full_py_path = os.path.join(SCRIPT_DIR, script_rel.replace("/", os.sep))
-
-        updated_info = dict(self.current_selected_patch)
-        updated_info["title"] = self.edit_vars["title"].get().strip()
-        updated_info["brand"] = self.edit_vars["brand"].get().strip().upper()
-        updated_info["model"] = self.edit_vars["model"].get().strip()
-        updated_info["board_code"] = self.edit_vars["board_code"].get().strip()
-        updated_info["category"] = self.edit_vars["category"].get().strip()
-        updated_info["symptom"] = self.txt_symptom.get("1.0", tk.END).strip()
-        updated_info["description"] = self.txt_desc.get("1.0", tk.END).strip()
-
-        ok, msg = update_script_patch_info(full_py_path, updated_info)
-        if ok:
-            update_manifest()
-            self.refresh_inventory()
-            self.log(f"Updated metadata for: {updated_info['title']}")
-            messagebox.showinfo("Success", f"Metadata saved and script updated:\n{os.path.basename(full_py_path)}")
-        else:
-            messagebox.showerror("Error", f"Failed to update script:\n{msg}")
-
     def open_selected_code(self):
         if not self.current_selected_patch:
             return
@@ -567,6 +617,7 @@ class AutoPatchManagerApp:
 
     def delete_selected_script(self):
         if not self.current_selected_patch:
+            messagebox.showwarning("Notice", "Please select a script from the table first.")
             return
 
         title = self.current_selected_patch.get("title")
