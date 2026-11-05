@@ -1,27 +1,78 @@
 """
-R1 BIOS TOOL — AUTOPATCH CLOUD DEPLOYMENT & SCRIPT MANAGER
-=========================================================
-Standalone manager for AutoPatch scripts:
-1. Auto-scans all patches in patches/ and updates manifest.json
-2. Visual Template Generator for new patch scripts (RAM disable, Delay fix, etc.)
-3. One-click commit and push to GitHub repository
+R1 AUTOPATCH ❖ SCRIPT & CLOUD REPOSITORY MANAGER
+================================================
+Dedicated visual deployment and patch management suite for R1_AutoPatch_Database.
+Features:
+- Live GitHub API connection health monitor
+- Full script inventory with search and category filters
+- In-place metadata editor (Edit Title, Description, Symptom, Model, etc.)
+- Script Creator with auto-scaffolding templates
+- Script Deletion with automatic manifest cleanup
+- One-click Code Editor launcher
+- Real-time streaming GitHub deployment terminal
 """
 
 import os
 import sys
-import json
-import glob
+import re
 import ast
+import json
 import time
+import shutil
+import threading
 import subprocess
+import urllib.request
+import urllib.error
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-ROOT_DIR = os.path.dirname(BASE_DIR)
-PATCHES_DIR = os.path.join(BASE_DIR, "patches")
-MANIFEST_FILE = os.path.join(BASE_DIR, "manifest.json")
+# ─── PATHS & CONFIG ──────────────────────────────────────────────────────────
+SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(SCRIPT_DIR)
+PATCHES_DIR = os.path.join(SCRIPT_DIR, "patches")
+MANIFEST_FILE = os.path.join(SCRIPT_DIR, "manifest.json")
 CONFIG_FILE = os.path.join(ROOT_DIR, "config", "github_token.json")
+
+REPO_OWNER = "rscomputer204-netizen"
+REPO_NAME = "R1_AutoPatch_Database"
+DEFAULT_BRANCH = "main"
+
+
+def load_github_token():
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return data.get("github_token", "").strip()
+        except Exception:
+            pass
+    return ""
+
+
+def check_github_api(token, timeout=5):
+    """Directly query the GitHub API to verify token status."""
+    token = (token or "").strip()
+    if not token:
+        return ("EMPTY", None, "No Token Configured")
+
+    url = "https://api.github.com/user"
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"token {token}")
+    req.add_header("User-Agent", "R1-AUTOPATCH-MANAGER")
+
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            login = data.get("login", "Unknown")
+            return ("OK", login, f"Connected as @{login}")
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            return ("EXPIRED", None, "Token Expired / Invalid (401)")
+        elif e.code == 403:
+            return ("EXPIRED", None, "Rate Limited / Access Denied (403)")
+        return ("ERROR", None, f"HTTP Error {e.code}")
+    except Exception:
+        return ("NO_INTERNET", None, "No Internet / Network Error")
 
 
 def scan_patches():
@@ -31,252 +82,477 @@ def scan_patches():
         os.makedirs(PATCHES_DIR, exist_ok=True)
         return manifest
 
-    py_files = glob.glob(os.path.join(PATCHES_DIR, "**", "*.py"), recursive=True)
-    for py_path in py_files:
-        rel_path = os.path.relpath(py_path, BASE_DIR).replace("\\", "/")
-        try:
-            with open(py_path, "r", encoding="utf-8") as f:
-                code = f.read()
+    for root, _, files in os.walk(PATCHES_DIR):
+        for f in files:
+            if f.endswith(".py"):
+                py_path = os.path.join(root, f)
+                rel_path = os.path.relpath(py_path, SCRIPT_DIR).replace("\\", "/")
+                try:
+                    with open(py_path, "r", encoding="utf-8") as fp:
+                        code = fp.read()
 
-            # Parse AST to extract PATCH_INFO without running arbitrary code
-            tree = ast.parse(code)
-            info = {}
-            for node in tree.body:
-                if isinstance(node, ast.Assign):
-                    for target in node.targets:
-                        if isinstance(target, ast.Name) and target.id == "PATCH_INFO":
-                            # Safe evaluate dictionary
-                            if isinstance(node.value, ast.Dict):
-                                keys = [k.value if isinstance(k, ast.Constant) else k.s for k in node.value.keys]
-                                values = []
-                                for v in node.value.values:
-                                    if isinstance(v, ast.Constant):
-                                        values.append(v.value)
-                                    elif isinstance(v, ast.List):
-                                        values.append([el.value for el in v.elts if isinstance(el, ast.Constant)])
-                                    else:
-                                        values.append(str(v))
-                                info = dict(zip(keys, values))
-                                break
+                    tree = ast.parse(code)
+                    info = {}
+                    for node in tree.body:
+                        if isinstance(node, ast.Assign):
+                            for target in node.targets:
+                                if isinstance(target, ast.Name) and target.id == "PATCH_INFO":
+                                    if isinstance(node.value, ast.Dict):
+                                        keys = [k.value if isinstance(k, ast.Constant) else k.s for k in node.value.keys]
+                                        values = []
+                                        for v in node.value.values:
+                                            if isinstance(v, ast.Constant):
+                                                values.append(v.value)
+                                            elif isinstance(v, ast.List):
+                                                values.append([el.value for el in v.elts if isinstance(el, ast.Constant)])
+                                            else:
+                                                values.append(str(v))
+                                        info = dict(zip(keys, values))
+                                        break
+                    if info:
+                        info["script_file"] = rel_path
+                        info.setdefault("brand", "UNIVERSAL")
+                        info.setdefault("model", "Universal")
+                        info.setdefault("board_code", "N/A")
+                        info.setdefault("title", os.path.basename(py_path))
+                        info.setdefault("category", "General")
+                        info.setdefault("symptom", "N/A")
+                        info.setdefault("description", "")
+                        info.setdefault("version", "1.0.0")
+                        info.setdefault("author", "R1 LAB")
+                        info["last_modified"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(py_path)))
+                        manifest.append(info)
+                except Exception as e:
+                    print(f"Error parsing {py_path}: {e}")
 
-            if info:
-                info["script_file"] = rel_path
-                # Ensure essential fields
-                info.setdefault("brand", "UNIVERSAL")
-                info.setdefault("model", "Universal")
-                info.setdefault("board_code", "N/A")
-                info.setdefault("title", os.path.basename(py_path))
-                info.setdefault("category", "General")
-                info.setdefault("symptom", "N/A")
-                info.setdefault("description", "")
-                info.setdefault("version", "1.0.0")
-                info.setdefault("author", "R1 LAB")
-                info["last_modified"] = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(os.path.getmtime(py_path)))
-                manifest.append(info)
-        except Exception as e:
-            print(f"[!] Error parsing {py_path}: {e}")
-
-    # Sort by brand, then title
     manifest.sort(key=lambda x: (x.get("brand", ""), x.get("title", "")))
     return manifest
 
 
 def update_manifest():
-    """Builds and writes manifest.json."""
     data = scan_patches()
     with open(MANIFEST_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
     return data
 
 
-class AutoPatchManagerGUI(tk.Tk):
-    def __init__(self):
-        super().__init__()
-        self.title("R1 AutoPatch — Script Manager & GitHub Deployer")
-        self.geometry("960, 680")
-        self.configure(bg="#0b1017")
-        self.minsize(800, 550)
+def update_script_patch_info(py_path, new_info: dict):
+    """Safely updates the PATCH_INFO assignment inside a .py script."""
+    if not os.path.exists(py_path):
+        return False, "Script file not found!"
 
-        self.apply_theme()
-        self.build_ui()
-        self.refresh_list()
+    with open(py_path, "r", encoding="utf-8") as f:
+        content = f.read()
 
-    def apply_theme(self):
-        style = ttk.Style(self)
-        style.theme_use("clam")
-        style.configure(".", background="#0b1017", foreground="#e2e8f0", font=("Segoe UI", 10))
-        style.configure("TFrame", background="#0b1017")
-        style.configure("Card.TFrame", background="#111927", relief="solid", borderwidth=1)
-        style.configure("TLabel", background="#0b1017", foreground="#e2e8f0")
-        style.configure("Header.TLabel", font=("Segoe UI", 14, "bold"), foreground="#00f3ff")
-        style.configure("Sub.TLabel", font=("Segoe UI", 9), foreground="#7e8f9f")
-        style.configure("Cyber.TButton", background="#00f3ff", foreground="#0b1017", font=("Segoe UI", 10, "bold"), borderwidth=0)
-        style.map("Cyber.TButton", background=[("active", "#00c4cc"), ("disabled", "#334155")])
-        style.configure("Action.TButton", background="#1e293b", foreground="#e2e8f0", font=("Segoe UI", 9, "bold"))
-        style.map("Action.TButton", background=[("active", "#334155")])
+    # Format dictionary string
+    dict_lines = ["PATCH_INFO = {"]
+    for k, v in new_info.items():
+        if k in ("script_file", "last_modified"):
+            continue
+        if isinstance(v, str):
+            # Escape quotes
+            safe_v = v.replace("\\", "\\\\").replace('"', '\\"')
+            dict_lines.append(f'    "{k}": "{safe_v}",')
+        elif isinstance(v, list):
+            dict_lines.append(f'    "{k}": {v},')
+        else:
+            dict_lines.append(f'    "{k}": {repr(v)},')
+    dict_lines.append("}")
+    new_block = "\n".join(dict_lines)
 
-    def build_ui(self):
-        # Top Header
-        top_bar = ttk.Frame(self, padding=(20, 15))
-        top_bar.pack(fill="x")
-        
-        ttk.Label(top_bar, text="AUTOPATCH SCRIPT MANAGER", style="Header.TLabel").pack(anchor="w")
-        ttk.Label(top_bar, text="Manage, create, and deploy BIOS patch scripts directly to GitHub Cloud.", style="Sub.TLabel").pack(anchor="w")
+    # Regex replace PATCH_INFO block
+    pattern = r"PATCH_INFO\s*=\s*\{.*?\n\}"
+    if re.search(pattern, content, flags=re.DOTALL):
+        new_content = re.sub(pattern, new_block, content, count=1, flags=re.DOTALL)
+    else:
+        # Prepend to file
+        new_content = new_block + "\n\n" + content
 
-        # Main horizontal split
-        main_pane = ttk.PanedWindow(self, orient="horizontal")
-        main_pane.pack(fill="both", expand=True, padx=20, pady=5)
+    with open(py_path, "w", encoding="utf-8") as f:
+        f.write(new_content)
 
-        # Left: Script List
-        left_frame = ttk.Frame(main_pane, style="Card.TFrame", padding=10)
-        main_pane.add(left_frame, weight=3)
+    return True, "Saved successfully!"
 
-        list_header = ttk.Frame(left_frame)
-        list_header.pack(fill="x", pady=(0, 8))
-        ttk.Label(list_header, text="Available Patches", font=("Segoe UI", 11, "bold"), foreground="#00f3ff").pack(side="left")
-        
-        btn_refresh = ttk.Button(list_header, text="↻ Refresh", style="Action.TButton", command=self.refresh_list)
-        btn_refresh.pack(side="right")
 
-        # Treeview for patches
-        columns = ("brand", "model", "category", "title")
+class AutoPatchManagerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("R1 AutoPatch ❖ Script & Cloud Repository Manager")
+        self.root.geometry("1100x750")
+        self.root.minsize(980, 640)
+
+        # Colors matching push_to_github.py Cyber Blue theme
+        self.clr_bg = "#0b1017"
+        self.clr_card = "#111927"
+        self.clr_header = "#0e1520"
+        self.clr_border = "#1e293b"
+        self.clr_cyan = "#00adb5"
+        self.clr_cyan_bright = "#00f3ff"
+        self.clr_green = "#22c55e"
+        self.clr_text = "#e2e8f0"
+        self.clr_dim = "#94a3b8"
+
+        self.root.configure(bg=self.clr_bg)
+        self.patches_list = []
+        self.current_selected_patch = None
+
+        self.setup_ui()
+        self.refresh_inventory()
+
+        # Start live connection monitor in background
+        self.check_connection_async()
+
+    def setup_ui(self):
+        # ── 1. Top Header ──────────────────────────────────────────────────
+        header = tk.Frame(self.root, bg=self.clr_header, padx=18, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
+        header.pack(fill=tk.X)
+
+        title_box = tk.Frame(header, bg=self.clr_header)
+        title_box.pack(side=tk.LEFT)
+
+        tk.Label(title_box, text="R1 AUTOPATCH ❖ SCRIPT & CLOUD MANAGER", fg=self.clr_cyan_bright, bg=self.clr_header,
+                 font=("Segoe UI", 13, "bold")).pack(anchor="w")
+        tk.Label(title_box, text="DYNAMIC BIOS PATCH INVENTORY, IN-PLACE METADATA EDITOR & REPO DEPLOYER", fg=self.clr_dim, bg=self.clr_header,
+                 font=("Segoe UI", 8, "bold")).pack(anchor="w")
+
+        # Right Header: Connection Health Badge
+        health_box = tk.Frame(header, bg=self.clr_card, padx=12, pady=6, highlightthickness=1, highlightbackground=self.clr_border)
+        health_box.pack(side=tk.RIGHT)
+
+        tk.Label(health_box, text=f"REPO: {REPO_OWNER}/{REPO_NAME} [{DEFAULT_BRANCH}]", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
+        self.lbl_health = tk.Label(health_box, text="⏳ Checking GitHub Link...", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold"))
+        self.lbl_health.pack(anchor="e")
+
+        # ── 2. Top Action Banner ───────────────────────────────────────────
+        action_bar = tk.Frame(self.root, bg=self.clr_card, padx=14, pady=10, highlightthickness=1, highlightbackground=self.clr_border)
+        action_bar.pack(fill=tk.X, padx=16, pady=(12, 10))
+
+        # New Script Button
+        btn_new = tk.Button(
+            action_bar, text="+ NEW SCRIPT", bg=self.clr_cyan, fg="#0b1017",
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=16, pady=6, cursor="hand2",
+            activebackground=self.clr_cyan_bright, activeforeground="#0b1017",
+            command=self.open_new_script_dialog
+        )
+        btn_new.pack(side=tk.LEFT, padx=(0, 8))
+
+        # Open in Editor Button
+        btn_code = tk.Button(
+            action_bar, text="⚡ OPEN CODE", bg="#1e293b", fg=self.clr_cyan_bright,
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=14, pady=6, cursor="hand2",
+            activebackground="#334155", activeforeground="#ffffff",
+            command=self.open_selected_code
+        )
+        btn_code.pack(side=tk.LEFT, padx=(0, 8))
+
+        # Delete Script Button
+        btn_del = tk.Button(
+            action_bar, text="🗑 DELETE", bg="#2a1515", fg="#f87171",
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=14, pady=6, cursor="hand2",
+            activebackground="#451a1a", activeforeground="#ffffff",
+            command=self.delete_selected_script
+        )
+        btn_del.pack(side=tk.LEFT, padx=(0, 14))
+
+        # Main Deploy Button: PUSH TO GITHUB
+        self.btn_push = tk.Button(
+            action_bar, text="🚀 PUSH TO GITHUB", bg="#1e293b", fg=self.clr_cyan_bright,
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=22, pady=6, cursor="hand2",
+            activebackground="#00adb5", activeforeground="#0b1017",
+            command=self.deploy_to_github
+        )
+        self.btn_push.pack(side=tk.LEFT)
+
+        # Status Badge on right
+        self.lbl_inv_status = tk.Label(action_bar, text="Scanning scripts...", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 9, "bold"))
+        self.lbl_inv_status.pack(side=tk.RIGHT, padx=5)
+
+        # ── 3. Main Split Container (Left: Inventory Table, Right: In-Place Editor)
+        content_frame = tk.Frame(self.root, bg=self.clr_bg)
+        content_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 10))
+
+        # --- LEFT PANEL: Script Inventory ---
+        left_frame = tk.Frame(content_frame, bg=self.clr_card, width=540, padx=12, pady=10, highlightthickness=1, highlightbackground=self.clr_border)
+        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 10))
+
+        # Search bar row
+        search_row = tk.Frame(left_frame, bg=self.clr_card)
+        search_row.pack(fill=tk.X, pady=(0, 8))
+
+        tk.Label(search_row, text="SEARCH:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(0, 6))
+        self.var_search = tk.StringVar()
+        self.var_search.trace_add("write", lambda *args: self.filter_tree())
+        ent_search = tk.Entry(search_row, textvariable=self.var_search, bg="#080c12", fg=self.clr_cyan_bright, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_search.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        btn_refresh = tk.Button(search_row, text="↻ Refresh", bg="#1e293b", fg=self.clr_text, font=("Segoe UI", 8), relief="flat", padx=8, command=self.refresh_inventory)
+        btn_refresh.pack(side=tk.RIGHT, padx=(8, 0))
+
+        # Treeview
+        tree_style = ttk.Style()
+        tree_style.theme_use("clam")
+        tree_style.configure("Treeview", background="#080c12", foreground="#e2e8f0", fieldbackground="#080c12", rowheight=26, font=("Segoe UI", 9))
+        tree_style.configure("Treeview.Heading", background="#1a2536", foreground="#00f3ff", font=("Segoe UI", 9, "bold"))
+        tree_style.map("Treeview", background=[("selected", "#1b314f")], foreground=[("selected", "#ffffff")])
+
+        columns = ("brand", "model", "title", "category")
         self.tree = ttk.Treeview(left_frame, columns=columns, show="headings", selectmode="browse")
         self.tree.heading("brand", text="Brand")
         self.tree.heading("model", text="Model")
+        self.tree.heading("title", text="Title")
         self.tree.heading("category", text="Category")
-        self.tree.heading("title", text="Patch Title")
-        self.tree.column("brand", width=80, anchor="center")
+
+        self.tree.column("brand", width=75, anchor="center")
         self.tree.column("model", width=140)
-        self.tree.column("category", width=100, anchor="center")
-        self.tree.column("title", width=180)
-        self.tree.pack(fill="both", expand=True)
-        self.tree.bind("<<TreeviewSelect>>", self.on_select_patch)
+        self.tree.column("title", width=190)
+        self.tree.column("category", width=95, anchor="center")
 
-        # Right: Details & Create New
-        right_frame = ttk.Frame(main_pane, style="Card.TFrame", padding=15)
-        main_pane.add(right_frame, weight=2)
+        tree_scroll = ttk.Scrollbar(left_frame, orient="vertical", command=self.tree.yview)
+        self.tree.configure(yscrollcommand=tree_scroll.set)
+        self.tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        tree_scroll.pack(side=tk.RIGHT, fill=tk.Y)
 
-        ttk.Label(right_frame, text="Patch Details & Actions", font=("Segoe UI", 11, "bold"), foreground="#00f3ff").pack(anchor="w", pady=(0, 10))
+        self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
+        self.tree.bind("<Double-1>", lambda e: self.open_selected_code())
 
-        self.lbl_details = tk.Text(right_frame, bg="#0e1520", fg="#94a3b8", font=("Consolas", 9), relief="flat", height=12)
-        self.lbl_details.pack(fill="x", pady=(0, 10))
-        self.lbl_details.insert("1.0", "Select a patch from the list to view metadata...")
-        self.lbl_details.configure(state="disabled")
+        # --- RIGHT PANEL: In-Place Metadata Editor ---
+        right_frame = tk.Frame(content_frame, bg=self.clr_card, width=460, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
+        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH)
+        right_frame.pack_propagate(False)
 
-        # Action Buttons
-        btn_box = ttk.Frame(right_frame)
-        btn_box.pack(fill="x", pady=5)
+        tk.Label(right_frame, text="EDIT SCRIPT METADATA", fg=self.clr_cyan_bright, bg=self.clr_card, font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(0, 6))
 
-        btn_new = ttk.Button(btn_box, text="+ Create New Patch", style="Cyber.TButton", command=self.open_new_dialog)
-        btn_new.pack(fill="x", pady=4)
+        # Form Entries
+        self.edit_vars = {
+            "title": tk.StringVar(),
+            "brand": tk.StringVar(),
+            "model": tk.StringVar(),
+            "board_code": tk.StringVar(),
+            "category": tk.StringVar(),
+            "version": tk.StringVar(),
+        }
 
-        btn_edit = ttk.Button(btn_box, text="✎ Open Script in Editor", style="Action.TButton", command=self.open_selected_script)
-        btn_edit.pack(fill="x", pady=4)
+        form_grid = tk.Frame(right_frame, bg=self.clr_card)
+        form_grid.pack(fill=tk.X, pady=(0, 6))
 
-        btn_push = ttk.Button(btn_box, text="☁ Push AutoPatch to GitHub", style="Cyber.TButton", command=self.push_to_github)
-        btn_push.pack(fill="x", pady=8)
+        # Title
+        tk.Label(form_grid, text="Patch Title:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).grid(row=0, column=0, sticky="w", pady=2)
+        tk.Entry(form_grid, textvariable=self.edit_vars["title"], bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1).grid(row=0, column=1, sticky="ew", pady=2, padx=(6, 0))
 
-        # Bottom Log / Status
-        self.status_var = tk.StringVar(value="Ready.")
-        status_bar = ttk.Frame(self, padding=(20, 8))
-        status_bar.pack(fill="x")
-        ttk.Label(status_bar, textvariable=self.status_var, foreground="#38bdf8", font=("Segoe UI", 9)).pack(side="left")
+        # Brand & Category row
+        tk.Label(form_grid, text="Brand / Cat:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).grid(row=1, column=0, sticky="w", pady=2)
+        row1_box = tk.Frame(form_grid, bg=self.clr_card)
+        row1_box.grid(row=1, column=1, sticky="ew", pady=2, padx=(6, 0))
 
-    def refresh_list(self):
-        manifest = update_manifest()
+        cmb_brand = ttk.Combobox(row1_box, textvariable=self.edit_vars["brand"], values=["DELL", "LENOVO", "HP", "ASUS", "ACER", "APPLE", "UNIVERSAL"], width=10, state="readonly")
+        cmb_brand.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+
+        cmb_cat = ttk.Combobox(row1_box, textvariable=self.edit_vars["category"], values=["RAM Disable", "Delay Fix", "Error Fix", "TPM Clear", "Power-On Lock", "General"], width=12)
+        cmb_cat.pack(side=tk.RIGHT, fill=tk.X, expand=True)
+
+        # Model & Board Code
+        tk.Label(form_grid, text="Model / Board:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).grid(row=2, column=0, sticky="w", pady=2)
+        row2_box = tk.Frame(form_grid, bg=self.clr_card)
+        row2_box.grid(row=2, column=1, sticky="ew", pady=2, padx=(6, 0))
+        tk.Entry(row2_box, textvariable=self.edit_vars["model"], bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 4))
+        tk.Entry(row2_box, textvariable=self.edit_vars["board_code"], bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1, width=12).pack(side=tk.RIGHT)
+
+        form_grid.columnconfigure(1, weight=1)
+
+        # Symptom
+        tk.Label(right_frame, text="Symptom / Observed Issue:", fg="#eab308", bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(4, 2))
+        self.txt_symptom = tk.Text(right_frame, bg="#080c12", fg="#fef08a", font=("Segoe UI", 9), height=2, relief="solid", bd=1)
+        self.txt_symptom.pack(fill=tk.X, pady=(0, 4))
+
+        # Description
+        tk.Label(right_frame, text="Description / Action:", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(2, 2))
+        self.txt_desc = tk.Text(right_frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), height=4, relief="solid", bd=1)
+        self.txt_desc.pack(fill=tk.X, pady=(0, 8))
+
+        # Save Button
+        btn_save = tk.Button(
+            right_frame, text="💾 SAVE SCRIPT METADATA", bg=self.clr_cyan, fg="#0b1017",
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=12, pady=6, cursor="hand2",
+            activebackground=self.clr_cyan_bright, activeforeground="#0b1017",
+            command=self.save_metadata_changes
+        )
+        btn_save.pack(fill=tk.X, pady=(0, 6))
+
+        # ── 4. Bottom Real-time Deployment Terminal ────────────────────────
+        term_frame = tk.Frame(self.root, bg=self.clr_card, padx=12, pady=8, highlightthickness=1, highlightbackground=self.clr_border)
+        term_frame.pack(fill=tk.X, padx=16, pady=(0, 12))
+
+        tk.Label(term_frame, text="DEPLOYMENT TERMINAL LOG:", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 4))
+        self.txt_log = scrolledtext.ScrolledText(term_frame, bg="#080c12", fg="#38bdf8", font=("Consolas", 9), height=5, relief="solid", bd=1)
+        self.txt_log.pack(fill=tk.X)
+
+    def log(self, text: str, tag: str = None):
+        self.txt_log.insert(tk.END, f"{text}\n")
+        self.txt_log.see(tk.END)
+
+    def check_connection_async(self):
+        def _check():
+            tok = load_github_token()
+            status, user, msg = check_github_api(tok)
+            if status == "OK":
+                self.lbl_health.configure(text=f"🟢 {msg}", fg=self.clr_green)
+            else:
+                self.lbl_health.configure(text=f"🔴 {msg}", fg="#f87171")
+        threading.Thread(target=_check, daemon=True).start()
+
+    def refresh_inventory(self):
+        self.patches_list = update_manifest()
+        self.filter_tree()
+        self.lbl_inv_status.configure(text=f"{len(self.patches_list)} scripts cataloged in manifest.json")
+        self.log(f"Synchronized local manifest. Found {len(self.patches_list)} patch scripts.")
+
+    def filter_tree(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        self.patches_map = {}
-        for p in manifest:
-            item_id = self.tree.insert("", "end", values=(
-                p.get("brand", ""),
+        q = self.var_search.get().strip().lower()
+        self.tree_item_map = {}
+
+        for p in self.patches_list:
+            haystack = f"{p.get('brand','')} {p.get('model','')} {p.get('title','')} {p.get('category','')}".lower()
+            if q and q not in haystack:
+                continue
+
+            item_id = self.tree.insert("", tk.END, values=(
+                p.get("brand", "ALL"),
                 p.get("model", ""),
-                p.get("category", ""),
-                p.get("title", "")
+                p.get("title", ""),
+                p.get("category", "")
             ))
-            self.patches_map[item_id] = p
+            self.tree_item_map[item_id] = p
 
-        self.status_var.set(f"Loaded {len(manifest)} patches. manifest.json synchronized.")
+        # Auto select first
+        children = self.tree.get_children()
+        if children:
+            self.tree.selection_set(children[0])
+            self.on_tree_select(None)
 
-    def on_select_patch(self, event):
-        selected = self.tree.selection()
-        if not selected:
+    def on_tree_select(self, event):
+        sel = self.tree.selection()
+        if not sel:
             return
-        p = self.patches_map.get(selected[0])
+        p = self.tree_item_map.get(sel[0])
         if not p:
             return
 
-        detail_text = (
-            f"ID:          {p.get('id')}\n"
-            f"Brand:       {p.get('brand')}\n"
-            f"Model:       {p.get('model')}\n"
-            f"Board Code:  {p.get('board_code')}\n"
-            f"Title:       {p.get('title')}\n"
-            f"Category:    {p.get('category')}\n"
-            f"Author:      {p.get('author')}\n"
-            f"File:        {p.get('script_file')}\n"
-            f"Modified:    {p.get('last_modified')}\n\n"
-            f"Symptom:\n  {p.get('symptom')}\n\n"
-            f"Description:\n  {p.get('description')}\n"
-        )
-        self.lbl_details.configure(state="normal")
-        self.lbl_details.delete("1.0", "end")
-        self.lbl_details.insert("1.0", detail_text)
-        self.lbl_details.configure(state="disabled")
+        self.current_selected_patch = p
+        self.edit_vars["title"].set(p.get("title", ""))
+        self.edit_vars["brand"].set(p.get("brand", "UNIVERSAL"))
+        self.edit_vars["model"].set(p.get("model", ""))
+        self.edit_vars["board_code"].set(p.get("board_code", "N/A"))
+        self.edit_vars["category"].set(p.get("category", "General"))
+        self.edit_vars["version"].set(p.get("version", "1.0.0"))
 
-    def open_selected_script(self):
-        selected = self.tree.selection()
-        if not selected:
-            messagebox.showwarning("Notice", "Please select a patch first.")
+        self.txt_symptom.delete("1.0", tk.END)
+        self.txt_symptom.insert("1.0", p.get("symptom", "N/A"))
+
+        self.txt_desc.delete("1.0", tk.END)
+        self.txt_desc.insert("1.0", p.get("description", ""))
+
+    def save_metadata_changes(self):
+        if not self.current_selected_patch:
+            messagebox.showwarning("Notice", "Please select a script from the table first.")
             return
-        p = self.patches_map.get(selected[0])
-        if p and p.get("script_file"):
-            full_path = os.path.join(BASE_DIR, p["script_file"].replace("/", os.sep))
-            if os.path.exists(full_path):
-                os.startfile(full_path)
-            else:
-                messagebox.showerror("Error", f"Script file not found:\n{full_path}")
 
-    def open_new_dialog(self):
-        """Opens dialog to generate a new patch template."""
-        dlg = tk.Toplevel(self)
-        dlg.title("New Patch Template Generator")
-        dlg.geometry("520, 560")
-        dlg.configure(bg="#0b1017")
-        dlg.transient(self)
+        script_rel = self.current_selected_patch.get("script_file")
+        full_py_path = os.path.join(SCRIPT_DIR, script_rel.replace("/", os.sep))
+
+        updated_info = dict(self.current_selected_patch)
+        updated_info["title"] = self.edit_vars["title"].get().strip()
+        updated_info["brand"] = self.edit_vars["brand"].get().strip().upper()
+        updated_info["model"] = self.edit_vars["model"].get().strip()
+        updated_info["board_code"] = self.edit_vars["board_code"].get().strip()
+        updated_info["category"] = self.edit_vars["category"].get().strip()
+        updated_info["symptom"] = self.txt_symptom.get("1.0", tk.END).strip()
+        updated_info["description"] = self.txt_desc.get("1.0", tk.END).strip()
+
+        ok, msg = update_script_patch_info(full_py_path, updated_info)
+        if ok:
+            update_manifest()
+            self.refresh_inventory()
+            self.log(f"Updated metadata for: {updated_info['title']}", "ok")
+            messagebox.showinfo("Success", f"Metadata saved and script updated:\n{os.path.basename(full_py_path)}")
+        else:
+            messagebox.showerror("Error", f"Failed to update script:\n{msg}")
+
+    def open_selected_code(self):
+        if not self.current_selected_patch:
+            return
+        script_rel = self.current_selected_patch.get("script_file")
+        full_py_path = os.path.join(SCRIPT_DIR, script_rel.replace("/", os.sep))
+        if os.path.exists(full_py_path):
+            os.startfile(full_py_path)
+            self.log(f"Opened code in system editor: {os.path.basename(full_py_path)}")
+        else:
+            messagebox.showerror("Error", f"File does not exist:\n{full_py_path}")
+
+    def delete_selected_script(self):
+        if not self.current_selected_patch:
+            return
+
+        title = self.current_selected_patch.get("title")
+        script_rel = self.current_selected_patch.get("script_file")
+        full_py_path = os.path.join(SCRIPT_DIR, script_rel.replace("/", os.sep))
+
+        confirm = messagebox.askyesno(
+            "Confirm Delete",
+            f"Are you sure you want to delete this patch?\n\n'{title}'\nFile: {script_rel}\n\nThis will remove the file and update manifest.json."
+        )
+        if not confirm:
+            return
+
+        try:
+            if os.path.exists(full_py_path):
+                os.remove(full_py_path)
+            self.refresh_inventory()
+            self.log(f"Deleted script: {script_rel}")
+            messagebox.showinfo("Deleted", f"Patch '{title}' deleted successfully.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Could not delete file:\n{e}")
+
+    def open_new_script_dialog(self):
+        dlg = tk.Toplevel(self.root)
+        dlg.title("Generate New AutoPatch Script")
+        dlg.geometry("500, 520")
+        dlg.configure(bg=self.clr_bg)
+        dlg.transient(self.root)
         dlg.grab_set()
 
-        frame = ttk.Frame(dlg, padding=20)
-        frame.pack(fill="both", expand=True)
+        frame = tk.Frame(dlg, bg=self.clr_bg, padx=18, pady=16)
+        frame.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Label(frame, text="Generate New AutoPatch Script", style="Header.TLabel").pack(anchor="w", pady=(0, 15))
+        tk.Label(frame, text="CREATE NEW PATCH SCRIPT", fg=self.clr_cyan_bright, bg=self.clr_bg, font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 12))
 
         entries = {}
         fields = [
             ("Brand:", "brand", ["DELL", "LENOVO", "HP", "ASUS", "ACER", "APPLE", "UNIVERSAL"]),
-            ("Model Name:", "model", "e.g. ThinkPad T480 / Latitude 3400"),
-            ("Board Part Number:", "board_code", "e.g. NM-B481 / LA-G521P"),
+            ("Model Name:", "model", "e.g. Latitude 3400 / ThinkPad T480"),
+            ("Board Part Number:", "board_code", "e.g. LA-G521P / NM-B481"),
             ("Patch Title:", "title", "e.g. Onboard RAM Disable"),
             ("Category:", "category", ["RAM Disable", "Delay Fix", "Error Fix", "TPM Clear", "Power-On Lock", "General"]),
-            ("Symptom:", "symptom", "What problem occurs? (e.g. 3 Beeps, Black screen)"),
+            ("Symptom:", "symptom", "What symptom occurs? (e.g. 3 beeps, black screen)"),
             ("Description:", "description", "How does this patch fix the issue?"),
         ]
 
-        for label_text, key, default in fields:
-            ttk.Label(frame, text=label_text, font=("Segoe UI", 9, "bold")).pack(anchor="w", pady=(6, 2))
+        for lbl, key, default in fields:
+            tk.Label(frame, text=lbl, fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(4, 1))
             if isinstance(default, list):
                 cb = ttk.Combobox(frame, values=default, state="readonly")
                 cb.set(default[0])
-                cb.pack(fill="x")
+                cb.pack(fill=tk.X)
                 entries[key] = cb
             else:
-                ent = ttk.Entry(frame)
+                ent = tk.Entry(frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
                 ent.insert(0, default if not default.startswith("e.g.") else "")
-                ent.pack(fill="x")
+                ent.pack(fill=tk.X)
                 entries[key] = ent
 
-        def create_script():
+        def _create():
             brand = entries["brand"].get().strip().upper()
             model = entries["model"].get().strip()
             board = entries["board_code"].get().strip() or "Universal"
@@ -286,7 +562,7 @@ class AutoPatchManagerGUI(tk.Tk):
             desc = entries["description"].get().strip() or "N/A"
 
             if not model or not title:
-                messagebox.showerror("Validation", "Model and Title are required!")
+                messagebox.showerror("Error", "Model and Title are required!")
                 return
 
             safe_name = f"{brand.lower()}_{title.lower().replace(' ', '_').replace('/', '_')}.py"
@@ -318,76 +594,54 @@ PATCH_INFO = {{
 }}
 
 def verify(bios_data: bytearray, metadata: dict = None) -> tuple[bool, str]:
-    """
-    Check if the BIOS image is compatible before patching.
-    Return (True, "Ready") or (False, "Reason for mismatch").
-    """
+    """Check if the BIOS image is compatible before patching."""
     if len(bios_data) < 4 * 1024 * 1024:
         return False, "File size is too small."
-    
-    # TODO: Add your signature checks here
     return True, "{brand} {model} signature verified. Ready to patch."
 
 def apply_patch(bios_data: bytearray, metadata: dict = None) -> tuple[bool, bytearray, str]:
-    """
-    Perform byte modifications and return (success, patched_data, message).
-    """
+    """Perform byte modifications and return (success, patched_data, message)."""
     ok, msg = verify(bios_data, metadata)
     if not ok:
         return False, bios_data, f"Verification failed: {{msg}}"
         
     patched = bytearray(bios_data)
-    
-    # TODO: Put your hex search & replace or offset modification logic here
-    # Example:
-    # search_bytes = bytes.fromhex("...")
-    # replace_bytes = bytes.fromhex("...")
-    # pos = patched.find(search_bytes)
-    # if pos != -1:
-    #     patched[pos:pos+len(replace_bytes)] = replace_bytes
-
+    # TODO: Implement your byte modifications here
     return True, patched, "Patch applied successfully!"
 '''
-            with open(target_path, "w", encoding="utf-8") as f:
-                f.write(template_code)
+            with open(target_path, "w", encoding="utf-8") as fp:
+                fp.write(template_code)
 
             dlg.destroy()
-            self.refresh_list()
-            messagebox.showinfo("Success", f"Script generated at:\n{target_path}\nOpening editor...")
+            self.refresh_inventory()
+            self.log(f"Created new patch script: {safe_name}")
             os.startfile(target_path)
 
-        ttk.Button(frame, text="Generate Template & Open Editor", style="Cyber.TButton", command=create_script).pack(fill="x", pady=(20, 0))
+        tk.Button(
+            frame, text="Generate Template & Open Editor", bg=self.clr_cyan, fg="#0b1017",
+            font=("Segoe UI", 10, "bold"), relief="flat", pady=8, cursor="hand2",
+            command=_create
+        ).pack(fill=tk.X, pady=(16, 0))
 
-    def push_to_github(self):
-        """Updates manifest and pushes AutoPatch_Scripts to GitHub."""
+    def deploy_to_github(self):
+        tok = load_github_token()
+        if not tok:
+            messagebox.showerror("Error", "No GitHub token found in config/github_token.json!")
+            return
+
         manifest = update_manifest()
-        self.status_var.set("Manifest updated. Staging and committing to GitHub...")
-        
-        try:
-            cfg = {}
-            if os.path.exists(CONFIG_FILE):
-                with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                    cfg = json.load(f)
+        self.btn_push.configure(state=tk.DISABLED, text="🚀 DEPLOYING...")
+        self.log(f"Preparing to push {len(manifest)} scripts to {REPO_OWNER}/{REPO_NAME}...")
 
-            token = cfg.get("github_token", "")
-            repo_owner = "rscomputer204-netizen"
-            repo_name = "R1_AutoPatch_Database"
-            branch = "main"
-
-            if not token:
-                messagebox.showerror("Error", "No GitHub token found in config/github_token.json!")
-                return
-
+        def _worker():
             import tempfile
-            import shutil
-
-            temp_dir = tempfile.mkdtemp(prefix="autopatch_deploy_")
+            temp_dir = tempfile.mkdtemp(prefix="autopatch_push_")
             try:
-                # Copy everything from BASE_DIR except __pycache__ and temp
-                for item in os.listdir(BASE_DIR):
+                # Copy everything from SCRIPT_DIR
+                for item in os.listdir(SCRIPT_DIR):
                     if item.startswith(".") or item == "__pycache__":
                         continue
-                    s = os.path.join(BASE_DIR, item)
+                    s = os.path.join(SCRIPT_DIR, item)
                     d = os.path.join(temp_dir, item)
                     if os.path.isdir(s):
                         shutil.copytree(s, d, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
@@ -398,43 +652,55 @@ def apply_patch(bios_data: bytearray, metadata: dict = None) -> tuple[bool, byte
                 readme = os.path.join(temp_dir, "README.md")
                 if not os.path.exists(readme):
                     with open(readme, "w", encoding="utf-8") as f:
-                        f.write("# R1 AutoPatch Database\nCloud repository of BIOS fix and patch scripts for R1 BIOS TOOL.\n")
+                        f.write(f"# R1 AutoPatch Database 🚀\nCloud repository of BIOS fix and patch scripts for **R1 BIOS TOOL**.\n\nTotal Patches: {len(manifest)}\n")
 
                 # Git commit & push
+                self.log("Initializing git bundle...")
                 subprocess.run(["git", "init"], cwd=temp_dir, check=True, capture_output=True)
                 subprocess.run(["git", "config", "user.name", "R1 LAB"], cwd=temp_dir, check=True, capture_output=True)
                 subprocess.run(["git", "config", "user.email", "r1lab@bios-tool.local"], cwd=temp_dir, check=True, capture_output=True)
-                subprocess.run(["git", "checkout", "-b", branch], cwd=temp_dir, check=True, capture_output=True)
+                subprocess.run(["git", "checkout", "-b", DEFAULT_BRANCH], cwd=temp_dir, check=True, capture_output=True)
                 subprocess.run(["git", "add", "."], cwd=temp_dir, check=True, capture_output=True)
-                
-                commit_msg = f"AutoPatch Cloud Sync: {len(manifest)} scripts updated"
+
+                commit_msg = f"AutoPatch Cloud Sync: {len(manifest)} scripts updated ({time.strftime('%Y-%m-%d %H:%M')})"
                 subprocess.run(["git", "commit", "-m", commit_msg], cwd=temp_dir, check=True, capture_output=True)
 
-                auth_url = f"https://x-access-token:{token}@github.com/{repo_owner}/{repo_name}.git"
-                res = subprocess.run(
-                    f'git -c credential.helper= push -u "{auth_url}" {branch} --force',
-                    shell=True, capture_output=True, text=True, cwd=temp_dir
+                self.log(f"Streaming push to https://github.com/{REPO_OWNER}/{REPO_NAME}.git...")
+                auth_url = f"https://x-access-token:{tok}@github.com/{REPO_OWNER}/{REPO_NAME}.git"
+                
+                proc = subprocess.Popen(
+                    f'git -c credential.helper= push -u "{auth_url}" {DEFAULT_BRANCH} --force',
+                    shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=temp_dir
                 )
 
-                if res.returncode == 0:
-                    self.status_var.set(f"Successfully deployed {len(manifest)} patches to GitHub!")
+                for line in proc.stdout:
+                    l = line.strip()
+                    if l:
+                        self.log(f"  {l}")
+
+                proc.wait()
+
+                if proc.returncode == 0:
+                    self.log(f"SUCCESS: AutoPatch repository is 100% updated on GitHub!")
                     messagebox.showinfo(
-                        "Cloud Deploy Success",
-                        f"AutoPatch scripts and manifest successfully pushed to:\nhttps://github.com/{repo_owner}/{repo_name}\n\nAll client machines can now access these patches instantly!"
+                        "Deployment Complete",
+                        f"All {len(manifest)} scripts and manifest successfully deployed to:\nhttps://github.com/{REPO_OWNER}/{REPO_NAME}\n\nClient machines can now instantly access these patches!"
                     )
                 else:
-                    self.status_var.set(f"Push failed with code {res.returncode}")
-                    messagebox.showerror("Push Error", f"Git output:\n{res.stdout}\n{res.stderr}")
+                    self.log(f"ERROR: Git push exited with code {proc.returncode}")
+                    messagebox.showerror("Error", f"Failed to push to GitHub. Code: {proc.returncode}")
 
+            except Exception as e:
+                self.log(f"Exception during deployment: {e}")
+                messagebox.showerror("Exception", f"Deployment error:\n{e}")
             finally:
                 shutil.rmtree(temp_dir, ignore_errors=True)
+                self.btn_push.configure(state=tk.NORMAL, text="🚀 PUSH TO GITHUB")
 
-        except Exception as e:
-            self.status_var.set(f"Push error: {e}")
-            messagebox.showerror("Error", f"Failed to push to GitHub:\n{e}")
+        threading.Thread(target=_worker, daemon=True).start()
 
 
 if __name__ == "__main__":
-    app = AutoPatchManagerGUI()
-    app.mainloop()
-
+    root = tk.Tk()
+    app = AutoPatchManagerApp(root)
+    root.mainloop()
