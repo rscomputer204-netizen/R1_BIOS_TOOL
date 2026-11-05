@@ -3,6 +3,7 @@ R1 AUTOPATCH ❖ SCRIPT & CLOUD REPOSITORY MANAGER
 ================================================
 Dedicated visual deployment and patch management suite for R1_AutoPatch_Database.
 Features:
+- Dedicated Settings Dialog (Manage/Test Token, Repo Owner, Branch anytime)
 - Live GitHub API connection health monitor
 - Full-width spacious script inventory table with live search
 - Right-click context menu on any patch to Edit Metadata, Open Code, or Delete
@@ -34,20 +35,48 @@ PATCHES_DIR = os.path.join(SCRIPT_DIR, "patches")
 MANIFEST_FILE = os.path.join(SCRIPT_DIR, "manifest.json")
 CONFIG_FILE = os.path.join(ROOT_DIR, "config", "github_token.json")
 
-REPO_OWNER = "rscomputer204-netizen"
-REPO_NAME = "R1_AutoPatch_Database"
-DEFAULT_BRANCH = "main"
 
-
-def load_github_token():
+def load_config():
+    default_cfg = {
+        "repo_owner": "rscomputer204-netizen",
+        "repo_name": "R1_AutoPatch_Database",
+        "branch": "main",
+        "github_token": ""
+    }
     if os.path.exists(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as f:
                 data = json.load(f)
-                return data.get("github_token", "").strip()
+                if data.get("github_token"):
+                    default_cfg["github_token"] = data["github_token"].strip()
+                if data.get("repo_owner"):
+                    default_cfg["repo_owner"] = data["repo_owner"].strip()
+                if data.get("autopatch_repo_name"):
+                    default_cfg["repo_name"] = data["autopatch_repo_name"].strip()
+                elif data.get("repo_name") and data.get("repo_name") != "R1_BIOS_TOOL":
+                    default_cfg["repo_name"] = data["repo_name"].strip()
+                if data.get("autopatch_branch"):
+                    default_cfg["branch"] = data["autopatch_branch"].strip()
         except Exception:
             pass
-    return ""
+    return default_cfg
+
+
+def save_config(cfg):
+    os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+    existing = {}
+    if os.path.exists(CONFIG_FILE):
+        try:
+            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        except Exception:
+            pass
+    existing["github_token"] = cfg.get("github_token", "").strip()
+    existing["repo_owner"] = cfg.get("repo_owner", "rscomputer204-netizen").strip()
+    existing["autopatch_repo_name"] = cfg.get("repo_name", "R1_AutoPatch_Database").strip()
+    existing["autopatch_branch"] = cfg.get("branch", "main").strip()
+    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+        json.dump(existing, f, indent=4)
 
 
 def check_github_api(token, timeout=5):
@@ -171,6 +200,145 @@ def update_script_patch_info(py_path, new_info: dict):
     return True, "Saved successfully!"
 
 
+# ─── SETTINGS DIALOG (TOKEN & REPO CONFIGURATION) ────────────────────────────
+class SettingsDialog(tk.Toplevel):
+    def __init__(self, parent, cfg, on_save_cb):
+        super().__init__(parent)
+        self.title("AutoPatch GitHub Deployment Settings")
+        self.geometry("520x460")
+        self.resizable(False, False)
+        self.transient(parent)
+        self.grab_set()
+
+        self.cfg = dict(cfg)
+        self.on_save_cb = on_save_cb
+
+        clr_bg = "#0b1017"
+        clr_card = "#111927"
+        clr_border = "#1e293b"
+        clr_cyan = "#00adb5"
+        clr_cyan_bright = "#00f3ff"
+        clr_text = "#e2e8f0"
+        clr_dim = "#94a3b8"
+
+        self.configure(bg=clr_bg)
+
+        # Header
+        hdr = tk.Frame(self, bg="#0e1520", padx=16, pady=12, highlightthickness=1, highlightbackground=clr_border)
+        hdr.pack(fill=tk.X)
+        tk.Label(hdr, text="⚙️  GITHUB CONNECTION SETTINGS", fg=clr_cyan_bright, bg="#0e1520", font=("Segoe UI", 11, "bold")).pack(anchor="w")
+        tk.Label(hdr, text="Configure your personal access token and AutoPatch target repository", fg=clr_dim, bg="#0e1520", font=("Segoe UI", 8)).pack(anchor="w")
+
+        # Body
+        body = tk.Frame(self, bg=clr_bg, padx=18, pady=14)
+        body.pack(fill=tk.BOTH, expand=True)
+
+        # Token Field
+        tk.Label(body, text="PERSONAL ACCESS TOKEN (REPO SCOPE):", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        tok_frame = tk.Frame(body, bg=clr_card, highlightthickness=1, highlightbackground=clr_border)
+        tok_frame.pack(fill=tk.X, pady=(0, 8))
+
+        self.var_token = tk.StringVar(value=self.cfg.get("github_token", ""))
+        self.show_tok = False
+        self.ent_token = tk.Entry(tok_frame, textvariable=self.var_token, bg=clr_card, fg=clr_text,
+                                  insertbackground=clr_cyan, relief="flat", font=("Consolas", 9), show="•")
+        self.ent_token.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
+
+        self.btn_eye = tk.Button(tok_frame, text="👁", bg=clr_card, fg=clr_dim, relief="flat", cursor="hand2", command=self.toggle_eye)
+        self.btn_eye.pack(side=tk.RIGHT, padx=6)
+
+        # Live Test Button & Result
+        test_frame = tk.Frame(body, bg=clr_bg)
+        test_frame.pack(fill=tk.X, pady=(0, 12))
+        self.btn_test = tk.Button(test_frame, text="⚡ Test Token Connection", bg="#1e293b", fg=clr_cyan_bright,
+                                  font=("Segoe UI", 8, "bold"), relief="flat", padx=10, pady=4, cursor="hand2",
+                                  command=self.run_test)
+        self.btn_test.pack(side=tk.LEFT)
+
+        self.lbl_test_res = tk.Label(test_frame, text="Click to test token validity", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8))
+        self.lbl_test_res.pack(side=tk.LEFT, padx=(10, 0))
+
+        # Repo Owner
+        tk.Label(body, text="REPOSITORY OWNER (USERNAME / ORG):", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        self.var_owner = tk.StringVar(value=self.cfg.get("repo_owner", "rscomputer204-netizen"))
+        ent_owner = tk.Entry(body, textvariable=self.var_owner, bg=clr_card, fg=clr_text,
+                             insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
+                             highlightthickness=1, highlightbackground=clr_border)
+        ent_owner.pack(fill=tk.X, pady=(0, 10), ipady=4, padx=1)
+
+        # Repo Name
+        tk.Label(body, text="REPOSITORY NAME:", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        self.var_repo = tk.StringVar(value=self.cfg.get("repo_name", "R1_AutoPatch_Database"))
+        ent_repo = tk.Entry(body, textvariable=self.var_repo, bg=clr_card, fg=clr_text,
+                            insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
+                             highlightthickness=1, highlightbackground=clr_border)
+        ent_repo.pack(fill=tk.X, pady=(0, 10), ipady=4, padx=1)
+
+        # Branch Name
+        tk.Label(body, text="TARGET BRANCH:", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
+        self.var_branch = tk.StringVar(value=self.cfg.get("branch", "main"))
+        ent_branch = tk.Entry(body, textvariable=self.var_branch, bg=clr_card, fg=clr_text,
+                              insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
+                              highlightthickness=1, highlightbackground=clr_border)
+        ent_branch.pack(fill=tk.X, pady=(0, 14), ipady=4, padx=1)
+
+        # Footer Buttons
+        ftr = tk.Frame(self, bg="#0e1520", padx=16, pady=10, highlightthickness=1, highlightbackground=clr_border)
+        ftr.pack(fill=tk.X, side=tk.BOTTOM)
+
+        btn_cancel = tk.Button(ftr, text="Cancel", bg="#1e293b", fg=clr_dim, relief="flat", padx=16, pady=6, cursor="hand2", command=self.destroy)
+        btn_cancel.pack(side=tk.RIGHT, padx=(8, 0))
+
+        btn_save = tk.Button(ftr, text="💾 Save Settings", bg=clr_cyan, fg="#0b1017",
+                             font=("Segoe UI", 9, "bold"), relief="flat", padx=20, pady=6, cursor="hand2",
+                             activebackground=clr_cyan_bright, command=self.save)
+        btn_save.pack(side=tk.RIGHT)
+
+    def toggle_eye(self):
+        self.show_tok = not self.show_tok
+        self.ent_token.config(show="" if self.show_tok else "•")
+
+    def run_test(self):
+        tok = self.var_token.get().strip()
+        if not tok:
+            self.lbl_test_res.config(text="⚠ Please enter a token first", fg="#facc15")
+            return
+        self.lbl_test_res.config(text="Testing with GitHub...", fg="#38bdf8")
+        self.btn_test.config(state=tk.DISABLED)
+
+        def worker():
+            status, login, msg = check_github_api(tok)
+            if status == "OK":
+                self.after(0, lambda: self.lbl_test_res.config(text=f"✔ Authenticated as @{login}", fg="#22c55e"))
+            elif status == "EXPIRED":
+                self.after(0, lambda: self.lbl_test_res.config(text="✖ Token Expired or Invalid (401)", fg="#f43f5e"))
+            elif status == "NO_INTERNET":
+                self.after(0, lambda: self.lbl_test_res.config(text="⚠ No Internet / Connection Failed", fg="#facc15"))
+            else:
+                self.after(0, lambda: self.lbl_test_res.config(text=f"✖ {msg}", fg="#f43f5e"))
+            self.after(0, lambda: self.btn_test.config(state=tk.NORMAL))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def save(self):
+        new_tok = self.var_token.get().strip()
+        new_owner = self.var_owner.get().strip() or "rscomputer204-netizen"
+        new_repo = self.var_repo.get().strip() or "R1_AutoPatch_Database"
+        new_branch = self.var_branch.get().strip() or "main"
+
+        self.cfg["github_token"] = new_tok
+        self.cfg["repo_owner"] = new_owner
+        self.cfg["repo_name"] = new_repo
+        self.cfg["branch"] = new_branch
+
+        save_config(self.cfg)
+        if self.on_save_cb:
+            self.on_save_cb(self.cfg)
+        messagebox.showinfo("SETTINGS SAVED", "GitHub deployment settings saved successfully!")
+        self.destroy()
+
+
+# ─── MAIN APPLICATION ────────────────────────────────────────────────────────
 class AutoPatchManagerApp:
     def __init__(self, root):
         self.root = root
@@ -190,6 +358,7 @@ class AutoPatchManagerApp:
         self.clr_dim = "#94a3b8"
 
         self.root.configure(bg=self.clr_bg)
+        self.cfg = load_config()
         self.patches_list = []
         self.current_selected_patch = None
 
@@ -212,11 +381,28 @@ class AutoPatchManagerApp:
         tk.Label(title_box, text="DYNAMIC BIOS PATCH INVENTORY, RIGHT-CLICK METADATA EDITOR & CLOUD DEPLOYER", fg=self.clr_dim, bg=self.clr_header,
                  font=("Segoe UI", 8, "bold")).pack(anchor="w")
 
-        # Right Header: Connection Health Badge
-        health_box = tk.Frame(header, bg=self.clr_card, padx=12, pady=6, highlightthickness=1, highlightbackground=self.clr_border)
+        # Right Header: Settings Button & Live Connection Badge
+        header_right = tk.Frame(header, bg=self.clr_header)
+        header_right.pack(side=tk.RIGHT)
+
+        # Settings Button
+        btn_settings = tk.Button(
+            header_right, text="⚙️ Settings", bg="#1e293b", fg=self.clr_cyan_bright,
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=12, pady=5, cursor="hand2",
+            activebackground="#334155", activeforeground="#ffffff",
+            command=self.open_settings
+        )
+        btn_settings.pack(side=tk.RIGHT, padx=(10, 0))
+
+        # Live Health Status Box
+        health_box = tk.Frame(header_right, bg=self.clr_card, padx=12, pady=5, highlightthickness=1, highlightbackground=self.clr_border)
         health_box.pack(side=tk.RIGHT)
 
-        tk.Label(health_box, text=f"REPO: {REPO_OWNER}/{REPO_NAME} [{DEFAULT_BRANCH}]", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(anchor="e")
+        self.lbl_repo_badge = tk.Label(
+            health_box, text=f"REPO: {self.cfg['repo_owner']}/{self.cfg['repo_name']} [{self.cfg['branch']}]",
+            fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 8, "bold")
+        )
+        self.lbl_repo_badge.pack(anchor="e")
         self.lbl_health = tk.Label(health_box, text="⏳ Checking GitHub Link...", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8, "bold"))
         self.lbl_health.pack(anchor="e")
 
@@ -257,7 +443,7 @@ class AutoPatchManagerApp:
         )
         self.lbl_inv_status.pack(side=tk.RIGHT, padx=5)
 
-        # ── 3. Full-Width Script Inventory Table (Right side edit panel REMOVED!)
+        # ── 3. Full-Width Script Inventory Table ───────────────────────────
         content_frame = tk.Frame(self.root, bg=self.clr_bg)
         content_frame.pack(fill=tk.BOTH, expand=True, padx=16, pady=(0, 10))
 
@@ -308,7 +494,7 @@ class AutoPatchManagerApp:
         # Bindings
         self.tree.bind("<<TreeviewSelect>>", self.on_tree_select)
         self.tree.bind("<Double-1>", lambda e: self.open_edit_popup())
-        self.tree.bind("<Button-3>", self.show_context_menu)  # Right-click
+        self.tree.bind("<Button-3>", self.show_context_menu)
 
         # ── 4. Right-Click Context Menu ────────────────────────────────────
         self.context_menu = tk.Menu(self.root, tearoff=0, bg="#111927", fg="#e2e8f0", activebackground="#00adb5", activeforeground="#0b1017", font=("Segoe UI", 9))
@@ -329,9 +515,19 @@ class AutoPatchManagerApp:
         self.txt_log.insert(tk.END, f"{text}\n")
         self.txt_log.see(tk.END)
 
+    def open_settings(self):
+        SettingsDialog(self.root, self.cfg, self.on_settings_saved)
+
+    def on_settings_saved(self, new_cfg):
+        self.cfg = new_cfg
+        repo_name = f"{self.cfg['repo_owner']}/{self.cfg['repo_name']}"
+        self.lbl_repo_badge.configure(text=f"REPO: {repo_name} [{self.cfg['branch']}]")
+        self.log(f"Settings updated for {repo_name}.")
+        self.check_connection_async()
+
     def check_connection_async(self):
         def _check():
-            tok = load_github_token()
+            tok = self.cfg.get("github_token", "")
             status, user, msg = check_github_api(tok)
             if status == "OK":
                 self.lbl_health.configure(text=f"🟢 {msg}", fg=self.clr_green)
@@ -365,7 +561,6 @@ class AutoPatchManagerApp:
             ))
             self.tree_item_map[item_id] = p
 
-        # Reset selection state
         self.current_selected_patch = None
         self.update_delete_button_state()
 
@@ -381,7 +576,6 @@ class AutoPatchManagerApp:
             self.update_delete_button_state()
 
     def update_delete_button_state(self):
-        """Enable DELETE button ONLY when a valid row is selected."""
         if self.current_selected_patch:
             self.btn_del.configure(
                 state=tk.NORMAL,
@@ -398,7 +592,6 @@ class AutoPatchManagerApp:
             )
 
     def show_context_menu(self, event):
-        """Displays right-click popup menu on the clicked tree row."""
         row_id = self.tree.identify_row(event.y)
         if row_id:
             self.tree.selection_set(row_id)
@@ -406,7 +599,6 @@ class AutoPatchManagerApp:
             self.context_menu.tk_popup(event.x_root, event.y_root)
 
     def open_edit_popup(self):
-        """Opens a modal popup dialog to edit Title, Description, Model, Brand, etc."""
         if not self.current_selected_patch:
             messagebox.showwarning("Notice", "Please select a script from the table first.")
             return
@@ -481,7 +673,6 @@ class AutoPatchManagerApp:
         txt_desc.insert("1.0", p.get("description", ""))
         txt_desc.pack(fill=tk.X, pady=(0, 14))
 
-        # Save Action
         def _save():
             new_title = var_title.get().strip()
             if not new_title:
@@ -524,14 +715,9 @@ class AutoPatchManagerApp:
         ).pack(side=tk.RIGHT)
 
     def on_detect_updates(self):
-        """
-        Scans patches/ folder deeply, detects added, modified or deleted scripts,
-        updates manifest.json, and enables the 'PUSH TO GITHUB' button.
-        """
         self.log("\n=======================================================", "info")
         self.log("[SCAN] Detecting scripts & changes in patches/...", "info")
 
-        # Read existing manifest to compare
         prev_map = {}
         if os.path.exists(MANIFEST_FILE):
             try:
@@ -564,7 +750,6 @@ class AutoPatchManagerApp:
             if rel_path not in current_map:
                 deleted_scripts.append(f"{info.get('title')} ({rel_path})")
 
-        # Log findings
         if new_scripts:
             self.log(f"  [+] Found {len(new_scripts)} NEW script(s):", "ok")
             for ns in new_scripts:
@@ -583,7 +768,6 @@ class AutoPatchManagerApp:
         if not new_scripts and not modified_scripts and not deleted_scripts:
             self.log(f"  [=] All {len(current_manifest)} scripts verified. Catalog is synchronized.", "info")
 
-        # Synchronize manifest.json
         with open(MANIFEST_FILE, "w", encoding="utf-8") as f:
             json.dump(current_manifest, f, indent=2, ensure_ascii=False)
 
@@ -641,20 +825,23 @@ class AutoPatchManagerApp:
             messagebox.showerror("Error", f"Could not delete file:\n{e}")
 
     def deploy_to_github(self):
-        tok = load_github_token()
+        tok = self.cfg.get("github_token", "").strip()
+        repo_owner = self.cfg.get("repo_owner", "rscomputer204-netizen").strip()
+        repo_name = self.cfg.get("repo_name", "R1_AutoPatch_Database").strip()
+        branch = self.cfg.get("branch", "main").strip()
+
         if not tok:
-            messagebox.showerror("Error", "No GitHub token found in config/github_token.json!")
+            messagebox.showerror("Configuration Error", "No GitHub token configured!\nPlease click '⚙️ Settings' in the top header and enter your token.")
             return
 
         manifest = update_manifest()
         self.btn_push.configure(state=tk.DISABLED, text="🚀 DEPLOYING...")
-        self.log(f"Preparing to push {len(manifest)} scripts to {REPO_OWNER}/{REPO_NAME}...")
+        self.log(f"Preparing to push {len(manifest)} scripts to {repo_owner}/{repo_name} [{branch}]...")
 
         def _worker():
             import tempfile
             temp_dir = tempfile.mkdtemp(prefix="autopatch_push_")
             try:
-                # Copy everything from SCRIPT_DIR
                 for item in os.listdir(SCRIPT_DIR):
                     if item.startswith(".") or item == "__pycache__":
                         continue
@@ -665,28 +852,26 @@ class AutoPatchManagerApp:
                     else:
                         shutil.copy2(s, d)
 
-                # Ensure README exists
                 readme = os.path.join(temp_dir, "README.md")
                 if not os.path.exists(readme):
                     with open(readme, "w", encoding="utf-8") as f:
                         f.write(f"# R1 AutoPatch Database 🚀\nCloud repository of BIOS fix and patch scripts for **R1 BIOS TOOL**.\n\nTotal Patches: {len(manifest)}\n")
 
-                # Git commit & push
                 self.log("Initializing git bundle...")
                 subprocess.run(["git", "init"], cwd=temp_dir, check=True, capture_output=True)
                 subprocess.run(["git", "config", "user.name", "R1 LAB"], cwd=temp_dir, check=True, capture_output=True)
                 subprocess.run(["git", "config", "user.email", "r1lab@bios-tool.local"], cwd=temp_dir, check=True, capture_output=True)
-                subprocess.run(["git", "checkout", "-b", DEFAULT_BRANCH], cwd=temp_dir, check=True, capture_output=True)
+                subprocess.run(["git", "checkout", "-b", branch], cwd=temp_dir, check=True, capture_output=True)
                 subprocess.run(["git", "add", "."], cwd=temp_dir, check=True, capture_output=True)
 
                 commit_msg = f"AutoPatch Cloud Sync: {len(manifest)} scripts updated ({time.strftime('%Y-%m-%d %H:%M')})"
                 subprocess.run(["git", "commit", "-m", commit_msg], cwd=temp_dir, check=True, capture_output=True)
 
-                self.log(f"Streaming push to https://github.com/{REPO_OWNER}/{REPO_NAME}.git...")
-                auth_url = f"https://x-access-token:{tok}@github.com/{REPO_OWNER}/{REPO_NAME}.git"
+                self.log(f"Streaming push to https://github.com/{repo_owner}/{repo_name}.git...")
+                auth_url = f"https://x-access-token:{tok}@github.com/{repo_owner}/{repo_name}.git"
                 
                 proc = subprocess.Popen(
-                    f'git -c credential.helper= push -u "{auth_url}" {DEFAULT_BRANCH} --force',
+                    f'git -c credential.helper= push -u "{auth_url}" {branch} --force',
                     shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, cwd=temp_dir
                 )
 
@@ -701,7 +886,7 @@ class AutoPatchManagerApp:
                     self.log(f"SUCCESS: AutoPatch repository is 100% updated on GitHub!")
                     messagebox.showinfo(
                         "Deployment Complete",
-                        f"All {len(manifest)} scripts and manifest successfully deployed to:\nhttps://github.com/{REPO_OWNER}/{REPO_NAME}\n\nClient machines can now instantly access these patches!"
+                        f"All {len(manifest)} scripts and manifest successfully deployed to:\nhttps://github.com/{repo_owner}/{repo_name}\n\nClient machines can now instantly access these patches!"
                     )
                 else:
                     self.log(f"ERROR: Git push exited with code {proc.returncode}")

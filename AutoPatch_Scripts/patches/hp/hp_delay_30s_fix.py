@@ -12,7 +12,7 @@ PATCH_INFO = {
     "board_code": "HP Commercial Notebooks",
     "title": "Display Delay 30s Fix",
     "category": "Delay Fix",
-    "symptom": "Power button lights up immediately, but screen remains completely black for 30 to 45 seconds before showing HP logo",
+    "symptom": "Power button lights up immediately, but screen remains completely black for 30 to 45 seconds before showing HP l",
     "description": "Resets the HP ME configuration timeout and initializes ME/BIOS fast boot flags to eliminate the 30-second POST delay.",
     "version": "1.0.0",
     "author": "R1 LAB",

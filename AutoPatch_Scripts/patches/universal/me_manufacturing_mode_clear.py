@@ -12,7 +12,7 @@ PATCH_INFO = {
     "board_code": "Universal",
     "title": "Manufacturing Mode 0x33 Warning Clear",
     "category": "General",
-    "symptom": "",
+    "symptom": "Sets the ME Manufacturing Mode flag to closed/disabled in Flash Partition Table and NVAR settings to suppress the 0x33 warning.",
     "description": "Sets the ME Manufacturing Mode flag to closed/disabled in Flash Partition Table and NVAR settings to suppress the 0x33 warning.",
     "version": "1.0.0",
     "author": "R1 LAB",
