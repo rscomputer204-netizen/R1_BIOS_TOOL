@@ -1185,11 +1185,11 @@ class BodyViewerWidget(QWidget):
             }
         """)
 
-        act_body = menu.addAction("💾 Extract body...")
-        act_asis = menu.addAction("💾 Extract as is...")
+        act_body = menu.addAction("Extract body...")
+        act_asis = menu.addAction("Extract as is...")
         menu.addSeparator()
-        act_hex = menu.addAction("🔍 Inspect in Hex Viewer")
-        act_copy_guid = menu.addAction("📋 Copy Name / GUID")
+        act_hex = menu.addAction("Inspect in Hex Viewer")
+        act_copy_guid = menu.addAction("Copy Name / GUID")
 
         action = menu.exec(self.tree.viewport().mapToGlobal(pos))
         if action == act_body:
