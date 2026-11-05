@@ -5,7 +5,8 @@ Dedicated visual deployment and patch management suite for R1_AutoPatch_Database
 Features:
 - Dedicated Settings Dialog (Manage/Test Token, Repo Owner, Branch anytime)
 - Live GitHub API connection health monitor
-- Full-width spacious script inventory table with live search
+- Full-width spacious script inventory table with live search and brand dropdown filter
+- Highly visible cyan insertion cursor on all text inputs and entries
 - Right-click context menu on any patch to Edit Metadata, Open Code, or Delete
 - Modal popup dialog for editing Title, Description, Symptom, Model, Brand, etc.
 - Smart DELETE button that highlights ONLY when a row is selected
@@ -240,8 +241,10 @@ class SettingsDialog(tk.Toplevel):
 
         self.var_token = tk.StringVar(value=self.cfg.get("github_token", ""))
         self.show_tok = False
-        self.ent_token = tk.Entry(tok_frame, textvariable=self.var_token, bg=clr_card, fg=clr_text,
-                                  insertbackground=clr_cyan, relief="flat", font=("Consolas", 9), show="•")
+        self.ent_token = tk.Entry(
+            tok_frame, textvariable=self.var_token, bg=clr_card, fg=clr_text,
+            insertbackground=clr_cyan_bright, insertwidth=2, relief="flat", font=("Consolas", 9), show="•"
+        )
         self.ent_token.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=8, pady=6)
 
         self.btn_eye = tk.Button(tok_frame, text="👁", bg=clr_card, fg=clr_dim, relief="flat", cursor="hand2", command=self.toggle_eye)
@@ -261,25 +264,31 @@ class SettingsDialog(tk.Toplevel):
         # Repo Owner
         tk.Label(body, text="REPOSITORY OWNER (USERNAME / ORG):", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
         self.var_owner = tk.StringVar(value=self.cfg.get("repo_owner", "rscomputer204-netizen"))
-        ent_owner = tk.Entry(body, textvariable=self.var_owner, bg=clr_card, fg=clr_text,
-                             insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
-                             highlightthickness=1, highlightbackground=clr_border)
+        ent_owner = tk.Entry(
+            body, textvariable=self.var_owner, bg=clr_card, fg=clr_text,
+            insertbackground=clr_cyan_bright, insertwidth=2, relief="flat", font=("Segoe UI", 9),
+            highlightthickness=1, highlightbackground=clr_border
+        )
         ent_owner.pack(fill=tk.X, pady=(0, 10), ipady=4, padx=1)
 
         # Repo Name
         tk.Label(body, text="REPOSITORY NAME:", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
         self.var_repo = tk.StringVar(value=self.cfg.get("repo_name", "R1_AutoPatch_Database"))
-        ent_repo = tk.Entry(body, textvariable=self.var_repo, bg=clr_card, fg=clr_text,
-                            insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
-                             highlightthickness=1, highlightbackground=clr_border)
+        ent_repo = tk.Entry(
+            body, textvariable=self.var_repo, bg=clr_card, fg=clr_text,
+            insertbackground=clr_cyan_bright, insertwidth=2, relief="flat", font=("Segoe UI", 9),
+            highlightthickness=1, highlightbackground=clr_border
+        )
         ent_repo.pack(fill=tk.X, pady=(0, 10), ipady=4, padx=1)
 
         # Branch Name
         tk.Label(body, text="TARGET BRANCH:", fg=clr_dim, bg=clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 2))
         self.var_branch = tk.StringVar(value=self.cfg.get("branch", "main"))
-        ent_branch = tk.Entry(body, textvariable=self.var_branch, bg=clr_card, fg=clr_text,
-                              insertbackground=clr_cyan, relief="flat", font=("Segoe UI", 9),
-                              highlightthickness=1, highlightbackground=clr_border)
+        ent_branch = tk.Entry(
+            body, textvariable=self.var_branch, bg=clr_card, fg=clr_text,
+            insertbackground=clr_cyan_bright, insertwidth=2, relief="flat", font=("Segoe UI", 9),
+            highlightthickness=1, highlightbackground=clr_border
+        )
         ent_branch.pack(fill=tk.X, pady=(0, 14), ipady=4, padx=1)
 
         # Footer Buttons
@@ -450,20 +459,37 @@ class AutoPatchManagerApp:
         table_card = tk.Frame(content_frame, bg=self.clr_card, padx=14, pady=12, highlightthickness=1, highlightbackground=self.clr_border)
         table_card.pack(fill=tk.BOTH, expand=True)
 
-        # Search Bar & Instructions Row
+        # Search Bar & Brand Filter Row
         search_row = tk.Frame(table_card, bg=self.clr_card)
         search_row.pack(fill=tk.X, pady=(0, 10))
 
         tk.Label(search_row, text="SEARCH CATALOG:", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 9, "bold")).pack(side=tk.LEFT, padx=(0, 8))
         self.var_search = tk.StringVar()
         self.var_search.trace_add("write", lambda *args: self.filter_tree())
-        ent_search = tk.Entry(search_row, textvariable=self.var_search, bg="#080c12", fg=self.clr_cyan_bright, font=("Segoe UI", 10), relief="solid", bd=1)
+        
+        # High visibility cyan cursor
+        ent_search = tk.Entry(
+            search_row, textvariable=self.var_search, bg="#080c12", fg=self.clr_cyan_bright,
+            font=("Segoe UI", 10), relief="solid", bd=1,
+            insertbackground=self.clr_cyan_bright, insertwidth=2
+        )
         ent_search.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        tk.Label(search_row, text="💡 Tip: Right-click any row to Edit Metadata or Open Code", fg="#64748b", bg=self.clr_card, font=("Segoe UI", 8, "italic")).pack(side=tk.RIGHT, padx=(12, 0))
+        # Brand Filter Dropdown right beside search
+        tk.Label(search_row, text="FILTER BRAND:", fg=self.clr_cyan, bg=self.clr_card, font=("Segoe UI", 8, "bold")).pack(side=tk.LEFT, padx=(14, 6))
+        self.var_brand_filter = tk.StringVar(value="ALL BRANDS")
+        self.cmb_brand_filter = ttk.Combobox(
+            search_row, textvariable=self.var_brand_filter,
+            values=["ALL BRANDS", "DELL", "LENOVO", "HP", "ASUS", "ACER", "APPLE", "UNIVERSAL"],
+            state="readonly", width=14, font=("Segoe UI", 9, "bold")
+        )
+        self.cmb_brand_filter.pack(side=tk.LEFT, padx=(0, 10))
+        self.cmb_brand_filter.bind("<<ComboboxSelected>>", lambda e: self.filter_tree())
 
         btn_refresh = tk.Button(search_row, text="↻ Refresh", bg="#1e293b", fg=self.clr_text, font=("Segoe UI", 8, "bold"), relief="flat", padx=10, pady=3, command=self.refresh_inventory)
-        btn_refresh.pack(side=tk.RIGHT, padx=(8, 0))
+        btn_refresh.pack(side=tk.RIGHT, padx=(6, 0))
+
+        tk.Label(search_row, text="💡 Tip: Right-click row to Edit", fg="#64748b", bg=self.clr_card, font=("Segoe UI", 8, "italic")).pack(side=tk.RIGHT, padx=(10, 0))
 
         # Spacious Treeview
         tree_style = ttk.Style()
@@ -545,9 +571,18 @@ class AutoPatchManagerApp:
             self.tree.delete(item)
 
         q = self.var_search.get().strip().lower()
+        selected_brand = self.var_brand_filter.get().strip().upper()
         self.tree_item_map = {}
 
         for p in self.patches_list:
+            p_brand = p.get('brand', 'UNIVERSAL').upper()
+
+            # Brand filter logic
+            if selected_brand not in ("ALL BRANDS", "ALL", ""):
+                if p_brand != selected_brand:
+                    continue
+
+            # Text query search
             haystack = f"{p.get('brand','')} {p.get('model','')} {p.get('title','')} {p.get('category','')} {p.get('symptom','')}".lower()
             if q and q not in haystack:
                 continue
@@ -619,10 +654,13 @@ class AutoPatchManagerApp:
 
         tk.Label(frame, text="EDIT SCRIPT METADATA", fg=self.clr_cyan_bright, bg=self.clr_bg, font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 10))
 
-        # Title
+        # Title (with prominent cyan cursor)
         tk.Label(frame, text="Patch Title:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(4, 1))
         var_title = tk.StringVar(value=p.get("title", ""))
-        ent_title = tk.Entry(frame, textvariable=var_title, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_title = tk.Entry(
+            frame, textvariable=var_title, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1,
+            insertbackground=self.clr_cyan_bright, insertwidth=2
+        )
         ent_title.pack(fill=tk.X)
 
         # Brand & Category row
@@ -651,25 +689,37 @@ class AutoPatchManagerApp:
         col_m.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 6))
         tk.Label(col_m, text="Model Name:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 1))
         var_model = tk.StringVar(value=p.get("model", ""))
-        ent_model = tk.Entry(col_m, textvariable=var_model, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_model = tk.Entry(
+            col_m, textvariable=var_model, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1,
+            insertbackground=self.clr_cyan_bright, insertwidth=2
+        )
         ent_model.pack(fill=tk.X)
 
         col_bd = tk.Frame(row_mb, bg=self.clr_bg)
         col_bd.pack(side=tk.RIGHT, fill=tk.X, expand=True)
         tk.Label(col_bd, text="Board Part Number:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(0, 1))
         var_board = tk.StringVar(value=p.get("board_code", "N/A"))
-        ent_board = tk.Entry(col_bd, textvariable=var_board, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
+        ent_board = tk.Entry(
+            col_bd, textvariable=var_board, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1,
+            insertbackground=self.clr_cyan_bright, insertwidth=2
+        )
         ent_board.pack(fill=tk.X)
 
         # Symptom
         tk.Label(frame, text="Symptom / Observed Issue:", fg="#eab308", bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(6, 1))
-        txt_symp = tk.Text(frame, bg="#080c12", fg="#fef08a", font=("Segoe UI", 9), height=3, relief="solid", bd=1)
+        txt_symp = tk.Text(
+            frame, bg="#080c12", fg="#fef08a", font=("Segoe UI", 9), height=3, relief="solid", bd=1,
+            insertbackground=self.clr_cyan_bright, insertwidth=2
+        )
         txt_symp.insert("1.0", p.get("symptom", "N/A"))
         txt_symp.pack(fill=tk.X)
 
         # Description
         tk.Label(frame, text="Description / Action:", fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(6, 1))
-        txt_desc = tk.Text(frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), height=5, relief="solid", bd=1)
+        txt_desc = tk.Text(
+            frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), height=5, relief="solid", bd=1,
+            insertbackground=self.clr_cyan_bright, insertwidth=2
+        )
         txt_desc.insert("1.0", p.get("description", ""))
         txt_desc.pack(fill=tk.X, pady=(0, 14))
 
