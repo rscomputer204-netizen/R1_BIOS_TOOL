@@ -4395,17 +4395,17 @@ class BiosServiceTool(QMainWindow):
         tab_bar_layout.setSpacing(8)
 
         # Tab Switch Buttons
-        self.btn_tab_terminal = QPushButton("📟 TERMINAL LOG")
+        self.btn_tab_terminal = QPushButton("TERMINAL LOG")
         self.btn_tab_terminal.setObjectName("TabBtnTerminal")
         self.btn_tab_terminal.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tab_terminal.clicked.connect(lambda: self.switch_display_tab("TERMINAL"))
 
-        self.btn_tab_hex = QPushButton("🔍 HEX VIEWER")
+        self.btn_tab_hex = QPushButton("HEX VIEWER")
         self.btn_tab_hex.setObjectName("TabBtnHex")
         self.btn_tab_hex.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tab_hex.clicked.connect(lambda: self.switch_display_tab("HEX"))
 
-        self.btn_tab_body = QPushButton("🧬 BODY VIEWER")
+        self.btn_tab_body = QPushButton("BODY VIEWER")
         self.btn_tab_body.setObjectName("TabBtnBody")
         self.btn_tab_body.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_tab_body.clicked.connect(lambda: self.switch_display_tab("BODY"))
