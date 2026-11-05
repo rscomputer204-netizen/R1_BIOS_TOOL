@@ -4,11 +4,9 @@ R1 AUTOPATCH ❖ SCRIPT & CLOUD REPOSITORY MANAGER
 Dedicated visual deployment and patch management suite for R1_AutoPatch_Database.
 Features:
 - Live GitHub API connection health monitor
-- Full script inventory with search and category filters
+- "NEW UPDATE DETECT" scans for newly added, modified, or deleted scripts
 - In-place metadata editor (Edit Title, Description, Symptom, Model, etc.)
-- Script Creator with auto-scaffolding templates
-- Script Deletion with automatic manifest cleanup
-- One-click Code Editor launcher
+- Unlocks "PUSH TO GITHUB" only after change detection
 - Real-time streaming GitHub deployment terminal
 """
 
@@ -144,13 +142,11 @@ def update_script_patch_info(py_path, new_info: dict):
     with open(py_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Format dictionary string
     dict_lines = ["PATCH_INFO = {"]
     for k, v in new_info.items():
         if k in ("script_file", "last_modified"):
             continue
         if isinstance(v, str):
-            # Escape quotes
             safe_v = v.replace("\\", "\\\\").replace('"', '\\"')
             dict_lines.append(f'    "{k}": "{safe_v}",')
         elif isinstance(v, list):
@@ -160,12 +156,10 @@ def update_script_patch_info(py_path, new_info: dict):
     dict_lines.append("}")
     new_block = "\n".join(dict_lines)
 
-    # Regex replace PATCH_INFO block
     pattern = r"PATCH_INFO\s*=\s*\{.*?\n\}"
     if re.search(pattern, content, flags=re.DOTALL):
         new_content = re.sub(pattern, new_block, content, count=1, flags=re.DOTALL)
     else:
-        # Prepend to file
         new_content = new_block + "\n\n" + content
 
     with open(py_path, "w", encoding="utf-8") as f:
@@ -227,44 +221,37 @@ class AutoPatchManagerApp:
         action_bar = tk.Frame(self.root, bg=self.clr_card, padx=14, pady=10, highlightthickness=1, highlightbackground=self.clr_border)
         action_bar.pack(fill=tk.X, padx=16, pady=(12, 10))
 
-        # New Script Button
-        btn_new = tk.Button(
-            action_bar, text="+ NEW SCRIPT", bg=self.clr_cyan, fg="#0b1017",
-            font=("Segoe UI", 10, "bold"), relief="flat", padx=16, pady=6, cursor="hand2",
+        # Button 1: NEW UPDATE DETECT (Primary action)
+        self.btn_detect = tk.Button(
+            action_bar, text="🔍  NEW UPDATE DETECT", bg=self.clr_cyan, fg="#0b1017",
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=20, pady=7, cursor="hand2",
             activebackground=self.clr_cyan_bright, activeforeground="#0b1017",
-            command=self.open_new_script_dialog
+            command=self.on_detect_updates
         )
-        btn_new.pack(side=tk.LEFT, padx=(0, 8))
+        self.btn_detect.pack(side=tk.LEFT, padx=(0, 10))
 
-        # Open in Editor Button
-        btn_code = tk.Button(
-            action_bar, text="⚡ OPEN CODE", bg="#1e293b", fg=self.clr_cyan_bright,
-            font=("Segoe UI", 9, "bold"), relief="flat", padx=14, pady=6, cursor="hand2",
-            activebackground="#334155", activeforeground="#ffffff",
-            command=self.open_selected_code
-        )
-        btn_code.pack(side=tk.LEFT, padx=(0, 8))
-
-        # Delete Script Button
+        # Button 2: Delete Script
         btn_del = tk.Button(
-            action_bar, text="🗑 DELETE", bg="#2a1515", fg="#f87171",
-            font=("Segoe UI", 9, "bold"), relief="flat", padx=14, pady=6, cursor="hand2",
+            action_bar, text="🗑 DELETE SCRIPT", bg="#2a1515", fg="#f87171",
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=14, pady=7, cursor="hand2",
             activebackground="#451a1a", activeforeground="#ffffff",
             command=self.delete_selected_script
         )
         btn_del.pack(side=tk.LEFT, padx=(0, 14))
 
-        # Main Deploy Button: PUSH TO GITHUB
+        # Button 3: PUSH TO GITHUB (Disabled until updates detected)
         self.btn_push = tk.Button(
-            action_bar, text="🚀 PUSH TO GITHUB", bg="#1e293b", fg=self.clr_cyan_bright,
-            font=("Segoe UI", 10, "bold"), relief="flat", padx=22, pady=6, cursor="hand2",
-            activebackground="#00adb5", activeforeground="#0b1017",
+            action_bar, text="🚀  PUSH TO GITHUB", bg="#1e293b", fg="#64748b",
+            font=("Segoe UI", 10, "bold"), relief="flat", padx=24, pady=7, cursor="arrow",
+            state=tk.DISABLED,
             command=self.deploy_to_github
         )
         self.btn_push.pack(side=tk.LEFT)
 
         # Status Badge on right
-        self.lbl_inv_status = tk.Label(action_bar, text="Scanning scripts...", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 9, "bold"))
+        self.lbl_inv_status = tk.Label(
+            action_bar, text="Click 'NEW UPDATE DETECT' to begin", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 9, "bold")
+        )
         self.lbl_inv_status.pack(side=tk.RIGHT, padx=5)
 
         # ── 3. Main Split Container (Left: Inventory Table, Right: In-Place Editor)
@@ -372,11 +359,18 @@ class AutoPatchManagerApp:
         # Save Button
         btn_save = tk.Button(
             right_frame, text="💾 SAVE SCRIPT METADATA", bg=self.clr_cyan, fg="#0b1017",
-            font=("Segoe UI", 9, "bold"), relief="flat", padx=12, pady=6, cursor="hand2",
+            font=("Segoe UI", 9, "bold"), relief="flat", padx=12, pady=7, cursor="hand2",
             activebackground=self.clr_cyan_bright, activeforeground="#0b1017",
             command=self.save_metadata_changes
         )
         btn_save.pack(fill=tk.X, pady=(0, 6))
+
+        # Helper note
+        tk.Label(
+            right_frame,
+            text="Tip: Double-click any script in the table to open its code in your editor.",
+            fg="#64748b", bg=self.clr_card, font=("Segoe UI", 8, "italic")
+        ).pack(anchor="w")
 
         # ── 4. Bottom Real-time Deployment Terminal ────────────────────────
         term_frame = tk.Frame(self.root, bg=self.clr_card, padx=12, pady=8, highlightthickness=1, highlightbackground=self.clr_border)
@@ -403,8 +397,7 @@ class AutoPatchManagerApp:
     def refresh_inventory(self):
         self.patches_list = update_manifest()
         self.filter_tree()
-        self.lbl_inv_status.configure(text=f"{len(self.patches_list)} scripts cataloged in manifest.json")
-        self.log(f"Synchronized local manifest. Found {len(self.patches_list)} patch scripts.")
+        self.log(f"Inventory refreshed: {len(self.patches_list)} patch script(s) loaded.")
 
     def filter_tree(self):
         for item in self.tree.get_children():
@@ -454,6 +447,87 @@ class AutoPatchManagerApp:
         self.txt_desc.delete("1.0", tk.END)
         self.txt_desc.insert("1.0", p.get("description", ""))
 
+    def on_detect_updates(self):
+        """
+        Scans patches/ folder deeply, detects added, modified or deleted scripts,
+        updates manifest.json, and enables the 'PUSH TO GITHUB' button.
+        """
+        self.log("\n=======================================================", "info")
+        self.log("[SCAN] Detecting scripts & changes in patches/...", "info")
+
+        # Read existing manifest to compare
+        prev_map = {}
+        if os.path.exists(MANIFEST_FILE):
+            try:
+                with open(MANIFEST_FILE, "r", encoding="utf-8") as f:
+                    for item in json.load(f):
+                        prev_map[item.get("script_file")] = item
+            except Exception:
+                pass
+
+        current_manifest = scan_patches()
+        current_map = {item.get("script_file"): item for item in current_manifest}
+
+        new_scripts = []
+        modified_scripts = []
+        deleted_scripts = []
+
+        for rel_path, info in current_map.items():
+            if rel_path not in prev_map:
+                new_scripts.append(f"{info.get('brand')} - {info.get('title')} ({rel_path})")
+            else:
+                prev_info = prev_map[rel_path]
+                if (info.get("title") != prev_info.get("title") or 
+                    info.get("description") != prev_info.get("description") or 
+                    info.get("symptom") != prev_info.get("symptom") or 
+                    info.get("model") != prev_info.get("model") or
+                    info.get("last_modified") != prev_info.get("last_modified")):
+                    modified_scripts.append(f"{info.get('title')} ({rel_path})")
+
+        for rel_path, info in prev_map.items():
+            if rel_path not in current_map:
+                deleted_scripts.append(f"{info.get('title')} ({rel_path})")
+
+        # Log findings
+        if new_scripts:
+            self.log(f"  [+] Found {len(new_scripts)} NEW script(s):", "ok")
+            for ns in new_scripts:
+                self.log(f"      • {ns}", "ok")
+
+        if modified_scripts:
+            self.log(f"  [*] Found {len(modified_scripts)} MODIFIED script(s):", "info")
+            for ms in modified_scripts:
+                self.log(f"      • {ms}", "info")
+
+        if deleted_scripts:
+            self.log(f"  [-] Found {len(deleted_scripts)} DELETED script(s):", "warn")
+            for ds in deleted_scripts:
+                self.log(f"      • {ds}", "warn")
+
+        if not new_scripts and not modified_scripts and not deleted_scripts:
+            self.log(f"  [=] All {len(current_manifest)} scripts verified. Catalog is synchronized.", "info")
+
+        # Synchronize manifest.json
+        with open(MANIFEST_FILE, "w", encoding="utf-8") as f:
+            json.dump(current_manifest, f, indent=2, ensure_ascii=False)
+
+        self.patches_list = current_manifest
+        self.filter_tree()
+
+        # Unlock the PUSH TO GITHUB button
+        self.btn_push.configure(
+            state=tk.NORMAL,
+            bg=self.clr_cyan,
+            fg="#0b1017",
+            cursor="hand2"
+        )
+        self.lbl_inv_status.configure(
+            text=f"Updates detected ({len(current_manifest)} scripts). Ready to push!",
+            fg=self.clr_cyan_bright
+        )
+        self.log(f"[READY] manifest.json updated. 'PUSH TO GITHUB' button is now UNLOCKED!", "ok")
+        self.log("=======================================================\n", "info")
+
     def save_metadata_changes(self):
         if not self.current_selected_patch:
             messagebox.showwarning("Notice", "Please select a script from the table first.")
@@ -475,7 +549,7 @@ class AutoPatchManagerApp:
         if ok:
             update_manifest()
             self.refresh_inventory()
-            self.log(f"Updated metadata for: {updated_info['title']}", "ok")
+            self.log(f"Updated metadata for: {updated_info['title']}")
             messagebox.showinfo("Success", f"Metadata saved and script updated:\n{os.path.basename(full_py_path)}")
         else:
             messagebox.showerror("Error", f"Failed to update script:\n{msg}")
@@ -487,7 +561,7 @@ class AutoPatchManagerApp:
         full_py_path = os.path.join(SCRIPT_DIR, script_rel.replace("/", os.sep))
         if os.path.exists(full_py_path):
             os.startfile(full_py_path)
-            self.log(f"Opened code in system editor: {os.path.basename(full_py_path)}")
+            self.log(f"Opened code in editor: {os.path.basename(full_py_path)}")
         else:
             messagebox.showerror("Error", f"File does not exist:\n{full_py_path}")
 
@@ -514,114 +588,6 @@ class AutoPatchManagerApp:
             messagebox.showinfo("Deleted", f"Patch '{title}' deleted successfully.")
         except Exception as e:
             messagebox.showerror("Error", f"Could not delete file:\n{e}")
-
-    def open_new_script_dialog(self):
-        dlg = tk.Toplevel(self.root)
-        dlg.title("Generate New AutoPatch Script")
-        dlg.geometry("500, 520")
-        dlg.configure(bg=self.clr_bg)
-        dlg.transient(self.root)
-        dlg.grab_set()
-
-        frame = tk.Frame(dlg, bg=self.clr_bg, padx=18, pady=16)
-        frame.pack(fill=tk.BOTH, expand=True)
-
-        tk.Label(frame, text="CREATE NEW PATCH SCRIPT", fg=self.clr_cyan_bright, bg=self.clr_bg, font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 12))
-
-        entries = {}
-        fields = [
-            ("Brand:", "brand", ["DELL", "LENOVO", "HP", "ASUS", "ACER", "APPLE", "UNIVERSAL"]),
-            ("Model Name:", "model", "e.g. Latitude 3400 / ThinkPad T480"),
-            ("Board Part Number:", "board_code", "e.g. LA-G521P / NM-B481"),
-            ("Patch Title:", "title", "e.g. Onboard RAM Disable"),
-            ("Category:", "category", ["RAM Disable", "Delay Fix", "Error Fix", "TPM Clear", "Power-On Lock", "General"]),
-            ("Symptom:", "symptom", "What symptom occurs? (e.g. 3 beeps, black screen)"),
-            ("Description:", "description", "How does this patch fix the issue?"),
-        ]
-
-        for lbl, key, default in fields:
-            tk.Label(frame, text=lbl, fg=self.clr_dim, bg=self.clr_bg, font=("Segoe UI", 8, "bold")).pack(anchor="w", pady=(4, 1))
-            if isinstance(default, list):
-                cb = ttk.Combobox(frame, values=default, state="readonly")
-                cb.set(default[0])
-                cb.pack(fill=tk.X)
-                entries[key] = cb
-            else:
-                ent = tk.Entry(frame, bg="#080c12", fg=self.clr_text, font=("Segoe UI", 9), relief="solid", bd=1)
-                ent.insert(0, default if not default.startswith("e.g.") else "")
-                ent.pack(fill=tk.X)
-                entries[key] = ent
-
-        def _create():
-            brand = entries["brand"].get().strip().upper()
-            model = entries["model"].get().strip()
-            board = entries["board_code"].get().strip() or "Universal"
-            title = entries["title"].get().strip()
-            cat = entries["category"].get().strip()
-            symptom = entries["symptom"].get().strip() or "N/A"
-            desc = entries["description"].get().strip() or "N/A"
-
-            if not model or not title:
-                messagebox.showerror("Error", "Model and Title are required!")
-                return
-
-            safe_name = f"{brand.lower()}_{title.lower().replace(' ', '_').replace('/', '_')}.py"
-            brand_dir = os.path.join(PATCHES_DIR, brand.lower())
-            os.makedirs(brand_dir, exist_ok=True)
-            target_path = os.path.join(brand_dir, safe_name)
-
-            if os.path.exists(target_path):
-                messagebox.showerror("Error", f"A script named {safe_name} already exists!")
-                return
-
-            template_code = f'''"""
-AutoPatch Script: {brand} {model} - {title}
-Author: R1 LAB
-"""
-
-PATCH_INFO = {{
-    "id": "{brand.lower()}_{title.lower().replace(' ', '_')}",
-    "brand": "{brand}",
-    "model": "{model}",
-    "board_code": "{board}",
-    "title": "{title}",
-    "category": "{cat}",
-    "symptom": "{symptom}",
-    "description": "{desc}",
-    "version": "1.0.0",
-    "author": "R1 LAB",
-    "target_size_mb": [8, 16, 32],
-}}
-
-def verify(bios_data: bytearray, metadata: dict = None) -> tuple[bool, str]:
-    """Check if the BIOS image is compatible before patching."""
-    if len(bios_data) < 4 * 1024 * 1024:
-        return False, "File size is too small."
-    return True, "{brand} {model} signature verified. Ready to patch."
-
-def apply_patch(bios_data: bytearray, metadata: dict = None) -> tuple[bool, bytearray, str]:
-    """Perform byte modifications and return (success, patched_data, message)."""
-    ok, msg = verify(bios_data, metadata)
-    if not ok:
-        return False, bios_data, f"Verification failed: {{msg}}"
-        
-    patched = bytearray(bios_data)
-    # TODO: Implement your byte modifications here
-    return True, patched, "Patch applied successfully!"
-'''
-            with open(target_path, "w", encoding="utf-8") as fp:
-                fp.write(template_code)
-
-            dlg.destroy()
-            self.refresh_inventory()
-            self.log(f"Created new patch script: {safe_name}")
-            os.startfile(target_path)
-
-        tk.Button(
-            frame, text="Generate Template & Open Editor", bg=self.clr_cyan, fg="#0b1017",
-            font=("Segoe UI", 10, "bold"), relief="flat", pady=8, cursor="hand2",
-            command=_create
-        ).pack(fill=tk.X, pady=(16, 0))
 
     def deploy_to_github(self):
         tok = load_github_token()
