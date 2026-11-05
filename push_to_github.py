@@ -943,7 +943,7 @@ class GitPushGUI:
                 # 5. Push to GitHub with Real-Time Streaming
                 self.log(f"Pushing to remote origin [{branch}]...", "info")
                 auth_url = f"https://x-access-token:{token}@github.com/{repo_owner}/{repo_name}.git"
-                push_cmd = f'git -c credential.helper= push --progress "{auth_url}" {branch}'
+                push_cmd = f'git -c credential.helper= push --force --progress "{auth_url}" {branch}'
 
                 proc = subprocess.Popen(
                     push_cmd, shell=True, text=True, encoding="utf-8", errors="replace",
