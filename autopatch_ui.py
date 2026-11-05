@@ -268,6 +268,7 @@ class AutoPatchDialog(QDialog):
             "HP",
             "Asus",
             "Acer",
+            "Apple",
             "Universal"
         ])
         self.cmb_filter.currentIndexChanged.connect(self.refresh_patch_list)
