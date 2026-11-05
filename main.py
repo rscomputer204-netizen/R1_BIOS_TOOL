@@ -5120,6 +5120,11 @@ class BiosServiceTool(QMainWindow):
         self.btn_save_fix.clicked.connect(self.save_and_fix_handler)
         self.btn_save_fix.setStyleSheet(cyber_btn_style)
 
+        self.btn_auto_patch = QPushButton("AUTO PATCH")
+        self.btn_auto_patch.setEnabled(True)
+        self.btn_auto_patch.clicked.connect(self.open_auto_patch_dialog)
+        self.btn_auto_patch.setStyleSheet(cyber_btn_style)
+
         self.btn_universal_extract = QPushButton("UNIVERSAL EXTRACT")
         self.btn_universal_extract.setEnabled(True)
         self.btn_universal_extract.clicked.connect(self.universal_extract_handler)
@@ -5161,6 +5166,7 @@ class BiosServiceTool(QMainWindow):
         
         sidebar_layout.addStretch()
         sidebar_layout.addWidget(self.label_tools)
+        sidebar_layout.addWidget(self.btn_auto_patch)
         sidebar_layout.addWidget(self.btn_universal_extract)
         sidebar_layout.addWidget(self.btn_merge)
         sidebar_layout.addWidget(self.btn_ec_finder)
@@ -7051,6 +7057,29 @@ class BiosServiceTool(QMainWindow):
 
         dialog = PasswordRemoverDialog(initial_file=current_file, brand=brand, parent=self)
         dialog.exec()
+
+    def open_auto_patch_dialog(self):
+        """Open the AutoPatchDialog for dynamic cloud-synced BIOS problem solving."""
+        current_file = getattr(self, 'current_bios_file', None)
+        if current_file and os.path.exists(current_file):
+            current_file = os.path.abspath(current_file)
+        else:
+            current_file = None
+
+        dmi_hint = {}
+        if hasattr(self, 'cached_dmi_info') and self.cached_dmi_info:
+            dmi_hint = self.cached_dmi_info
+        elif hasattr(self, 'dmi_lbl_brand'):
+            brand_text = self.dmi_lbl_brand.text().strip()
+            if brand_text and brand_text not in ("N/A", "Unknown", "Detecting...", ""):
+                dmi_hint = {"Brand": brand_text.split()[0].upper()}
+
+        try:
+            from autopatch_ui import AutoPatchDialog
+            dialog = AutoPatchDialog(parent=self, initial_file=current_file, dmi_hint=dmi_hint)
+            dialog.exec()
+        except Exception as e:
+            self.log_to_terminal(f"<font color='#f87171'>[ERROR] Failed to open AutoPatch dialog: {e}</font>")
 
     def extract_dmi_handler(self):
         self.log_to_terminal("[ACTION] Extracting DMI Information...")

@@ -849,6 +849,7 @@ class GitPushGUI:
                 core_dirs = [
                     "R1_CSME_Analyzer",  # <-- Guaranteed inclusion of our native engine!
                     "R1_Universal_Extractor",  # <-- Native Universal Extractor engine!
+                    "AutoPatch_Scripts",  # <-- AutoPatch scripts and manifest!
                     "translations",
                     "rg_engine",
                     "brands",

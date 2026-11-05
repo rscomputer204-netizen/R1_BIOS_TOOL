@@ -80,6 +80,7 @@ EXTERNAL_RUNTIME_DIRS = [
     "MCS-Parser",      # Added for additional parsing
     "WORKSPACE",       # User workspace (created at runtime if missing)
     "config",          # Report and application user settings
+    "AutoPatch_Scripts", # AutoPatch scripts, manifest, and deployer
 ]
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
