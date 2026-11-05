@@ -496,7 +496,8 @@ class AutoPatchManagerApp:
         tree_style.theme_use("clam")
         tree_style.configure("Treeview", background="#080c12", foreground="#e2e8f0", fieldbackground="#080c12", rowheight=28, font=("Segoe UI", 9))
         tree_style.configure("Treeview.Heading", background="#1a2536", foreground="#00f3ff", font=("Segoe UI", 9, "bold"))
-        tree_style.map("Treeview", background=[("selected", "#18324f")], foreground=[("selected", "#ffffff")])
+        # Selected row: vivid blue highlight background with black text
+        tree_style.map("Treeview", background=[("selected", "#00b4ff")], foreground=[("selected", "#000000")])
 
         columns = ("brand", "model", "title", "category", "symptom")
         self.tree = ttk.Treeview(table_card, columns=columns, show="headings", selectmode="browse")
