@@ -1,19 +1,21 @@
 """
-R1 BIOS TOOL — AUTOPATCH UI (CLEAN & MODERN)
-===========================================
-Streamlined, distraction-free interface for dynamic BIOS patch browsing,
-fully automated brand detection, safety verification, and one-click patching.
+R1 BIOS TOOL — AUTOPATCH UI (LOCKED LIST & BIG DROP ZONE)
+=========================================================
+1. Top Section: 2-line patch banner (Title on line 1, Description on line 2).
+2. Left Section: Locked fixed-width patch list (cannot be resized or shrunk).
+3. Right Section: Massive interactive Drag & Drop box (clickable + drop),
+   with the Execute button enabled ONLY when both file and patch are loaded.
 """
 
 import os
 import sys
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
-    QListWidget, QListWidgetItem, QFrame, QTextEdit, QFileDialog,
-    QCheckBox, QMessageBox, QSplitter, QWidget, QComboBox
+    QListWidget, QListWidgetItem, QFrame, QFileDialog,
+    QCheckBox, QMessageBox, QWidget, QComboBox
 )
 from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QColor, QFont, QIcon, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QColor, QFont, QCursor, QDragEnterEvent, QDropEvent
 
 from autopatch_engine import AutoPatchEngine
 
@@ -29,15 +31,20 @@ QFrame#Card {
     border: 1px solid #1a2536;
     border-radius: 8px;
 }
-QFrame#FileDropFrame {
+QFrame#TopBannerFrame {
     background-color: #0c141f;
-    border: 1px dashed #00adb5;
+    border: 1px solid #1a2536;
     border-radius: 8px;
-    padding: 6px 12px;
+    padding: 8px 14px;
 }
-QFrame#FileDropFrame:hover {
-    border: 1px dashed #00f3ff;
-    background-color: #0e1927;
+QFrame#BigDropZone {
+    background-color: #080d14;
+    border: 2px dashed #00adb5;
+    border-radius: 12px;
+}
+QFrame#BigDropZone:hover {
+    border: 2px dashed #00f3ff;
+    background-color: #0c1624;
 }
 QLabel {
     color: #cbd5e1;
@@ -61,7 +68,7 @@ QComboBox {
     padding: 5px 10px;
     font-size: 11px;
     font-weight: bold;
-    min-width: 130px;
+    min-width: 120px;
 }
 QComboBox:hover {
     border-color: #00adb5;
@@ -85,7 +92,7 @@ QListWidget::item {
     border: 1px solid #1e293b;
     border-radius: 6px;
     margin: 3px 2px;
-    padding: 6px 8px;
+    padding: 8px;
 }
 QListWidget::item:hover {
     background-color: #131d2b;
@@ -99,18 +106,19 @@ QPushButton#ExecuteBtn {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00adb5, stop:1 #00f3ff);
     color: #0b1017;
     font-weight: bold;
-    font-size: 13px;
+    font-size: 14px;
     letter-spacing: 1px;
     border: none;
-    border-radius: 6px;
-    padding: 12px 24px;
+    border-radius: 8px;
+    padding: 14px 24px;
 }
 QPushButton#ExecuteBtn:hover {
     background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #00c4cc, stop:1 #38bdf8);
 }
 QPushButton#ExecuteBtn:disabled {
-    background: #17212e;
+    background: #141b24;
     color: #475569;
+    border: 1px solid #1e293b;
 }
 QPushButton#SecondaryBtn {
     background-color: #131d2b;
@@ -124,15 +132,6 @@ QPushButton#SecondaryBtn:hover {
     background-color: #1c2b3f;
     border-color: #00f3ff;
     color: #ffffff;
-}
-QTextEdit {
-    background-color: #080c12;
-    border: 1px solid #1a2536;
-    border-radius: 6px;
-    color: #94a3b8;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 11px;
-    padding: 8px;
 }
 QCheckBox {
     color: #cbd5e1;
@@ -152,14 +151,16 @@ QCheckBox::indicator:checked {
 """
 
 
-class DropAreaWidget(QFrame):
-    """Clean drop area for BIOS file."""
+class ClickableDropZone(QFrame):
+    """Large interactive drop zone that also opens file dialog when clicked."""
     file_dropped = Signal(str)
+    clicked = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setObjectName("FileDropFrame")
+        self.setObjectName("BigDropZone")
         self.setAcceptDrops(True)
+        self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
     def dragEnterEvent(self, e: QDragEnterEvent):
         if e.mimeData().hasUrls():
@@ -174,13 +175,18 @@ class DropAreaWidget(QFrame):
                 self.file_dropped.emit(file_path)
                 break
 
+    def mousePressEvent(self, e):
+        if e.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        super().mousePressEvent(e)
+
 
 class AutoPatchDialog(QDialog):
     def __init__(self, parent=None, initial_file=None, dmi_hint=None):
         super().__init__(parent)
         self.setWindowTitle("AutoPatch — Smart BIOS Firmware Fixer")
-        self.resize(1000, 640)
-        self.setMinimumSize(880, 560)
+        self.resize(1060, 680)
+        self.setMinimumSize(940, 600)
         self.setStyleSheet(CYBER_STYLE)
 
         self.engine = AutoPatchEngine()
@@ -196,10 +202,10 @@ class AutoPatchDialog(QDialog):
     def setup_ui(self):
         root_layout = QVBoxLayout(self)
         root_layout.setContentsMargins(18, 14, 18, 14)
-        root_layout.setSpacing(10)
+        root_layout.setSpacing(12)
 
-        # ── 1. Header (Clean & Minimalist) ─────────────────────────────────
-        header_row = QHBoxLayout()
+        # ── 1. Top Bar: Title & Cloud Sync ─────────────────────────────────
+        top_row = QHBoxLayout()
         title_box = QVBoxLayout()
         title_lbl = QLabel("AUTO PATCH")
         title_lbl.setStyleSheet("font-size: 18px; font-weight: bold; color: #00f3ff; letter-spacing: 1.5px;")
@@ -207,52 +213,51 @@ class AutoPatchDialog(QDialog):
         sub_lbl.setStyleSheet("font-size: 11px; color: #64748b;")
         title_box.addWidget(title_lbl)
         title_box.addWidget(sub_lbl)
-        header_row.addLayout(title_box)
+        top_row.addLayout(title_box)
 
-        header_row.addStretch()
+        top_row.addStretch()
 
         # Cloud sync button
         btn_sync = QPushButton("☁ Sync Cloud")
         btn_sync.setObjectName("SecondaryBtn")
         btn_sync.clicked.connect(self.sync_cloud_patches)
-        header_row.addWidget(btn_sync)
+        top_row.addWidget(btn_sync)
 
-        root_layout.addLayout(header_row)
+        root_layout.addLayout(top_row)
 
-        # ── 2. Top File Bar with Auto-Detection & Discreet Filter ──────────
-        self.drop_bar = DropAreaWidget()
-        self.drop_bar.file_dropped.connect(self.on_file_selected)
-        bar_layout = QHBoxLayout(self.drop_bar)
-        bar_layout.setContentsMargins(8, 4, 8, 4)
-        bar_layout.setSpacing(10)
+        # ── 2. Top Info Banner: 2 Lines for Selected Patch Information ─────
+        # (This replaces the old drop bar, as requested by the user!)
+        self.banner_frame = QFrame()
+        self.banner_frame.setObjectName("TopBannerFrame")
+        banner_layout = QHBoxLayout(self.banner_frame)
+        banner_layout.setContentsMargins(14, 8, 14, 8)
+        banner_layout.setSpacing(12)
 
-        # File Icon & Path / Prompt
-        self.lbl_file_display = QLabel("Drop BIOS file here or click Browse...")
-        self.lbl_file_display.setStyleSheet("font-size: 12px; color: #94a3b8;")
-        bar_layout.addWidget(self.lbl_file_display, stretch=3)
+        patch_info_vbox = QVBoxLayout()
+        patch_info_vbox.setSpacing(3)
 
-        btn_browse = QPushButton("Browse File...")
-        btn_browse.setObjectName("SecondaryBtn")
-        btn_browse.clicked.connect(self.browse_file)
-        bar_layout.addWidget(btn_browse)
+        # Line 1: Patch Title & Brand Tag
+        self.lbl_top_title = QLabel("Select a patch from the list")
+        self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #00f3ff;")
+        patch_info_vbox.addWidget(self.lbl_top_title)
 
-        # Vertical separator
-        sep = QFrame()
-        sep.setFrameShape(QFrame.Shape.VLine)
-        sep.setStyleSheet("color: #1a2536;")
-        bar_layout.addWidget(sep)
+        # Line 2: Patch 1-line Description / How it works
+        self.lbl_top_desc = QLabel("Choose any patch on the left to inspect and apply to your BIOS image.")
+        self.lbl_top_desc.setStyleSheet("font-size: 11px; color: #94a3b8;")
+        self.lbl_top_desc.setWordWrap(True)
+        patch_info_vbox.addWidget(self.lbl_top_desc)
 
-        # Auto-Detected Brand Badge
+        banner_layout.addLayout(patch_info_vbox, stretch=4)
+
+        # Right side of banner: Target detected badge & discreet filter
+        right_meta_layout = QHBoxLayout()
+        right_meta_layout.setSpacing(8)
+
         self.lbl_brand_badge = QLabel("Target: No File")
         self.lbl_brand_badge.setStyleSheet(
-            "font-size: 11px; font-weight: bold; color: #64748b; background: #080c12; padding: 4px 10px; border-radius: 4px; border: 1px solid #1a2536;"
+            "font-size: 11px; font-weight: bold; color: #64748b; background: #080c12; padding: 5px 10px; border-radius: 4px; border: 1px solid #1a2536;"
         )
-        bar_layout.addWidget(self.lbl_brand_badge)
-
-        # Discreet Internal Filter Dropdown (Tucked inside, no outside clutter!)
-        lbl_filter_tag = QLabel("Filter:")
-        lbl_filter_tag.setStyleSheet("font-size: 11px; color: #64748b;")
-        bar_layout.addWidget(lbl_filter_tag)
+        right_meta_layout.addWidget(self.lbl_brand_badge)
 
         self.cmb_filter = QComboBox()
         self.cmb_filter.addItems([
@@ -266,17 +271,19 @@ class AutoPatchDialog(QDialog):
             "Universal"
         ])
         self.cmb_filter.currentIndexChanged.connect(self.refresh_patch_list)
-        bar_layout.addWidget(self.cmb_filter)
+        right_meta_layout.addWidget(self.cmb_filter)
 
-        root_layout.addWidget(self.drop_bar)
+        banner_layout.addLayout(right_meta_layout)
+        root_layout.addWidget(self.banner_frame)
 
-        # ── 3. Main Splitter (Left: Patch List, Right: Details & Patch) ─────
-        splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.setStyleSheet("QSplitter::handle { background: #1a2536; width: 2px; }")
+        # ── 3. Main Center Split (Left: Locked 380px, Right: Big Drop Zone) ─
+        main_h_layout = QHBoxLayout()
+        main_h_layout.setSpacing(14)
 
-        # LEFT PANE: Patch List & Search
+        # ── LEFT PANEL: Fixed & Locked Width (Cannot be resized) ───────────
         left_card = QFrame()
         left_card.setObjectName("Card")
+        left_card.setFixedWidth(380)  # <-- LOCKED SIZE AS REQUESTED
         left_layout = QVBoxLayout(left_card)
         left_layout.setContentsMargins(10, 10, 10, 10)
         left_layout.setSpacing(6)
@@ -299,50 +306,62 @@ class AutoPatchDialog(QDialog):
         self.list_patches.itemSelectionChanged.connect(self.on_patch_selected)
         left_layout.addWidget(self.list_patches)
 
-        splitter.addWidget(left_card)
-        splitter.setStretchFactor(0, 4)
+        main_h_layout.addWidget(left_card)
 
-        # RIGHT PANE: Details, Safety Check & Patch Action
+        # ── RIGHT PANEL: Big Interactive Drop Zone & Execute Button ────────
         right_card = QFrame()
         right_card.setObjectName("Card")
         right_layout = QVBoxLayout(right_card)
-        right_layout.setContentsMargins(16, 14, 16, 14)
-        right_layout.setSpacing(8)
+        right_layout.setContentsMargins(16, 16, 16, 16)
+        right_layout.setSpacing(12)
 
-        # Patch Title
-        self.lbl_patch_title = QLabel("Select a patch from the list")
-        self.lbl_patch_title.setStyleSheet("font-size: 16px; font-weight: bold; color: #ffffff;")
-        self.lbl_patch_title.setWordWrap(True)
-        right_layout.addWidget(self.lbl_patch_title)
+        # Big Interactive Drop Area
+        self.drop_zone = ClickableDropZone()
+        self.drop_zone.file_dropped.connect(self.on_file_selected)
+        self.drop_zone.clicked.connect(self.browse_file)
 
-        # Meta tags row
-        self.lbl_patch_meta = QLabel("Brand: —  |  Model: —  |  Author: —")
-        self.lbl_patch_meta.setStyleSheet("font-size: 11px; color: #38bdf8;")
-        right_layout.addWidget(self.lbl_patch_meta)
+        drop_vbox = QVBoxLayout(self.drop_zone)
+        drop_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        drop_vbox.setSpacing(8)
 
-        # Clean Unified Issue & Details Card
-        lbl_symp_head = QLabel("PROBLEM SYMPTOM:")
-        lbl_symp_head.setStyleSheet("font-size: 10px; font-weight: bold; color: #eab308; letter-spacing: 0.5px; margin-top: 4px;")
-        right_layout.addWidget(lbl_symp_head)
+        # Icon
+        self.lbl_drop_icon = QLabel("📥")
+        self.lbl_drop_icon.setStyleSheet("font-size: 42px; background: transparent;")
+        self.lbl_drop_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        drop_vbox.addWidget(self.lbl_drop_icon)
 
-        self.lbl_symptom = QLabel("N/A")
-        self.lbl_symptom.setWordWrap(True)
-        self.lbl_symptom.setStyleSheet(
-            "font-size: 11px; color: #fef08a; background: #131a15; padding: 7px 10px; border-radius: 4px; border-left: 3px solid #eab308;"
+        # Main text
+        self.lbl_drop_title = QLabel("DRAG & DROP BIOS FILE HERE")
+        self.lbl_drop_title.setStyleSheet("font-size: 15px; font-weight: bold; color: #00f3ff; letter-spacing: 0.5px; background: transparent;")
+        self.lbl_drop_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        drop_vbox.addWidget(self.lbl_drop_title)
+
+        # Subtitle
+        self.lbl_drop_sub = QLabel("or click anywhere inside this box to browse from your computer")
+        self.lbl_drop_sub.setStyleSheet("font-size: 11px; color: #64748b; background: transparent;")
+        self.lbl_drop_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        drop_vbox.addWidget(self.lbl_drop_sub)
+
+        # Loaded File Details Box (Shown when file is loaded)
+        self.file_details_box = QFrame()
+        self.file_details_box.setStyleSheet(
+            "background: #0b1522; border: 1px solid #1a324b; border-radius: 6px; padding: 6px 14px; margin-top: 10px;"
         )
-        right_layout.addWidget(self.lbl_symptom)
+        self.file_details_box.hide()
+        f_box_layout = QVBoxLayout(self.file_details_box)
+        f_box_layout.setSpacing(3)
+        self.lbl_loaded_filename = QLabel("📁 No File")
+        self.lbl_loaded_filename.setStyleSheet("font-size: 13px; font-weight: bold; color: #00f3ff; background: transparent;")
+        f_box_layout.addWidget(self.lbl_loaded_filename)
+        self.lbl_loaded_meta = QLabel("")
+        self.lbl_loaded_meta.setStyleSheet("font-size: 11px; color: #38bdf8; background: transparent;")
+        f_box_layout.addWidget(self.lbl_loaded_meta)
+        drop_vbox.addWidget(self.file_details_box)
 
-        lbl_desc_head = QLabel("HOW IT WORKS:")
-        lbl_desc_head.setStyleSheet("font-size: 10px; font-weight: bold; color: #94a3b8; letter-spacing: 0.5px; margin-top: 4px;")
-        right_layout.addWidget(lbl_desc_head)
-
-        self.txt_description = QTextEdit()
-        self.txt_description.setReadOnly(True)
-        self.txt_description.setFixedHeight(85)
-        right_layout.addWidget(self.txt_description)
+        right_layout.addWidget(self.drop_zone, stretch=1)
 
         # Safety Verification Banner
-        self.lbl_verify_status = QLabel("Verification: Please select a patch and target file")
+        self.lbl_verify_status = QLabel("Status: Please select a patch and provide a BIOS file")
         self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #101927; color: #7e8f9f;")
         self.lbl_verify_status.setWordWrap(True)
         right_layout.addWidget(self.lbl_verify_status)
@@ -352,21 +371,17 @@ class AutoPatchDialog(QDialog):
         self.chk_backup.setChecked(True)
         right_layout.addWidget(self.chk_backup)
 
-        right_layout.addStretch()
-
-        # Big Action Button
+        # Big Action Button (Enabled ONLY when both file and patch are ready)
         self.btn_execute = QPushButton("⚡ EXECUTE AUTO PATCH")
         self.btn_execute.setObjectName("ExecuteBtn")
-        self.btn_execute.setEnabled(False)
+        self.btn_execute.setEnabled(False)  # <-- DISABLED BY DEFAULT
         self.btn_execute.clicked.connect(self.execute_patch_action)
         right_layout.addWidget(self.btn_execute)
 
-        splitter.addWidget(right_card)
-        splitter.setStretchFactor(1, 5)
+        main_h_layout.addWidget(right_card, stretch=1)
+        root_layout.addLayout(main_h_layout, stretch=1)
 
-        root_layout.addWidget(splitter)
-
-        # ── 4. Bottom Sleek Status Bar ─────────────────────────────────────
+        # ── 4. Bottom Status Bar ───────────────────────────────────────────
         self.lbl_status = QLabel("Ready.")
         self.lbl_status.setStyleSheet("font-size: 11px; color: #64748b; padding-left: 2px;")
         root_layout.addWidget(self.lbl_status)
@@ -394,9 +409,15 @@ class AutoPatchDialog(QDialog):
         file_name = os.path.basename(clean_path)
         file_size_mb = os.path.getsize(clean_path) / (1024 * 1024)
 
-        # Update file label
-        self.lbl_file_display.setText(f"📁 {file_name} ({file_size_mb:.1f} MB)")
-        self.lbl_file_display.setStyleSheet("font-size: 12px; font-weight: bold; color: #00f3ff;")
+        # Update Big Drop Zone visuals
+        self.lbl_drop_title.setText("FILE READY FOR PATCHING")
+        self.lbl_drop_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #4ade80; letter-spacing: 0.5px; background: transparent;")
+        self.lbl_drop_sub.setText("Click anywhere to change or choose another file")
+        self.lbl_drop_icon.setText("✅")
+
+        # Show loaded file details card
+        self.file_details_box.show()
+        self.lbl_loaded_filename.setText(f"📁 {file_name}")
 
         # Run Brand Detection
         brand, model = self.engine.detect_brand(clean_path, self.dmi_hint)
@@ -409,20 +430,22 @@ class AutoPatchDialog(QDialog):
                 txt += f" ({model})"
             self.lbl_brand_badge.setText(txt)
             self.lbl_brand_badge.setStyleSheet(
-                "font-size: 11px; font-weight: bold; color: #00f3ff; background: #0c202a; padding: 4px 10px; border-radius: 4px; border: 1px solid #00f3ff;"
+                "font-size: 11px; font-weight: bold; color: #00f3ff; background: #0c202a; padding: 5px 10px; border-radius: 4px; border: 1px solid #00f3ff;"
             )
-            self.lbl_status.setText(f"Auto-detected brand: {brand}. List automatically filtered.")
+            self.lbl_loaded_meta.setText(f"Size: {file_size_mb:.2f} MB  •  Detected Platform: {brand} {model}")
+            self.lbl_status.setText(f"Auto-detected brand: {brand}. Patch list filtered automatically.")
         else:
             self.lbl_brand_badge.setText("Target: Unknown")
             self.lbl_brand_badge.setStyleSheet(
-                "font-size: 11px; font-weight: bold; color: #a855f7; background: #1a1625; padding: 4px 10px; border-radius: 4px; border: 1px solid #a855f7;"
+                "font-size: 11px; font-weight: bold; color: #a855f7; background: #1a1625; padding: 5px 10px; border-radius: 4px; border: 1px solid #a855f7;"
             )
-            self.lbl_status.setText("Brand could not be determined. Showing all available patches.")
+            self.lbl_loaded_meta.setText(f"Size: {file_size_mb:.2f} MB  •  Platform: Unknown")
+            self.lbl_status.setText("Brand could not be determined automatically. Showing all patches.")
 
-        # Ensure filter is on "Auto (Detected)"
+        # Refresh patches with Auto filter
         self.cmb_filter.setCurrentIndex(0)
         self.refresh_patch_list()
-        self.update_verification_status()
+        self.update_verification_and_button_state()
 
     def get_selected_brand_filter(self) -> str:
         idx = self.cmb_filter.currentIndex()
@@ -439,11 +462,11 @@ class AutoPatchDialog(QDialog):
 
         patches = self.engine.get_filtered_patches(brand=active_brand, search_query=query)
         self.list_patches.clear()
-        self.lbl_count.setText(f"{len(patches)} patch{'es' if len(patches) != 1 else ''}")
+        self.lbl_count.setText(f"{len(patches)} available")
 
         for p in patches:
             item = QListWidgetItem()
-            item.setSizeHint(QSize(240, 56))
+            item.setSizeHint(QSize(350, 62))
             item.setData(Qt.ItemDataRole.UserRole, p)
 
             # Compact custom widget
@@ -459,14 +482,14 @@ class AutoPatchDialog(QDialog):
             top_row.addStretch()
 
             brand_tag = QLabel(p.get("brand", "ALL"))
-            brand_tag.setStyleSheet("font-size: 9px; font-weight: bold; background: #132030; color: #38bdf8; padding: 1px 5px; border-radius: 3px;")
+            brand_tag.setStyleSheet("font-size: 9px; font-weight: bold; background: #132030; color: #38bdf8; padding: 2px 6px; border-radius: 3px;")
             top_row.addWidget(brand_tag)
             layout.addLayout(top_row)
 
             # Sub line: Model & Symptom preview
             sub_text = f"{p.get('model', 'Universal')}  •  {p.get('symptom', '')}"
-            if len(sub_text) > 55:
-                sub_text = sub_text[:52] + "..."
+            if len(sub_text) > 52:
+                sub_text = sub_text[:49] + "..."
             sub_lbl = QLabel(sub_text)
             sub_lbl.setStyleSheet("font-size: 10px; color: #94a3b8;")
             layout.addWidget(sub_lbl)
@@ -478,11 +501,9 @@ class AutoPatchDialog(QDialog):
             self.list_patches.setCurrentRow(0)
         else:
             self.selected_patch = None
-            self.lbl_patch_title.setText("No patches available for this filter")
-            self.lbl_patch_meta.setText("Select 'All Brands' in the filter dropdown above to see other patches.")
-            self.lbl_symptom.setText("N/A")
-            self.txt_description.clear()
-            self.btn_execute.setEnabled(False)
+            self.lbl_top_title.setText("No patches available for this filter")
+            self.lbl_top_desc.setText("Select 'All Brands' in the dropdown above to view all patches.")
+            self.update_verification_and_button_state()
 
     def on_patch_selected(self):
         items = self.list_patches.selectedItems()
@@ -493,31 +514,49 @@ class AutoPatchDialog(QDialog):
             return
 
         self.selected_patch = p
-        self.lbl_patch_title.setText(p.get("title", ""))
-        self.lbl_patch_meta.setText(
-            f"Brand: {p.get('brand')}  |  Model: {p.get('model')}  |  Board: {p.get('board_code')}  |  v{p.get('version', '1.0')}"
-        )
-        self.lbl_symptom.setText(p.get("symptom", "N/A"))
-        self.txt_description.setText(
-            f"{p.get('description', '')}\n\n[Script: {p.get('script_file', '')} | Author: {p.get('author', 'R1 LAB')}]"
-        )
 
-        self.update_verification_status()
+        # ── Update Top 2-Line Banner ──
+        # Line 1: Title & Brand/Model
+        brand = p.get('brand', 'Universal')
+        model = p.get('model', '')
+        meta_str = f"[{brand} - {model}]" if model else f"[{brand}]"
+        self.lbl_top_title.setText(f"{p.get('title', '')}  {meta_str}")
 
-    def update_verification_status(self):
-        if not self.selected_patch:
-            self.lbl_verify_status.setText("Verification: Please select a patch from the list")
+        # Line 2: 1-line description / how it works
+        desc_line = p.get('description', '') or p.get('symptom', '') or "Standard binary patch."
+        # Keep it clean and concise
+        first_line = desc_line.split('\n')[0].strip()
+        self.lbl_top_desc.setText(f"Action: {first_line}")
+
+        self.update_verification_and_button_state()
+
+    def update_verification_and_button_state(self):
+        """
+        Validation Rule:
+        Execute button is enabled ONLY when BOTH a file is provided AND a patch is selected.
+        """
+        has_patch = self.selected_patch is not None
+        has_file = bool(self.current_file and os.path.exists(self.current_file))
+
+        if not has_patch and not has_file:
+            self.lbl_verify_status.setText("Status: Please select a patch and drop a BIOS file")
             self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #101927; color: #7e8f9f;")
             self.btn_execute.setEnabled(False)
             return
 
-        if not self.current_file or not os.path.exists(self.current_file):
-            self.lbl_verify_status.setText("Verification: Please drop or select a target BIOS file above")
+        if not has_patch:
+            self.lbl_verify_status.setText("Status: File loaded. Please select a patch from the left list")
             self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
             self.btn_execute.setEnabled(False)
             return
 
-        # Pre-verify signature
+        if not has_file:
+            self.lbl_verify_status.setText("Status: Patch selected. Please drop or browse a target BIOS file")
+            self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
+            self.btn_execute.setEnabled(False)
+            return
+
+        # Both patch and file are present! Pre-verify signature
         try:
             with open(self.current_file, "rb") as f:
                 data = bytearray(f.read())
@@ -527,7 +566,7 @@ class AutoPatchDialog(QDialog):
                 self.lbl_verify_status.setStyleSheet(
                     "font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #0c2b20; color: #4ade80; border: 1px solid #16a34a;"
                 )
-                self.btn_execute.setEnabled(True)
+                self.btn_execute.setEnabled(True)  # <-- ENABLED!
             else:
                 self.lbl_verify_status.setText(f"⚠ Mismatch: {msg}")
                 self.lbl_verify_status.setStyleSheet(
