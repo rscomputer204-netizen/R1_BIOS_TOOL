@@ -351,8 +351,8 @@ class AutoPatchDialog(QDialog):
         self.cmb_filter = QComboBox()
         self.cmb_filter.addItems([
             "All Patches",
-            "⚡ Downloaded Only",
-            "☁️ Cloud Only",
+            "Downloaded Only",
+            "Cloud Only",
             "Dell",
             "HP",
             "Lenovo",
@@ -603,15 +603,15 @@ class AutoPatchDialog(QDialog):
             self.patch_badges[pid] = badge_lbl
 
             if pid in self.active_downloads:
-                badge_lbl.setText("⏳ DL...")
+                badge_lbl.setText("DL...")
                 badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #422006; color: #fbbf24; border: 1px solid #f59e0b; padding: 2px 7px; border-radius: 4px;")
             elif is_dl:
-                badge_lbl.setText("✓ READY")
-                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 2px 7px; border-radius: 4px;")
+                badge_lbl.setText("READY")
+                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;")
                 badge_lbl.setToolTip("Patch is downloaded locally and ready for execution.")
             else:
-                badge_lbl.setText("☁️ Get")
-                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px;")
+                badge_lbl.setText("GET")
+                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;")
                 badge_lbl.setToolTip("Double-click to download this patch from GitHub cloud.")
 
             right_vbox.addWidget(badge_lbl)
@@ -651,7 +651,7 @@ class AutoPatchDialog(QDialog):
 
         badge = self.patch_badges.get(pid)
         if badge:
-            badge.setText("⏳ 0%")
+            badge.setText("0%")
             badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #422006; color: #fbbf24; border: 1px solid #f59e0b; padding: 2px 7px; border-radius: 4px;")
 
         self.lbl_status.setText(f"Downloading '{p.get('title')}' from GitHub...")
@@ -665,7 +665,7 @@ class AutoPatchDialog(QDialog):
     def on_download_progress(self, pid: str, percent: int):
         badge = self.patch_badges.get(pid)
         if badge:
-            badge.setText(f"⏳ {percent}%")
+            badge.setText(f"{percent}%")
 
     def on_download_finished(self, pid: str, success: bool, msg: str):
         if pid in self.active_downloads:
@@ -674,16 +674,16 @@ class AutoPatchDialog(QDialog):
         badge = self.patch_badges.get(pid)
         if success:
             if badge:
-                badge.setText("✓ READY")
-                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 2px 7px; border-radius: 4px;")
+                badge.setText("READY")
+                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;")
                 badge.setToolTip("Patch downloaded locally and ready to execute.")
-            self.lbl_status.setText("✓ Patch downloaded successfully! Ready to execute.")
+            self.lbl_status.setText("Patch downloaded successfully. Ready to execute.")
             dl_count = self.engine.get_downloaded_count()
             self.lbl_count.setText(f"{len(self.engine.patches)} found ({dl_count} ready)")
             self.update_verification_and_button_state()
         else:
             if badge:
-                badge.setText("⚠️ Failed")
+                badge.setText("FAILED")
                 badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #450a0a; color: #f87171; border: 1px solid #ef4444; padding: 2px 7px; border-radius: 4px;")
             self.lbl_status.setText(f"Download failed: {msg}")
 
@@ -730,10 +730,10 @@ class AutoPatchDialog(QDialog):
         if ok:
             badge = self.patch_badges.get(pid)
             if badge:
-                badge.setText("☁️ Get")
-                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px;")
+                badge.setText("GET")
+                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px; letter-spacing: 0.5px;")
                 badge.setToolTip("Double-click to download this patch from GitHub cloud.")
-            self.lbl_status.setText(f"🗑 Triple-Click / Delete: Patch '{title}' removed from local cache!")
+            self.lbl_status.setText(f"Patch '{title}' removed from local cache.")
             dl_count = self.engine.get_downloaded_count()
             self.lbl_count.setText(f"{len(self.engine.patches)} found ({dl_count} ready)")
             self.update_verification_and_button_state()
@@ -850,41 +850,41 @@ class AutoPatchDialog(QDialog):
         if not has_patch and not has_file:
             self.lbl_verify_status.setText("Status: Please select a patch and drop a BIOS file")
             self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #101927; color: #7e8f9f;")
-            self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
+            self.btn_execute.setText("EXECUTE AUTO PATCH")
             self.btn_execute.setEnabled(False)
             return
 
         if not has_patch:
             self.lbl_verify_status.setText("Status: File loaded. Please select a patch from the left list")
             self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
-            self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
+            self.btn_execute.setText("EXECUTE AUTO PATCH")
             self.btn_execute.setEnabled(False)
             return
 
         if not has_file:
             # Check if patch is downloaded
             if not self.engine.is_patch_downloaded(self.selected_patch):
-                self.lbl_verify_status.setText("⚠️ Status: Patch selected (Not Downloaded). Drop BIOS file or double-click patch to download.")
+                self.lbl_verify_status.setText("Status: Patch selected (Not Downloaded). Drop BIOS file or double-click patch to download.")
                 self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #261c0c; color: #fbbf24;")
             else:
                 self.lbl_verify_status.setText("Status: Patch ready (Downloaded). Please drop or browse a target BIOS file")
                 self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
-            self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
+            self.btn_execute.setText("EXECUTE AUTO PATCH")
             self.btn_execute.setEnabled(False)
             return
 
         # Both patch and file are present!
         # Check if patch is downloaded locally
         if not self.engine.is_patch_downloaded(self.selected_patch):
-            self.lbl_verify_status.setText("⚠️ ALERT: Patch not downloaded yet! Please Double-Click (or Right-Click -> Download) to download now.")
+            self.lbl_verify_status.setText("ALERT: Patch not downloaded yet. Please double-click or right-click to download now.")
             self.lbl_verify_status.setStyleSheet(
                 "font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #3b2808; color: #fbbf24; border: 1px solid #f59e0b;"
             )
-            self.btn_execute.setText("⬇️ DOWNLOAD PATCH NOW")
+            self.btn_execute.setText("DOWNLOAD PATCH NOW")
             self.btn_execute.setEnabled(True)  # Button triggers download
             return
 
-        self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
+        self.btn_execute.setText("EXECUTE AUTO PATCH")
 
         # Pre-verify signature since it is downloaded
         try:
@@ -892,13 +892,13 @@ class AutoPatchDialog(QDialog):
                 data = bytearray(f.read())
             ok, msg = self.engine.verify_patch(self.selected_patch, data)
             if ok:
-                self.lbl_verify_status.setText(f"✓ Ready: {msg}")
+                self.lbl_verify_status.setText(f"Ready: {msg}")
                 self.lbl_verify_status.setStyleSheet(
                     "font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #0c2b20; color: #4ade80; border: 1px solid #16a34a;"
                 )
                 self.btn_execute.setEnabled(True)  # <-- ENABLED!
             else:
-                self.lbl_verify_status.setText(f"⚠ Mismatch: {msg}")
+                self.lbl_verify_status.setText(f"Mismatch: {msg}")
                 self.lbl_verify_status.setStyleSheet(
                     "font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #2d1818; color: #f87171; border: 1px solid #dc2626;"
                 )
