@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QFrame, QFileDialog,
     QCheckBox, QMessageBox, QWidget, QComboBox, QMenu
 )
-from PySide6.QtCore import Qt, Signal, QSize, QThread, QEvent
+from PySide6.QtCore import Qt, Signal, QSize, QThread, QEvent, QTimer
 from PySide6.QtGui import QColor, QFont, QCursor, QDragEnterEvent, QDropEvent, QAction
 
 from autopatch_engine import AutoPatchEngine
@@ -251,6 +251,54 @@ class AutoPatchDialog(QDialog):
 
         self.setup_ui()
         self.initialize_state()
+
+        # Temporary 2-second "THIS OPTION NOT READY" warning overlay as requested
+        QTimer.singleShot(100, self.show_not_ready_warning)
+
+    def show_not_ready_warning(self):
+        """Displays a prominent 2-second 'THIS OPTION NOT READY' overlay banner."""
+        self.warning_overlay = QFrame(self)
+        self.warning_overlay.setStyleSheet("""
+            QFrame {
+                background-color: rgba(15, 10, 5, 245);
+                border: 2px solid #f59e0b;
+                border-radius: 12px;
+            }
+        """)
+        ov_layout = QVBoxLayout(self.warning_overlay)
+        ov_layout.setContentsMargins(40, 24, 40, 24)
+        ov_layout.setSpacing(6)
+        ov_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        lbl_warn = QLabel("THIS OPTION NOT READY")
+        lbl_warn.setStyleSheet("font-size: 26px; font-weight: 900; color: #fbbf24; letter-spacing: 2.5px; background: transparent; border: none;")
+        lbl_warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ov_layout.addWidget(lbl_warn)
+
+        lbl_sub = QLabel("Under Active Development — Coming Soon")
+        lbl_sub.setStyleSheet("font-size: 13px; font-weight: bold; color: #cbd5e1; letter-spacing: 1px; background: transparent; border: none;")
+        lbl_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        ov_layout.addWidget(lbl_sub)
+
+        self.warning_overlay.adjustSize()
+        self.reposition_warning_overlay()
+        self.warning_overlay.show()
+        self.warning_overlay.raise_()
+
+        # Automatically hide in exactly 2 seconds (2000 ms)
+        QTimer.singleShot(2000, self.warning_overlay.hide)
+
+    def reposition_warning_overlay(self):
+        if hasattr(self, "warning_overlay") and self.warning_overlay.isVisible():
+            w = self.warning_overlay.width()
+            h = self.warning_overlay.height()
+            x = (self.width() - w) // 2
+            y = (self.height() - h) // 2 - 30
+            self.warning_overlay.move(x, y)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.reposition_warning_overlay()
 
     def setup_ui(self):
         root_layout = QVBoxLayout(self)
