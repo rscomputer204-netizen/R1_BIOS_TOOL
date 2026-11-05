@@ -756,40 +756,50 @@ class AutoPatchDialog(QDialog):
         menu = QMenu(self)
         menu.setStyleSheet("""
             QMenu {
-                background-color: #0e1520;
+                background-color: #0c1421;
                 color: #e2e8f0;
                 border: 1px solid #1e293b;
+                border-radius: 6px;
                 padding: 4px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 12px;
             }
             QMenu::item {
-                padding: 6px 18px;
+                padding: 6px 20px 6px 12px;
                 border-radius: 4px;
+                margin: 1px 2px;
             }
             QMenu::item:selected {
                 background-color: #00adb5;
-                color: #0b1017;
-                font-weight: bold;
+                color: #06101a;
+                font-weight: 600;
             }
             QMenu::item:disabled {
                 color: #475569;
+                background-color: transparent;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #1e293b;
+                margin: 4px 6px;
             }
         """)
 
         is_dl = self.engine.is_patch_downloaded(p)
 
-        act_dl = QAction("⬇️  Download Patch (ডাউনলোড)", self)
+        act_dl = QAction("Download Patch", self)
         act_dl.setEnabled(not is_dl)
         act_dl.triggered.connect(lambda: self.start_patch_download(p))
         menu.addAction(act_dl)
 
-        act_del = QAction("🗑  Delete from Cache (ডিলেট)", self)
+        act_del = QAction("Delete Patch", self)
         act_del.setEnabled(is_dl)
         act_del.triggered.connect(lambda: self.delete_patch_action(p))
         menu.addAction(act_del)
 
         menu.addSeparator()
 
-        act_reapply = QAction("🔄  Re-apply / Re-verify (রিপ্লাই)", self)
+        act_reapply = QAction("Re-apply Patch", self)
         act_reapply.triggered.connect(lambda: self.reapply_patch_action(p))
         menu.addAction(act_reapply)
 
