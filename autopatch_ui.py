@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QFrame, QFileDialog,
     QCheckBox, QMessageBox, QWidget, QComboBox, QMenu
 )
-from PySide6.QtCore import Qt, Signal, QSize, QThread
+from PySide6.QtCore import Qt, Signal, QSize, QThread, QEvent
 from PySide6.QtGui import QColor, QFont, QCursor, QDragEnterEvent, QDropEvent, QAction
 
 from autopatch_engine import AutoPatchEngine
@@ -378,6 +378,7 @@ class AutoPatchDialog(QDialog):
         self.list_patches.itemClicked.connect(self.on_patch_item_clicked)
         self.list_patches.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.list_patches.customContextMenuRequested.connect(self.show_context_menu)
+        self.list_patches.viewport().installEventFilter(self)
         left_layout.addWidget(self.list_patches)
 
         main_h_layout.addWidget(left_card)
@@ -686,30 +687,43 @@ class AutoPatchDialog(QDialog):
                 badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #450a0a; color: #f87171; border: 1px solid #ef4444; padding: 2px 7px; border-radius: 4px;")
             self.lbl_status.setText(f"Download failed: {msg}")
 
-    def on_patch_item_clicked(self, item: QListWidgetItem):
-        """Detects triple-click (3 rapid clicks) to delete patch from cache."""
-        p = item.data(Qt.ItemDataRole.UserRole)
-        if not p:
-            return
-        pid = p.get("id", "")
-        now = time.time()
-        if pid == self.last_clicked_id and (now - self.last_click_time) < 0.45:
-            self.click_count += 1
-        else:
-            self.click_count = 1
-            self.last_clicked_id = pid
-        self.last_click_time = now
+    def eventFilter(self, obj, event):
+        """Intercepts viewport mouse events to reliably detect triple-clicks on patch items."""
+        if hasattr(self, "list_patches") and obj == self.list_patches.viewport():
+            if event.type() in (QEvent.Type.MouseButtonPress, QEvent.Type.MouseButtonDblClick):
+                if event.button() == Qt.MouseButton.LeftButton:
+                    now = time.time()
+                    pos = event.pos()
+                    item = self.list_patches.itemAt(pos)
+                    if item:
+                        p = item.data(Qt.ItemDataRole.UserRole)
+                        pid = p.get("id", "") if p else ""
+                        if pid and pid == self.last_clicked_id and (now - self.last_click_time) < 0.70:
+                            if event.type() == QEvent.Type.MouseButtonDblClick:
+                                self.click_count = 2
+                            else:
+                                self.click_count += 1
+                        else:
+                            self.click_count = 1
+                            self.last_clicked_id = pid
+                        self.last_click_time = now
 
-        if self.click_count == 3:
-            self.click_count = 0
-            self.delete_patch_action(p)
+                        if self.click_count >= 3:
+                            self.click_count = 0
+                            if p:
+                                self.delete_patch_action(p)
+                            return True
+        return super().eventFilter(obj, event)
+
+    def on_patch_item_clicked(self, item: QListWidgetItem):
+        pass
 
     def delete_patch_action(self, p: dict):
         """Deletes patch file from local cache and resets badge."""
         pid = p.get("id", "")
         title = p.get("title", "Patch")
         if not self.engine.is_patch_downloaded(p):
-            self.lbl_status.setText(f"Patch '{title}' is not downloaded yet.")
+            self.lbl_status.setText(f"Notice: Patch '{title}' is not downloaded yet.")
             return
 
         ok = self.engine.delete_patch(p)
@@ -719,10 +733,12 @@ class AutoPatchDialog(QDialog):
                 badge.setText("☁️ Get")
                 badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px;")
                 badge.setToolTip("Double-click to download this patch from GitHub cloud.")
-            self.lbl_status.setText(f"🗑 Patch '{title}' deleted from local cache!")
+            self.lbl_status.setText(f"🗑 Triple-Click / Delete: Patch '{title}' removed from local cache!")
             dl_count = self.engine.get_downloaded_count()
             self.lbl_count.setText(f"{len(self.engine.patches)} found ({dl_count} ready)")
             self.update_verification_and_button_state()
+            if "Downloaded" in self.cmb_filter.currentText():
+                self.refresh_patch_list()
         else:
             self.lbl_status.setText(f"Could not delete '{title}' from cache.")
 
