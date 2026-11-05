@@ -9,13 +9,14 @@ R1 BIOS TOOL — AUTOPATCH UI (LOCKED LIST & BIG DROP ZONE)
 
 import os
 import sys
+import time
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QPushButton,
     QListWidget, QListWidgetItem, QFrame, QFileDialog,
-    QCheckBox, QMessageBox, QWidget, QComboBox
+    QCheckBox, QMessageBox, QWidget, QComboBox, QMenu
 )
 from PySide6.QtCore import Qt, Signal, QSize, QThread
-from PySide6.QtGui import QColor, QFont, QCursor, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QColor, QFont, QCursor, QDragEnterEvent, QDropEvent, QAction
 
 from autopatch_engine import AutoPatchEngine
 
@@ -244,6 +245,9 @@ class AutoPatchDialog(QDialog):
         self.selected_patch = None
         self.active_downloads = {}  # patch_id -> PatchDownloadWorker
         self.patch_badges = {}      # patch_id -> QLabel
+        self.last_click_time = 0
+        self.last_clicked_id = None
+        self.click_count = 0
 
         self.setup_ui()
         self.initialize_state()
@@ -366,11 +370,14 @@ class AutoPatchDialog(QDialog):
 
         left_layout.addLayout(filter_row)
 
-        # Patch List with Double-click download trigger
+        # Patch List with Double-click download, Triple-click delete & Right-click menu
         self.list_patches = QListWidget()
         self.list_patches.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list_patches.itemSelectionChanged.connect(self.on_patch_selected)
         self.list_patches.itemDoubleClicked.connect(self.on_patch_double_clicked)
+        self.list_patches.itemClicked.connect(self.on_patch_item_clicked)
+        self.list_patches.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.list_patches.customContextMenuRequested.connect(self.show_context_menu)
         left_layout.addWidget(self.list_patches)
 
         main_h_layout.addWidget(left_card)
@@ -679,6 +686,108 @@ class AutoPatchDialog(QDialog):
                 badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #450a0a; color: #f87171; border: 1px solid #ef4444; padding: 2px 7px; border-radius: 4px;")
             self.lbl_status.setText(f"Download failed: {msg}")
 
+    def on_patch_item_clicked(self, item: QListWidgetItem):
+        """Detects triple-click (3 rapid clicks) to delete patch from cache."""
+        p = item.data(Qt.ItemDataRole.UserRole)
+        if not p:
+            return
+        pid = p.get("id", "")
+        now = time.time()
+        if pid == self.last_clicked_id and (now - self.last_click_time) < 0.45:
+            self.click_count += 1
+        else:
+            self.click_count = 1
+            self.last_clicked_id = pid
+        self.last_click_time = now
+
+        if self.click_count == 3:
+            self.click_count = 0
+            self.delete_patch_action(p)
+
+    def delete_patch_action(self, p: dict):
+        """Deletes patch file from local cache and resets badge."""
+        pid = p.get("id", "")
+        title = p.get("title", "Patch")
+        if not self.engine.is_patch_downloaded(p):
+            self.lbl_status.setText(f"Patch '{title}' is not downloaded yet.")
+            return
+
+        ok = self.engine.delete_patch(p)
+        if ok:
+            badge = self.patch_badges.get(pid)
+            if badge:
+                badge.setText("☁️ Get")
+                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px;")
+                badge.setToolTip("Double-click to download this patch from GitHub cloud.")
+            self.lbl_status.setText(f"🗑 Patch '{title}' deleted from local cache!")
+            dl_count = self.engine.get_downloaded_count()
+            self.lbl_count.setText(f"{len(self.engine.patches)} found ({dl_count} ready)")
+            self.update_verification_and_button_state()
+        else:
+            self.lbl_status.setText(f"Could not delete '{title}' from cache.")
+
+    def show_context_menu(self, pos):
+        """Shows right-click context menu with Download, Delete, and Re-apply options."""
+        item = self.list_patches.itemAt(pos)
+        if not item:
+            return
+        p = item.data(Qt.ItemDataRole.UserRole)
+        if not p:
+            return
+
+        self.list_patches.setCurrentItem(item)
+
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #0e1520;
+                color: #e2e8f0;
+                border: 1px solid #1e293b;
+                padding: 4px;
+            }
+            QMenu::item {
+                padding: 6px 18px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #00adb5;
+                color: #0b1017;
+                font-weight: bold;
+            }
+            QMenu::item:disabled {
+                color: #475569;
+            }
+        """)
+
+        is_dl = self.engine.is_patch_downloaded(p)
+
+        act_dl = QAction("⬇️  Download Patch (ডাউনলোড)", self)
+        act_dl.setEnabled(not is_dl)
+        act_dl.triggered.connect(lambda: self.start_patch_download(p))
+        menu.addAction(act_dl)
+
+        act_del = QAction("🗑  Delete from Cache (ডিলেট)", self)
+        act_del.setEnabled(is_dl)
+        act_del.triggered.connect(lambda: self.delete_patch_action(p))
+        menu.addAction(act_del)
+
+        menu.addSeparator()
+
+        act_reapply = QAction("🔄  Re-apply / Re-verify (রিপ্লাই)", self)
+        act_reapply.triggered.connect(lambda: self.reapply_patch_action(p))
+        menu.addAction(act_reapply)
+
+        menu.exec(self.list_patches.mapToGlobal(pos))
+
+    def reapply_patch_action(self, p: dict):
+        """Forces re-verification or execution of the patch."""
+        self.lbl_status.setText(f"Re-verifying patch '{p.get('title')}'...")
+        self.update_verification_and_button_state()
+        if self.current_file and self.engine.is_patch_downloaded(p):
+            self.execute_patch_action()
+        elif not self.engine.is_patch_downloaded(p):
+            self.start_patch_download(p)
+
     def on_patch_selected(self):
         items = self.list_patches.selectedItems()
         if not items:
@@ -715,22 +824,43 @@ class AutoPatchDialog(QDialog):
         if not has_patch and not has_file:
             self.lbl_verify_status.setText("Status: Please select a patch and drop a BIOS file")
             self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #101927; color: #7e8f9f;")
+            self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
             self.btn_execute.setEnabled(False)
             return
 
         if not has_patch:
             self.lbl_verify_status.setText("Status: File loaded. Please select a patch from the left list")
             self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
+            self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
             self.btn_execute.setEnabled(False)
             return
 
         if not has_file:
-            self.lbl_verify_status.setText("Status: Patch selected. Please drop or browse a target BIOS file")
-            self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
+            # Check if patch is downloaded
+            if not self.engine.is_patch_downloaded(self.selected_patch):
+                self.lbl_verify_status.setText("⚠️ Status: Patch selected (Not Downloaded). Drop BIOS file or double-click patch to download.")
+                self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #261c0c; color: #fbbf24;")
+            else:
+                self.lbl_verify_status.setText("Status: Patch ready (Downloaded). Please drop or browse a target BIOS file")
+                self.lbl_verify_status.setStyleSheet("font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #181d24; color: #eab308;")
+            self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
             self.btn_execute.setEnabled(False)
             return
 
-        # Both patch and file are present! Pre-verify signature
+        # Both patch and file are present!
+        # Check if patch is downloaded locally
+        if not self.engine.is_patch_downloaded(self.selected_patch):
+            self.lbl_verify_status.setText("⚠️ ALERT: Patch not downloaded yet! Please Double-Click (or Right-Click -> Download) to download now.")
+            self.lbl_verify_status.setStyleSheet(
+                "font-size: 11px; padding: 7px 10px; border-radius: 4px; background: #3b2808; color: #fbbf24; border: 1px solid #f59e0b;"
+            )
+            self.btn_execute.setText("⬇️ DOWNLOAD PATCH NOW")
+            self.btn_execute.setEnabled(True)  # Button triggers download
+            return
+
+        self.btn_execute.setText("⚡ EXECUTE AUTO PATCH")
+
+        # Pre-verify signature since it is downloaded
         try:
             with open(self.current_file, "rb") as f:
                 data = bytearray(f.read())
@@ -753,6 +883,11 @@ class AutoPatchDialog(QDialog):
 
     def execute_patch_action(self):
         if not self.selected_patch or not self.current_file:
+            return
+
+        # If patch is not downloaded yet, clicking this button initiates download!
+        if not self.engine.is_patch_downloaded(self.selected_patch):
+            self.start_patch_download(self.selected_patch)
             return
 
         patch_title = self.selected_patch.get("title")

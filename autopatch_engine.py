@@ -213,8 +213,21 @@ class AutoPatchEngine:
         spec.loader.exec_module(mod)
         return mod
 
+    def delete_patch(self, patch_info: dict) -> bool:
+        """Deletes the downloaded patch file from local cache."""
+        dest = self.get_patch_dest_path(patch_info)
+        if os.path.exists(dest):
+            try:
+                os.remove(dest)
+                return True
+            except Exception:
+                return False
+        return False
+
     def verify_patch(self, patch_info: dict, bios_data: bytearray) -> tuple[bool, str]:
-        """Executes the script's verify() function."""
+        """Executes the script's verify() function ONLY if already downloaded."""
+        if not self.is_patch_downloaded(patch_info):
+            return False, "NOT_DOWNLOADED"
         try:
             mod = self._load_script_module(patch_info)
             if hasattr(mod, "verify"):
