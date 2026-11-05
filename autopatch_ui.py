@@ -257,48 +257,51 @@ class AutoPatchDialog(QDialog):
 
     def show_not_ready_warning(self):
         """Displays a massive 2-second red 'THIS OPTION NOT READY' overlay in exact dead center."""
-        self.warning_overlay = QFrame(self)
-        self.warning_overlay.setStyleSheet("""
+        # Full-window backdrop covering the entire dialog
+        self.warning_overlay = QWidget(self)
+        self.warning_overlay.setGeometry(0, 0, self.width(), self.height())
+        self.warning_overlay.setStyleSheet("background: transparent;")
+
+        backdrop_layout = QVBoxLayout(self.warning_overlay)
+        backdrop_layout.setContentsMargins(0, 0, 0, 0)
+        backdrop_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        # Centered red alert card
+        card = QFrame()
+        card.setStyleSheet("""
             QFrame {
-                background-color: rgba(24, 4, 8, 250);
+                background-color: rgba(24, 4, 8, 252);
                 border: 3px solid #ef4444;
                 border-radius: 18px;
             }
         """)
-        ov_layout = QVBoxLayout(self.warning_overlay)
-        ov_layout.setContentsMargins(75, 42, 75, 42)
-        ov_layout.setSpacing(12)
-        ov_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(75, 42, 75, 42)
+        card_layout.setSpacing(12)
+        card_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         lbl_warn = QLabel("THIS OPTION NOT READY")
         lbl_warn.setStyleSheet("font-size: 46px; font-weight: 900; color: #ff2a4b; letter-spacing: 3px; background: transparent; border: none;")
         lbl_warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ov_layout.addWidget(lbl_warn)
+        card_layout.addWidget(lbl_warn)
 
         lbl_sub = QLabel("Under Active Development — Coming Soon")
         lbl_sub.setStyleSheet("font-size: 20px; font-weight: bold; color: #fca5a5; letter-spacing: 1.5px; background: transparent; border: none;")
         lbl_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        ov_layout.addWidget(lbl_sub)
+        card_layout.addWidget(lbl_sub)
 
-        self.warning_overlay.adjustSize()
-        self.reposition_warning_overlay()
+        backdrop_layout.addWidget(card, 0, Qt.AlignmentFlag.AlignCenter)
+
         self.warning_overlay.show()
         self.warning_overlay.raise_()
 
         # Automatically hide in exactly 2 seconds (2000 ms)
         QTimer.singleShot(2000, self.warning_overlay.hide)
 
-    def reposition_warning_overlay(self):
-        if hasattr(self, "warning_overlay") and self.warning_overlay.isVisible():
-            w = self.warning_overlay.width()
-            h = self.warning_overlay.height()
-            x = (self.width() - w) // 2
-            y = (self.height() - h) // 2
-            self.warning_overlay.move(x, y)
-
     def resizeEvent(self, event):
         super().resizeEvent(event)
-        self.reposition_warning_overlay()
+        if hasattr(self, "warning_overlay") and self.warning_overlay:
+            self.warning_overlay.setGeometry(0, 0, self.width(), self.height())
 
     def setup_ui(self):
         root_layout = QVBoxLayout(self)
