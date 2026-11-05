@@ -256,27 +256,27 @@ class AutoPatchDialog(QDialog):
         QTimer.singleShot(100, self.show_not_ready_warning)
 
     def show_not_ready_warning(self):
-        """Displays a prominent 2-second 'THIS OPTION NOT READY' overlay banner."""
+        """Displays a massive 2-second red 'THIS OPTION NOT READY' overlay in exact dead center."""
         self.warning_overlay = QFrame(self)
         self.warning_overlay.setStyleSheet("""
             QFrame {
-                background-color: rgba(15, 10, 5, 245);
-                border: 2px solid #f59e0b;
-                border-radius: 12px;
+                background-color: rgba(24, 4, 8, 250);
+                border: 3px solid #ef4444;
+                border-radius: 18px;
             }
         """)
         ov_layout = QVBoxLayout(self.warning_overlay)
-        ov_layout.setContentsMargins(40, 24, 40, 24)
-        ov_layout.setSpacing(6)
+        ov_layout.setContentsMargins(75, 42, 75, 42)
+        ov_layout.setSpacing(12)
         ov_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         lbl_warn = QLabel("THIS OPTION NOT READY")
-        lbl_warn.setStyleSheet("font-size: 26px; font-weight: 900; color: #fbbf24; letter-spacing: 2.5px; background: transparent; border: none;")
+        lbl_warn.setStyleSheet("font-size: 46px; font-weight: 900; color: #ff2a4b; letter-spacing: 3px; background: transparent; border: none;")
         lbl_warn.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ov_layout.addWidget(lbl_warn)
 
         lbl_sub = QLabel("Under Active Development — Coming Soon")
-        lbl_sub.setStyleSheet("font-size: 13px; font-weight: bold; color: #cbd5e1; letter-spacing: 1px; background: transparent; border: none;")
+        lbl_sub.setStyleSheet("font-size: 20px; font-weight: bold; color: #fca5a5; letter-spacing: 1.5px; background: transparent; border: none;")
         lbl_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         ov_layout.addWidget(lbl_sub)
 
@@ -293,7 +293,7 @@ class AutoPatchDialog(QDialog):
             w = self.warning_overlay.width()
             h = self.warning_overlay.height()
             x = (self.width() - w) // 2
-            y = (self.height() - h) // 2 - 30
+            y = (self.height() - h) // 2
             self.warning_overlay.move(x, y)
 
     def resizeEvent(self, event):
@@ -359,7 +359,7 @@ class AutoPatchDialog(QDialog):
         )
         right_meta_layout.addWidget(self.lbl_brand_badge)
 
-        self.lbl_cloud_badge = QLabel(f"🟢 {len(self.engine.patches)} Cloud Patches")
+        self.lbl_cloud_badge = QLabel(f"{len(self.engine.patches)} Cloud Patches")
         self.lbl_cloud_badge.setStyleSheet(
             "font-size: 11px; font-weight: bold; color: #22c55e; background: #0c2018; padding: 5px 10px; border-radius: 4px; border: 1px solid #16a34a;"
         )
@@ -383,7 +383,7 @@ class AutoPatchDialog(QDialog):
         # 1. Search Bar
         search_row = QHBoxLayout()
         self.txt_search = QLineEdit()
-        self.txt_search.setPlaceholderText("🔍 Search issue, model, or board code...")
+        self.txt_search.setPlaceholderText("Search issue, model, or board code...")
         self.txt_search.textChanged.connect(self.refresh_patch_list)
         search_row.addWidget(self.txt_search)
         left_layout.addLayout(search_row)
@@ -448,9 +448,9 @@ class AutoPatchDialog(QDialog):
         drop_vbox.setSpacing(8)
 
         # Icon
-        self.lbl_drop_icon = QLabel("📥")
-        self.lbl_drop_icon.setStyleSheet("font-size: 42px; background: transparent;")
-        self.lbl_drop_icon.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_drop_icon = QLabel()
+        self.lbl_drop_icon.setStyleSheet("font-size: 0px; background: transparent;")
+        self.lbl_drop_icon.hide()
         drop_vbox.addWidget(self.lbl_drop_icon)
 
         # Main text
@@ -473,7 +473,7 @@ class AutoPatchDialog(QDialog):
         self.file_details_box.hide()
         f_box_layout = QVBoxLayout(self.file_details_box)
         f_box_layout.setSpacing(3)
-        self.lbl_loaded_filename = QLabel("📁 No File")
+        self.lbl_loaded_filename = QLabel("No File")
         self.lbl_loaded_filename.setStyleSheet("font-size: 13px; font-weight: bold; color: #00f3ff; background: transparent;")
         f_box_layout.addWidget(self.lbl_loaded_filename)
         self.lbl_loaded_meta = QLabel("")
@@ -536,11 +536,11 @@ class AutoPatchDialog(QDialog):
         self.lbl_drop_title.setText("FILE READY FOR PATCHING")
         self.lbl_drop_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #4ade80; letter-spacing: 0.5px; background: transparent;")
         self.lbl_drop_sub.setText("Click anywhere to change or choose another file")
-        self.lbl_drop_icon.setText("✅")
+        self.lbl_drop_icon.hide()
 
         # Show loaded file details card
         self.file_details_box.show()
-        self.lbl_loaded_filename.setText(f"📁 {file_name}")
+        self.lbl_loaded_filename.setText(f"{file_name}")
 
         # Run Brand Detection
         brand, model = self.engine.detect_brand(clean_path, self.dmi_hint)
@@ -548,7 +548,7 @@ class AutoPatchDialog(QDialog):
         self.detected_model = model or ""
 
         if brand != "UNKNOWN":
-            txt = f"🎯 {brand}"
+            txt = f"{brand}"
             if model:
                 txt += f" ({model})"
             self.lbl_brand_badge.setText(txt)
@@ -683,7 +683,7 @@ class AutoPatchDialog(QDialog):
             return
         pid = p.get("id", "")
         if self.engine.is_patch_downloaded(p):
-            self.lbl_status.setText(f"✓ '{p.get('title')}' is already downloaded and ready to execute!")
+            self.lbl_status.setText(f"'{p.get('title')}' is already downloaded and ready to execute.")
             return
 
         if pid in self.active_downloads:
