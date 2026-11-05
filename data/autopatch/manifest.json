@@ -1,5 +1,1126 @@
 [
   {
+    "id": "acer_asp_a315_55_csme",
+    "brand": "ACER",
+    "model": "Aspire 3 A315-55",
+    "board_code": "EH5VF LA-H802P",
+    "title": "CSME Handshake Error Fix",
+    "category": "Error Fix",
+    "symptom": "CSME error message during POST.",
+    "description": "Clears ME error bits in host firmware interface.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a315_55_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a515_54_csme",
+    "brand": "ACER",
+    "model": "Aspire 5 A515-54",
+    "board_code": "EH5LP LA-H801P",
+    "title": "CSME State Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "ME handshake delay causes 35s boot time.",
+    "description": "Clears ME state machine error counters.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a515_54_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_swift_sf514_53t_csme",
+    "brand": "ACER",
+    "model": "Swift 5 SF514-53T",
+    "board_code": "JH5VM LA-G281P",
+    "title": "CSME Telemetry Fix",
+    "category": "Error Fix",
+    "symptom": "CSME communication error causes 30s delay on POST.",
+    "description": "Resets CSME telemetry registers to healthy operational status.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_swift_sf514_53t_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_nitro_an515_54_csme",
+    "brand": "ACER",
+    "model": "Nitro 5 AN515-54",
+    "board_code": "EH5VF LA-H802P",
+    "title": "CSME Timeout Reset",
+    "category": "Error Fix",
+    "symptom": "CSME error and slow POST on Nitro 5 AN515-54.",
+    "description": "Restores CSME v12 healthy operational state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_nitro_an515_54_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a715_72g_delay",
+    "brand": "ACER",
+    "model": "Aspire 7 A715-72G",
+    "board_code": "DH5VF LA-F952P",
+    "title": "Display Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "Display output delayed for 25 seconds on cold boot.",
+    "description": "Synchronizes Coffee Lake CSME v12 quickboot state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a715_72g_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a315_54_delay",
+    "brand": "ACER",
+    "model": "Aspire 3 A315-54",
+    "board_code": "EH5LP LA-H801P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Aspire 3 A315-54 takes 30 seconds to show Acer logo.",
+    "description": "Clears ME v12 boot timer delay in UEFI NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a315_54_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a515_52_delay",
+    "brand": "ACER",
+    "model": "Aspire 5 A515-52",
+    "board_code": "DH5JV LA-G021P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Aspire 5 A515-52 30-second black screen before logo.",
+    "description": "Restores CSME v12 quickboot state flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a515_52_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_nitro_an515_51_delay",
+    "brand": "ACER",
+    "model": "Nitro 5 AN515-51",
+    "board_code": "C5V01 LA-E892P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Nitro 5 AN515-51 takes 30 seconds to show display.",
+    "description": "Resets Kaby Lake ME fast boot delay tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_nitro_an515_51_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_swift_sf314_56_delay",
+    "brand": "ACER",
+    "model": "Swift 3 SF314-56",
+    "board_code": "JH4VF LA-F943P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Swift 3 SF314-56 30 seconds black screen delay.",
+    "description": "Clears ME timeout parameters and enables fast boot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_swift_sf314_56_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a315_23_delay",
+    "brand": "ACER",
+    "model": "Aspire 3 A315-23",
+    "board_code": "DA0ZASMB8D0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Aspire 3 A315-23 20 seconds delay before display.",
+    "description": "Clears corrupted memory training records in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a315_23_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a715_75g_fan",
+    "brand": "ACER",
+    "model": "Aspire 7 A715-75G",
+    "board_code": "FH52Q LA-J801P",
+    "title": "Fan High Spin Fix",
+    "category": "Fan Error",
+    "symptom": "Fans spin at 100% speed immediately on power on.",
+    "description": "Recalibrates thermal trip points in DSDT/EC firmware area.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a715_75g_fan.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_pred_ph315_fan",
+    "brand": "ACER",
+    "model": "Predator Helios 300 PH315",
+    "board_code": "DH5VF LA-F952P",
+    "title": "Fan Speed Fix",
+    "category": "Fan Error",
+    "symptom": "AeroBlade fans run at max speed constantly.",
+    "description": "Restores thermal sensor calibration in DSDT.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_pred_ph315_fan.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a315_53_ram",
+    "brand": "ACER",
+    "model": "Aspire 3 A315-53",
+    "board_code": "C5V01 LA-E891P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard soldered RAM causes black screen or RAM beep code.",
+    "description": "Disables Channel 0 onboard memory in SPD mapping tables.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a315_53_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a315_56_ram",
+    "brand": "ACER",
+    "model": "Aspire 3 A315-56",
+    "board_code": "FH5AT LA-K091P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM failure on 10th Gen Aspire 3.",
+    "description": "Disables onboard memory Channel A, redirects to SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a315_56_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a515_51_ram",
+    "brand": "ACER",
+    "model": "Aspire 5 A515-51",
+    "board_code": "C5V01 LA-E891P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Defective soldered RAM causes restart loop or freezes.",
+    "description": "Disables onboard RAM in BIOS SPD mapping, enables SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a515_51_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a515_55_ram",
+    "brand": "ACER",
+    "model": "Aspire 5 A515-55",
+    "board_code": "FH5AT LA-K091P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Faulty onboard memory on 10th Gen Comet Lake Aspire 5.",
+    "description": "Switches memory configuration to external SODIMM only.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a515_55_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_swift_sf314_54_ram",
+    "brand": "ACER",
+    "model": "Swift 3 SF314-54",
+    "board_code": "JH4VF LA-F943P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Damaged soldered memory causing system instability.",
+    "description": "Disables failed memory rank in BIOS configuration.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_swift_sf314_54_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_nitro_an515_55_power",
+    "brand": "ACER",
+    "model": "Nitro 5 AN515-55",
+    "board_code": "FH52Q LA-J801P",
+    "title": "Power Throttling / ME Fix",
+    "category": "Power Fix",
+    "symptom": "CPU throttles to 800MHz due to corrupted ME power limits.",
+    "description": "Clears ME power limit register and restores normal clocks.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_nitro_an515_55_power.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_asp_a514_52_post",
+    "brand": "ACER",
+    "model": "Aspire 5 A514-52",
+    "board_code": "DH5JV LA-G021P",
+    "title": "Slow POST Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow POST sequence on Aspire 5 14-inch.",
+    "description": "Clears corrupted MRC memory training cache in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_asp_a514_52_post.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "acer_nitro_an515_52_post",
+    "brand": "ACER",
+    "model": "Nitro 5 AN515-52",
+    "board_code": "DH5VF LA-F952P",
+    "title": "Slow POST Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow POST sequence on Coffee Lake Nitro 5.",
+    "description": "Clears corrupted memory training records in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/acer/acer_nitro_an515_52_post.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a2159_pass",
+    "brand": "APPLE",
+    "model": "MacBook Pro 13\" A2159",
+    "board_code": "820-01598-A",
+    "title": "Clean EFI & NVRAM",
+    "category": "Security",
+    "symptom": "Firmware lock icon on 2019 2-Thunderbolt A2159.",
+    "description": "Removes EFI password lock and initializes clean NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a2159_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mba_a1932_pass",
+    "brand": "APPLE",
+    "model": "MacBook Air 13\" A1932",
+    "board_code": "820-01521-A",
+    "title": "Clean EFI & NVRAM Reset",
+    "category": "Security",
+    "symptom": "Firmware lock screen active on Retina MacBook Air.",
+    "description": "Clears lock tokens from NVRAM SPI area.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mba_a1932_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mba_a1466_pass",
+    "brand": "APPLE",
+    "model": "MacBook Air 13\" A1466",
+    "board_code": "820-00165-A",
+    "title": "Clean EFI Password",
+    "category": "Security",
+    "symptom": "MacBook Air locked with firmware EFI lock icon.",
+    "description": "Clears EFI security lock hashes and resets NVRAM variables.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mba_a1466_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a1502_pass",
+    "brand": "APPLE",
+    "model": "MacBook Pro 13\" A1502",
+    "board_code": "820-4924-A",
+    "title": "Clean EFI Password",
+    "category": "Security",
+    "symptom": "MacBook Pro Retina 13 locked with firmware PIN.",
+    "description": "Removes EFI password lock and initializes clean NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a1502_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a1707_pass",
+    "brand": "APPLE",
+    "model": "MacBook Pro 15\" A1707",
+    "board_code": "820-00923-A",
+    "title": "Clean EFI Password",
+    "category": "Security",
+    "symptom": "MacBook Pro 15-inch TouchBar firmware lock active.",
+    "description": "Clears EFI password security credentials.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a1707_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a1708_pass",
+    "brand": "APPLE",
+    "model": "MacBook Pro 13\" A1708",
+    "board_code": "820-00875-A",
+    "title": "Clean EFI Password",
+    "category": "Security",
+    "symptom": "Firmware password locked on Non-TouchBar A1708.",
+    "description": "Clears EFI lock partition and initializes clean system tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a1708_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a1989_pass",
+    "brand": "APPLE",
+    "model": "MacBook Pro 13\" A1989",
+    "board_code": "820-00850-A",
+    "title": "Clean EFI Password",
+    "category": "Security",
+    "symptom": "EFI lock PIN active on 2018 4-Thunderbolt A1989.",
+    "description": "Clears EFI NVRAM security record.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a1989_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mba_a2179_pass",
+    "brand": "APPLE",
+    "model": "MacBook Air 13\" A2179",
+    "board_code": "820-01958-A",
+    "title": "EFI Password Clean",
+    "category": "Security",
+    "symptom": "EFI firmware password prompt on startup.",
+    "description": "Removes EFI password security descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mba_a2179_pass.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mba_a1466_me_clean",
+    "brand": "APPLE",
+    "model": "MacBook Air 13\" A1466",
+    "board_code": "820-3437-B",
+    "title": "ME Region Clean Fix",
+    "category": "Delay Fix",
+    "symptom": "Takes 30 seconds to show Apple logo or chime sound.",
+    "description": "Initializes Intel Haswell/Broadwell ME region to clean state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mba_a1466_me_clean.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a1502_me",
+    "brand": "APPLE",
+    "model": "MacBook Pro 13\" A1502",
+    "board_code": "820-3476-A",
+    "title": "ME State Reset",
+    "category": "Delay Fix",
+    "symptom": "No startup chime and 25 seconds delay before Apple logo.",
+    "description": "Clears ME state machine error counters in SPI flash.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a1502_me.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "apple_mbp_a1706_touchbar",
+    "brand": "APPLE",
+    "model": "MacBook Pro 13\" A1706",
+    "board_code": "820-00239-A",
+    "title": "TouchBar Delay Fix",
+    "category": "General",
+    "symptom": "TouchBar remains completely black for 45s during boot.",
+    "description": "Synchronizes embedded T1/DFR firmware handoff tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/apple/apple_mbp_a1706_touchbar.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x509ja_csme",
+    "brand": "ASUS",
+    "model": "VivoBook X509JA",
+    "board_code": "X509JA R2.0",
+    "title": "CSME EndPoint Error Fix",
+    "category": "Error Fix",
+    "symptom": "Intel 10th Gen CSME error and 30s boot delay.",
+    "description": "Clears CSME error flag and restores clean host firmware handshake.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x509ja_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_rog_g512li_csme",
+    "brand": "ASUS",
+    "model": "ROG Strix G512LI",
+    "board_code": "G512LI R2.0",
+    "title": "CSME Reset Fix",
+    "category": "Error Fix",
+    "symptom": "CSME communication error on Comet Lake 10th Gen.",
+    "description": "Refreshes CSME v14 configuration partition flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_rog_g512li_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux433fa_csme",
+    "brand": "ASUS",
+    "model": "ZenBook UX433FA",
+    "board_code": "UX433FN R2.0",
+    "title": "CSME Telemetry Reset",
+    "category": "Error Fix",
+    "symptom": "CSME communication error causes 30s delay on POST.",
+    "description": "Resets CSME telemetry registers to healthy operational status.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux433fa_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_rog_gl553vd_delay",
+    "brand": "ASUS",
+    "model": "ROG Strix GL553VD",
+    "board_code": "GL553VD R2.0",
+    "title": "Display Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "ROG GL553VD 25 seconds delay on startup.",
+    "description": "Initializes Skylake/Kaby Lake ME quickboot state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_rog_gl553vd_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux431fa_delay",
+    "brand": "ASUS",
+    "model": "ZenBook UX431FA",
+    "board_code": "UX431FA R2.0",
+    "title": "Display Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "Display output delayed for 25 seconds on cold boot.",
+    "description": "Synchronizes Whiskey Lake CSME v12 quickboot state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux431fa_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x510ua_delay",
+    "brand": "ASUS",
+    "model": "VivoBook X510UA",
+    "board_code": "X510UA R2.0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "VivoBook X510UA 30 seconds black screen delay.",
+    "description": "Clears ME timeout parameters and enables fast boot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x510ua_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x515ea_delay",
+    "brand": "ASUS",
+    "model": "VivoBook X515EA",
+    "board_code": "X515EA R2.0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "VivoBook X515EA 30 seconds display delay on Intel 11th Gen.",
+    "description": "Resets Intel CSME v15 telemetry parameters in ME region.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x515ea_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zep_ga401_delay",
+    "brand": "ASUS",
+    "model": "Zephyrus G14 GA401",
+    "board_code": "GA401IV R2.0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Zephyrus G14 display appears after 30 seconds delay.",
+    "description": "Clears corrupted MRC memory training cache in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zep_ga401_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_tuf_fx504gd_delay",
+    "brand": "ASUS",
+    "model": "TUF Gaming FX504GD",
+    "board_code": "FX504GD R2.0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "TUF FX504 takes 30 seconds to show display.",
+    "description": "Resets ME timeout parameters in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_tuf_fx504gd_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_s430ua_delay",
+    "brand": "ASUS",
+    "model": "VivoBook S430UA",
+    "board_code": "S430UA R2.0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "VivoBook S430 takes 25 seconds to show display.",
+    "description": "Resets ME timeout parameters in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_s430ua_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux410ua_delay",
+    "brand": "ASUS",
+    "model": "ZenBook UX410UA",
+    "board_code": "UX410UA R2.0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "20 seconds delay before display appears on UX410.",
+    "description": "Resets Kaby Lake ME fast boot delay tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux410ua_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_rog_gl503ge_fan",
+    "brand": "ASUS",
+    "model": "ROG Strix GL503GE",
+    "board_code": "GL503GE R2.1",
+    "title": "Fan Speed High Spin Fix",
+    "category": "Fan Error",
+    "symptom": "Fans spin at 100% speed immediately on power on.",
+    "description": "Recalibrates thermal trip points in DSDT/EC firmware area.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_rog_gl503ge_fan.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux430uq_delay",
+    "brand": "ASUS",
+    "model": "ZenBook UX430UQ",
+    "board_code": "UX430UQ R2.1",
+    "title": "Fast Boot Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "ZenBook UX430 takes 25 seconds to display ASUS logo.",
+    "description": "Clears ME configuration timeout parameters in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux430uq_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_s510ua_freeze",
+    "brand": "ASUS",
+    "model": "VivoBook S510UA",
+    "board_code": "S510UA R2.1",
+    "title": "Fast Boot Freeze Fix",
+    "category": "Delay Fix",
+    "symptom": "Intermittent freeze on ASUS logo during fast boot.",
+    "description": "Fixes NVRAM storage fragmentation and clears MRC cache.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_s510ua_freeze.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x412fl_ram",
+    "brand": "ASUS",
+    "model": "VivoBook X412FL",
+    "board_code": "X412FL R2.0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM causes BSOD with MEMORY_MANAGEMENT.",
+    "description": "Disables onboard RAM in BIOS SPD mapping, enables SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x412fl_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x510uq_ram",
+    "brand": "ASUS",
+    "model": "VivoBook X510UQ",
+    "board_code": "X510UQ R2.0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered DDR4 RAM chip failure causes black screen.",
+    "description": "Disables Channel A onboard memory, enables expansion slot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x510uq_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x512fa_ram",
+    "brand": "ASUS",
+    "model": "VivoBook X512FA",
+    "board_code": "X512FA R3.0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard memory causes power on no display.",
+    "description": "Switches memory configuration to external SODIMM only.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x512fa_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x515ep_ram",
+    "brand": "ASUS",
+    "model": "VivoBook X515EP",
+    "board_code": "X515EP R2.0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Faulty onboard DDR4 memory causes black screen.",
+    "description": "Disables Channel 0 onboard RAM SPD table, forcing SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x515ep_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux331ua_ram",
+    "brand": "ASUS",
+    "model": "ZenBook UX331UA",
+    "board_code": "UX331UN R2.0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Damaged soldered memory causing system instability.",
+    "description": "Disables failed memory rank in BIOS configuration.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux331ua_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux430ua_ram",
+    "brand": "ASUS",
+    "model": "ZenBook UX430UA",
+    "board_code": "UX430UA R2.0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Defective soldered LPDDR3 RAM causes artifacts or black screen.",
+    "description": "Disables damaged onboard RAM bank in BIOS configuration.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux430ua_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_rog_g531gt_power",
+    "brand": "ASUS",
+    "model": "ROG Strix G531GT",
+    "board_code": "G531GT R1.2",
+    "title": "Power Button Delay Fix",
+    "category": "Power Fix",
+    "symptom": "Takes 4 seconds to react to power button press.",
+    "description": "Restores EC/PCH handshake in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_rog_g531gt_power.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_zen_ux305ca_ram",
+    "brand": "ASUS",
+    "model": "ZenBook UX305CA",
+    "board_code": "UX305CA R2.0",
+    "title": "RAM Disable Patch",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM failure on Core M ZenBook.",
+    "description": "Reconfigures memory controller channel routing.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_zen_ux305ca_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_tuf_fx505dt_slow",
+    "brand": "ASUS",
+    "model": "TUF Gaming FX505DT",
+    "board_code": "FX505DU R2.0",
+    "title": "Slow Boot Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow boot sequence on TUF FX505 gaming laptop.",
+    "description": "Optimizes GOP display buffer init in UEFI NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_tuf_fx505dt_slow.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_x512fl_delay",
+    "brand": "ASUS",
+    "model": "VivoBook X512FL",
+    "board_code": "X512FL R3.1",
+    "title": "Slow POST Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow POST sequence on VivoBook X512FL.",
+    "description": "Clears corrupted memory training records in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_x512fl_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "asus_vivo_tp412ua_touch",
+    "brand": "ASUS",
+    "model": "VivoBook Flip TP412UA",
+    "board_code": "TP412UA R2.0",
+    "title": "Touch Screen Lag Fix",
+    "category": "General",
+    "symptom": "Touchscreen digitizer responds with 3 seconds delay after wake.",
+    "description": "Fixes I2C HID controller power state flags in DSDT.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/asus/asus_vivo_tp412ua_touch.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_insp_3567_delay_fix",
+    "brand": "DELL",
+    "model": "Inspiron 15-3567",
+    "board_code": "Vegas 15341-1",
+    "title": "Black Screen Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Display takes 25 to 30 seconds to show display after power on.",
+    "description": "Fixes Intel 6th/7th Gen Skylake/Kaby Lake ME delay timers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_insp_3567_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5410_logo_hang",
+    "brand": "DELL",
+    "model": "Latitude 5410",
+    "board_code": "FDW40 LA-J491P",
+    "title": "Boot Hang at Dell Logo Fix",
+    "category": "General",
+    "symptom": "Hangs at Dell circular logo on 10th Gen Comet Lake.",
+    "description": "Clears corrupted CSME v14 operational state in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5410_logo_hang.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5590_boot_loop_fix",
+    "brand": "DELL",
+    "model": "Latitude 5590",
+    "board_code": "LA-F342P",
+    "title": "Boot Loop 3 Times Fix",
+    "category": "Power Fix",
+    "symptom": "Laptop powers on, shuts down after 5 seconds, and repeats 3 times before booting.",
+    "description": "Clears corrupted MRC memory training cache in UEFI NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5590_boot_loop_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
     "id": "dell_endpoint_error_fix",
     "brand": "DELL",
     "model": "Latitude / Inspiron / Vostro (All Intel 8th-11th Gen)",
@@ -16,7 +1137,634 @@
       32
     ],
     "script_file": "patches/dell/dell_endpoint_error_fix.py",
-    "last_modified": "2026-11-04 23:54:35"
+    "last_modified": "2026-11-05 05:43:07"
+  },
+  {
+    "id": "dell_lat_5500_csme_fix",
+    "brand": "DELL",
+    "model": "Latitude 5500",
+    "board_code": "EDC51 LA-G881P",
+    "title": "CSME EndPoint Error Fix",
+    "category": "Error Fix",
+    "symptom": "Shows 'ME Error' in BIOS setup and Windows device manager yellow exclamation.",
+    "description": "Clears the CSME error flag and restores clean host firmware handshake.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5500_csme_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_xps_9560_csme_fix",
+    "brand": "DELL",
+    "model": "XPS 15 9560",
+    "board_code": "LA-E331P",
+    "title": "CSME EndPoint Error Fix",
+    "category": "Error Fix",
+    "symptom": "Intel ME EndPoint error and slow boot.",
+    "description": "Resets CSME status register to healthy operational state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_xps_9560_csme_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5420_csme_fix",
+    "brand": "DELL",
+    "model": "Latitude 5420",
+    "board_code": "GDF40 LA-K031P",
+    "title": "CSME Handshake Error Fix",
+    "category": "Error Fix",
+    "symptom": "Intel 11th Gen Tiger Lake CSME communication error and 30s boot delay.",
+    "description": "Refreshes CSME v15 configuration partition flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5420_csme_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5490_csme_reset",
+    "brand": "DELL",
+    "model": "Latitude 5490",
+    "board_code": "LA-F341P",
+    "title": "CSME Reset & Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Intermittent display delay and [ME Error] message during diagnostic test.",
+    "description": "Resets CSME telemetry registers to allow immediate GPU display initialization.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5490_csme_reset.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_vos_3468_delay_fix",
+    "brand": "DELL",
+    "model": "Vostro 3468",
+    "board_code": "15341-1",
+    "title": "Display Delay 20s Fix",
+    "category": "Delay Fix",
+    "symptom": "Vostro 3468 20 seconds delay before display.",
+    "description": "Initializes ME clean state and clears boot timer.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_vos_3468_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5480_delay_fix",
+    "brand": "DELL",
+    "model": "Latitude 5480",
+    "board_code": "LA-E081P",
+    "title": "Display Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "Power LED turns on but internal screen stays black for 25-30 seconds before showing Dell logo.",
+    "description": "Initializes ME fast boot handshake flags and clears NVAR boot delay timers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5480_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_insp_5480_delay_fix",
+    "brand": "DELL",
+    "model": "Inspiron 14-5480",
+    "board_code": "DDK40 LA-G711P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Dell Inspiron 5480 30-second black screen before logo.",
+    "description": "Restores CSME v12 quickboot state flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_insp_5480_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5400_delay_fix",
+    "brand": "DELL",
+    "model": "Latitude 5400",
+    "board_code": "EDC41 LA-G891P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "30-40 seconds display delay on Intel 8th/9th Gen Dell Latitude 5400.",
+    "description": "Resets Intel CSME v12 telemetry parameters in ME region.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5400_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_7480_delay_fix",
+    "brand": "DELL",
+    "model": "Latitude 7480",
+    "board_code": "LA-E941P",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "30 seconds black screen on every cold start before Dell logo appears.",
+    "description": "Patches CSME timeout parameters in descriptor region.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_7480_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_7410_display_delay",
+    "brand": "DELL",
+    "model": "Latitude 7410",
+    "board_code": "LA-J493P",
+    "title": "Display Output Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow POST sequence, power button white LED on for 28 seconds before Dell logo.",
+    "description": "Clears ME fast boot timeout token and optimizes GOP driver initialization.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_7410_display_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_xps_9370_delay_fix",
+    "brand": "DELL",
+    "model": "XPS 13 9370",
+    "board_code": "LA-E981P",
+    "title": "Display Output Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Display output delayed for 30 seconds on cold start.",
+    "description": "Fixes Intel 8th Gen ME v12 firmware communication timer.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_xps_9370_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_insp_7586_fan_fix",
+    "brand": "DELL",
+    "model": "Inspiron 15-7586",
+    "board_code": "LA-G701P",
+    "title": "Fan Speed Sensor Error Fix",
+    "category": "Fan Error",
+    "symptom": "Fan runs at maximum RPM constantly after boot.",
+    "description": "Recalibrates thermal trip points in DSDT/EC firmware area.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_insp_7586_fan_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5580_fan_spin_fix",
+    "brand": "DELL",
+    "model": "Latitude 5580",
+    "board_code": "LA-E091P",
+    "title": "Fan Spin No Display Fix",
+    "category": "Power Fix",
+    "symptom": "Fan spins at full speed on power button press with no display on screen.",
+    "description": "Recalibrates thermal NVAR tables and restores CSME power state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5580_fan_spin_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_vos_5490_delay_fix",
+    "brand": "DELL",
+    "model": "Vostro 5490",
+    "board_code": "EDC40 LA-G871P",
+    "title": "Fast Boot Display Fix",
+    "category": "Delay Fix",
+    "symptom": "Vostro 5490 30-second delay on battery and adapter.",
+    "description": "Synchronizes CSME v13 fast boot descriptors.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_vos_5490_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_7420_fastboot_fix",
+    "brand": "DELL",
+    "model": "Latitude 7420",
+    "board_code": "GDC40 LA-K371P",
+    "title": "Fast Boot Freeze Fix",
+    "category": "Delay Fix",
+    "symptom": "System freezes intermittently during Intel Fast Boot POST.",
+    "description": "Adjusts PCIe handshake timeouts in NVAR variables.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_7420_fastboot_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5510_mfg_mode",
+    "brand": "DELL",
+    "model": "Latitude 5510",
+    "board_code": "FDW50 LA-J492P",
+    "title": "Manufacturing Mode Clear",
+    "category": "General",
+    "symptom": "Prompts 'Manufacturing Mode: Level 0x33' on every startup.",
+    "description": "Locks descriptor manufacturing mode flag to normal consumer production mode.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5510_mfg_mode.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_insp_5570_ram_disable",
+    "brand": "DELL",
+    "model": "Inspiron 15-5570",
+    "board_code": "CAL50/DAL10 LA-F115P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Integrated RAM causes beep codes or restart loops.",
+    "description": "Disables soldered RAM bank, enabling SODIMM slot exclusively.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_insp_5570_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_3490_ram_disable",
+    "brand": "DELL",
+    "model": "Latitude 3490",
+    "board_code": "CAL50/DAL10 LA-F115P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Faulty onboard DDR4 memory causes 2,4 amber/white LED blink code.",
+    "description": "Disables Channel 0 onboard RAM SPD table, forcing system to use external slot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_3490_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_3590_ram_disable",
+    "brand": "DELL",
+    "model": "Latitude 3590",
+    "board_code": "LA-F116P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard BGA RAM failed, memory error code blinks.",
+    "description": "Bypasses onboard memory channels and routes all memory addressing to SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_3590_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_vos_5471_ram_disable",
+    "brand": "DELL",
+    "model": "Vostro 5471",
+    "board_code": "BAM00 LA-F131P",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM chips causing artifacting or failure to POST.",
+    "description": "Disables Channel A onboard memory ICs.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_vos_5471_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_5520_post_delay",
+    "brand": "DELL",
+    "model": "Latitude 5520",
+    "board_code": "GDF50 LA-K032P",
+    "title": "POST Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "Dell logo appears after 25 seconds delay.",
+    "description": "Reconfigures Tiger Lake memory training cache in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_5520_post_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_7490_delay_fix",
+    "brand": "DELL",
+    "model": "Latitude 7490",
+    "board_code": "LA-F322P",
+    "title": "POST Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Keyboard backlight lights up, fan spins, but display appears after 35 seconds.",
+    "description": "Synchronizes Intel ME quickboot tokens in UEFI flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_7490_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_xps_9570_power_delay",
+    "brand": "DELL",
+    "model": "XPS 15 9570",
+    "board_code": "LA-F541P",
+    "title": "Power Button Delay Fix",
+    "category": "Power Fix",
+    "symptom": "Takes 5 seconds to react to power button press.",
+    "description": "Restores EC/PCH handshake in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_xps_9570_power_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_insp_g3_3579_power_fix",
+    "brand": "DELL",
+    "model": "Inspiron G3 3579",
+    "board_code": "CAL53 LA-F421P",
+    "title": "Power Throttling / ME Fix",
+    "category": "Power Fix",
+    "symptom": "CPU locked at 0.79 GHz due to corrupted BD PROCHOT / ME status.",
+    "description": "Clears ME power limit register and resets PROCHOT override.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_insp_g3_3579_power_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_vos_5590_tag_reset",
+    "brand": "DELL",
+    "model": "Vostro 5590",
+    "board_code": "EDC50 LA-G881P",
+    "title": "Service Tag Reset Fix",
+    "category": "General",
+    "symptom": "Corrupted Service Tag prevents BIOS updates.",
+    "description": "Unlocks Dell DMI region for service tag rewriting.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_vos_5590_tag_reset.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_lat_7400_sleep_fix",
+    "brand": "DELL",
+    "model": "Latitude 7400",
+    "board_code": "EDC40 LA-G871P",
+    "title": "Sleep Wake Freeze Fix",
+    "category": "Power Fix",
+    "symptom": "Screen stays black after waking from Windows Modern Standby / Sleep.",
+    "description": "Patches ACPI S3/S0ix power transition state tables.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_lat_7400_sleep_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_xps_9360_delay_fix",
+    "brand": "DELL",
+    "model": "XPS 13 9360",
+    "board_code": "LA-D841P",
+    "title": "Slow Boot Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "XPS 9360 25s black screen delay before Dell logo.",
+    "description": "Clears Kaby Lake ME configuration timeout tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_xps_9360_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_vos_3568_logo_freeze",
+    "brand": "DELL",
+    "model": "Vostro 3568",
+    "board_code": "15341-1",
+    "title": "Slow POST / Logo Freeze Fix",
+    "category": "Delay Fix",
+    "symptom": "Hangs at Dell logo for 40 seconds before Windows loading spinner.",
+    "description": "Optimizes legacy CSM and GOP driver handoff.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_vos_3568_logo_freeze.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "dell_insp_g5_5587_fan_fix",
+    "brand": "DELL",
+    "model": "Inspiron G5 5587",
+    "board_code": "LA-E991P",
+    "title": "Thermal Fan High Spin Fix",
+    "category": "Fan Error",
+    "symptom": "Fans spin at 100% speed immediately when AC adapter is plugged in.",
+    "description": "Restores clean EC/ME thermal telemetry link.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/dell/dell_insp_g5_5587_fan_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_450_g5_delay",
+    "brand": "HP",
+    "model": "ProBook 450 G5",
+    "board_code": "DA0X8BMB6F0",
+    "title": "Black Screen 35s Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "35s black screen delay on ProBook 450 G5.",
+    "description": "Resets ME configuration timeout to 0.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_450_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_850_g6_csme",
+    "brand": "HP",
+    "model": "EliteBook 850 G6",
+    "board_code": "6050A3022501",
+    "title": "CSME Handshake Fix",
+    "category": "Error Fix",
+    "symptom": "CSME error message during POST.",
+    "description": "Clears ME error bits in host firmware interface.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_850_g6_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_450_g7_csme_delay",
+    "brand": "HP",
+    "model": "ProBook 450 G7",
+    "board_code": "DA0X8TMB8F0",
+    "title": "CSME State Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "ME handshake delay causes 40s boot time.",
+    "description": "Clears ME state machine error counters.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_450_g7_csme_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_450_g8_delay",
+    "brand": "HP",
+    "model": "ProBook 450 G8",
+    "board_code": "DA0X9TMB8D0",
+    "title": "Display Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "Display output delayed by 25 seconds on G8.",
+    "description": "Refreshes CSME v15 handshake configuration.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_450_g8_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
   },
   {
     "id": "hp_delay_30s_fix",
@@ -25,7 +1773,7 @@
     "board_code": "HP Commercial Notebooks",
     "title": "Display Delay 30s Fix",
     "category": "Delay Fix",
-    "symptom": "Power button lights up immediately, but screen remains completely black for 30 to 45 seconds before showing HP logo",
+    "symptom": "Power button lights up immediately, but screen remains completely black for 30 to 45 seconds before showing HP l",
     "description": "Resets the HP ME configuration timeout and initializes ME/BIOS fast boot flags to eliminate the 30-second POST delay.",
     "version": "1.0.0",
     "author": "R1 LAB",
@@ -34,7 +1782,881 @@
       32
     ],
     "script_file": "patches/hp/hp_delay_30s_fix.py",
-    "last_modified": "2026-11-04 23:54:55"
+    "last_modified": "2026-11-05 08:14:25"
+  },
+  {
+    "id": "hp_eb_830_g5_delay",
+    "brand": "HP",
+    "model": "EliteBook 830 G5",
+    "board_code": "6050A2945601",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "EliteBook 830 G5 black screen for 30 seconds on cold start.",
+    "description": "Clears ME boot delay tokens in HP NVAR.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_830_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_840_g5_delay",
+    "brand": "HP",
+    "model": "EliteBook 840 G5",
+    "board_code": "6050A2945601",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "30-45 seconds display delay on EliteBook 840 G5.",
+    "description": "Eliminates ME state timeout delay in BIOS descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_840_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_840_g6_delay",
+    "brand": "HP",
+    "model": "EliteBook 840 G6",
+    "board_code": "6050A3022501",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Display takes 30 seconds to appear on EliteBook 840 G6.",
+    "description": "Restores CSME v12 operational status registers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_840_g6_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_430_g5_delay",
+    "brand": "HP",
+    "model": "ProBook 430 G5",
+    "board_code": "DA0X8BMB6F0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "30 to 45 seconds black screen before HP logo appears on screen.",
+    "description": "Resets ME timeout parameters and fast boot flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_430_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_430_g6_delay",
+    "brand": "HP",
+    "model": "ProBook 430 G6",
+    "board_code": "DA0X8JMB8D0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "Display takes 30 seconds on ProBook 430 G6.",
+    "description": "Initializes Intel CSME v12 quickboot flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_430_g6_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_430_g7_delay",
+    "brand": "HP",
+    "model": "ProBook 430 G7",
+    "board_code": "DA0X8TMB8F0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "HP 10th Gen Comet Lake 30s display delay.",
+    "description": "Resets CSME v14 fast boot registers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_430_g7_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_650_g5_delay",
+    "brand": "HP",
+    "model": "ProBook 650 G5",
+    "board_code": "DA0G3DMB8D0",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "HP ProBook 650 G5 30s display delay.",
+    "description": "Restores clean CSME fast boot configuration.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_650_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_1040_g4_delay",
+    "brand": "HP",
+    "model": "EliteBook 1040 G4",
+    "board_code": "DA0Y0FMB4D0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "EliteBook 1040 G4 30-second black screen.",
+    "description": "Resets ME timeout parameters in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_1040_g4_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pav_15cc_delay",
+    "brand": "HP",
+    "model": "Pavilion 15-cc",
+    "board_code": "DAG34AMB6D0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Pavilion 15-cc takes 20-30 seconds to boot.",
+    "description": "Clears ME region timeout tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pav_15cc_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_650_g4_delay",
+    "brand": "HP",
+    "model": "ProBook 650 G4",
+    "board_code": "DAG35AMB8D0",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "ProBook 650 G4 30s black screen delay.",
+    "description": "Bypasses ME initialization timeout.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_650_g4_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_850_g5_delay",
+    "brand": "HP",
+    "model": "EliteBook 850 G5",
+    "board_code": "6050A2945601",
+    "title": "Display Output Delay",
+    "category": "Delay Fix",
+    "symptom": "EliteBook 850 G5 display output delayed by 30 seconds.",
+    "description": "Resets CSME fast boot timeout parameter.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_850_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pav_15dk_fan_fix",
+    "brand": "HP",
+    "model": "Pavilion Gaming 15-dk",
+    "board_code": "FPW50 LA-H461P",
+    "title": "Fan High Spin Fix",
+    "category": "Fan Error",
+    "symptom": "Dual cooling fans run at 100% continuously.",
+    "description": "Restores thermal sensor calibration in DSDT.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pav_15dk_fan_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_450_g6_fan_delay",
+    "brand": "HP",
+    "model": "ProBook 450 G6",
+    "board_code": "DA0X8JMB8D0",
+    "title": "Fan Spin No Display Delay",
+    "category": "Delay Fix",
+    "symptom": "Fan spins loudly for 25 seconds before display appears.",
+    "description": "Adjusts thermal init delay and ME handshake.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_450_g6_fan_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_440_g7_fastboot",
+    "brand": "HP",
+    "model": "ProBook 440 G7",
+    "board_code": "DA0X8TMB8F0",
+    "title": "Fast Boot Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Black screen for 30s before HP Sure Start screen.",
+    "description": "Synchronizes Sure Start fast boot tokens.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_440_g7_fastboot.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pav_15ec_keyboard",
+    "brand": "HP",
+    "model": "Pavilion Gaming 15-ec",
+    "board_code": "DA0G3HMB8D0",
+    "title": "Keyboard Freeze Delay",
+    "category": "General",
+    "symptom": "System freezes for 15 seconds during keyboard controller init.",
+    "description": "Fixes EC/KBC handshake timing parameters.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pav_15ec_keyboard.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_640_g5_handshake",
+    "brand": "HP",
+    "model": "ProBook 640 G5",
+    "board_code": "DA0G3DMB8D0",
+    "title": "ME Handshake Freeze Fix",
+    "category": "Error Fix",
+    "symptom": "System freezes for 20 seconds during ME communication.",
+    "description": "Resets ME host client handshake flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_640_g5_handshake.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_840_g4_delay",
+    "brand": "HP",
+    "model": "EliteBook 840 G4",
+    "board_code": "6050A2822301",
+    "title": "ME Telemetry Timeout Fix",
+    "category": "Delay Fix",
+    "symptom": "EliteBook 840 G4 30s delay on power on.",
+    "description": "Clears ME telemetry handshake errors.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_840_g4_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_440_g5_delay",
+    "brand": "HP",
+    "model": "ProBook 440 G5",
+    "board_code": "DA0X8BMB6F0",
+    "title": "ME Timeout Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Power LED lights, fan spins, display delayed by 30 seconds.",
+    "description": "Clears corrupted CSME telemetry in HP BIOS NVAR.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_440_g5_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pav_14ce_ram_disable",
+    "brand": "HP",
+    "model": "Pavilion 14-ce",
+    "board_code": "DAG3AAMB8D0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Caps lock blinking 3 slow 2 fast indicating RAM fault.",
+    "description": "Switches memory routing to external expansion slot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pav_14ce_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pav_15cs_ram_disable",
+    "brand": "HP",
+    "model": "Pavilion 15-cs",
+    "board_code": "DAG7BMB18A0",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM failure causes 3 long 2 short caps lock blinks.",
+    "description": "Disables Channel A onboard RAM and redirects to SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pav_15cs_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_440_g8_post_delay",
+    "brand": "HP",
+    "model": "ProBook 440 G8",
+    "board_code": "DA0X9TMB8D0",
+    "title": "POST Delay Reset",
+    "category": "Delay Fix",
+    "symptom": "HP 11th Gen Tiger Lake 25s display delay.",
+    "description": "Optimizes GOP display buffer init in UEFI NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_440_g8_post_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_omen_15dh_power_delay",
+    "brand": "HP",
+    "model": "Omen 15-dh",
+    "board_code": "DAG3EAMB8D0",
+    "title": "Power Delay Fix",
+    "category": "Power Fix",
+    "symptom": "Power button requires holding for 4 seconds before turning on.",
+    "description": "Restores EC power button signal response parameters.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_omen_15dh_power_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_840_g7_slow_boot",
+    "brand": "HP",
+    "model": "EliteBook 840 G7",
+    "board_code": "6050A3136201",
+    "title": "Slow Boot / POST Delay",
+    "category": "Delay Fix",
+    "symptom": "EliteBook 840 G7 25 seconds delay on startup.",
+    "description": "Initializes Comet Lake ME v14 quickboot state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_840_g7_slow_boot.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_omen_15dc_slow_post",
+    "brand": "HP",
+    "model": "Omen 15-dc",
+    "board_code": "DAG3DDMB8C0",
+    "title": "Slow POST / Black Screen Fix",
+    "category": "Delay Fix",
+    "symptom": "Omen 15-dc display appears after 30 seconds delay.",
+    "description": "Synchronizes Intel ME gaming profile descriptors.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_omen_15dc_slow_post.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_840_g3_slow_post",
+    "brand": "HP",
+    "model": "EliteBook 840 G3",
+    "board_code": "6050A2727301",
+    "title": "Slow POST Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "20 seconds delay before HP logo on EliteBook 840 G3.",
+    "description": "Resets Skylake ME v11 configuration partition.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_840_g3_slow_post.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_440_g6_slow_post",
+    "brand": "HP",
+    "model": "ProBook 440 G6",
+    "board_code": "DA0X8JMB8D0",
+    "title": "Slow POST Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow POST sequence on Whiskey Lake 8th Gen.",
+    "description": "Clears corrupted memory training records in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_440_g6_slow_post.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_eb_830_g6_surestart",
+    "brand": "HP",
+    "model": "EliteBook 830 G6",
+    "board_code": "6050A3022501",
+    "title": "Sure Start Loop Fix",
+    "category": "Error Fix",
+    "symptom": "HP Sure Start recovery loop on boot.",
+    "description": "Repairs corrupted HP Sure Start checksum in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_eb_830_g6_surestart.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "hp_pb_640_g4_surestart",
+    "brand": "HP",
+    "model": "ProBook 640 G4",
+    "board_code": "DAG35AMB8D0",
+    "title": "Sure Start Telemetry Error",
+    "category": "Error Fix",
+    "symptom": "Sure Start warns of firmware telemetry mismatch.",
+    "description": "Resets HP Sure Start security telemetry database.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/hp/hp_pb_640_g4_surestart.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_e14_g1_csme",
+    "brand": "LENOVO",
+    "model": "ThinkPad E14 Gen 1",
+    "board_code": "NM-C421",
+    "title": "CSME Handshake Error",
+    "category": "Error Fix",
+    "symptom": "CSME error message on ThinkPad E14 boot.",
+    "description": "Clears host firmware interface error flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_e14_g1_csme.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_t14_g1_csme_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad T14 Gen 1",
+    "board_code": "NM-C711",
+    "title": "CSME State Timeout Fix",
+    "category": "Error Fix",
+    "symptom": "CSME communication timeout causing 30s boot delay.",
+    "description": "Clears CSME v14 error flags and resets handshake timers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_t14_g1_csme_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x1c7_csme_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad X1 Carbon Gen 7",
+    "board_code": "NM-C121",
+    "title": "CSME Timeout Reset",
+    "category": "Error Fix",
+    "symptom": "CSME error and slow POST on X1 Carbon Gen 7.",
+    "description": "Restores CSME v12 healthy operational state.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x1c7_csme_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_t470_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad T470",
+    "board_code": "NM-A931",
+    "title": "Display Delay 20s Fix",
+    "category": "Delay Fix",
+    "symptom": "ThinkPad T470 takes 20 seconds to show Lenovo logo.",
+    "description": "Clears ME v11 boot timer delay in UEFI NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_t470_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_e14_g2_delay",
+    "brand": "LENOVO",
+    "model": "ThinkPad E14 Gen 2",
+    "board_code": "NM-D011",
+    "title": "Display Delay 25s Fix",
+    "category": "Delay Fix",
+    "symptom": "25 seconds black screen delay on E14 Gen 2.",
+    "description": "Synchronizes Tiger Lake GOP driver init.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_e14_g2_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_s340_delay_fix",
+    "brand": "LENOVO",
+    "model": "IdeaPad S340-15IWL",
+    "board_code": "NM-C101",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "30-second black screen on IdeaPad S340.",
+    "description": "Resets Whiskey Lake ME v12 fast boot flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_s340_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_t14_g2_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad T14 Gen 2",
+    "board_code": "NM-D471",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "ThinkPad T14 Gen 2 Tiger Lake 25-30s display delay.",
+    "description": "Synchronizes CSME v15 quickboot parameters.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_t14_g2_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_t490_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad T490",
+    "board_code": "NM-B901",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "ThinkPad T490 display delayed by 30 seconds on cold boot.",
+    "description": "Resets CSME v12 handshake configuration registers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_t490_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x1c8_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad X1 Carbon Gen 8",
+    "board_code": "NM-C871",
+    "title": "Display Delay 30s Fix",
+    "category": "Delay Fix",
+    "symptom": "X1 Carbon Gen 8 30 seconds display delay.",
+    "description": "Optimizes CSME v14 initialization flags.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x1c8_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_330s_delay_fix",
+    "brand": "LENOVO",
+    "model": "IdeaPad 330S-15IKB",
+    "board_code": "NM-B561",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "IdeaPad 330S takes 25 seconds to show display.",
+    "description": "Resets ME timeout parameters in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_330s_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_5_14itl_delay",
+    "brand": "LENOVO",
+    "model": "IdeaPad 5-14ITL05",
+    "board_code": "NM-D211",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "IdeaPad 5 takes 30 seconds to show Lenovo logo.",
+    "description": "Clears CSME v15 telemetry timeout registers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_5_14itl_delay.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_legion_5_delay_fix",
+    "brand": "LENOVO",
+    "model": "Legion 5-15IMH05",
+    "board_code": "NM-C911",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "Legion 5 25s display delay after power on.",
+    "description": "Optimizes Intel CSME v14 gaming profile descriptors.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_legion_5_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_l490_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad L490",
+    "board_code": "NM-C051",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "ThinkPad L490 25s delay on boot.",
+    "description": "Clears ME configuration timeout parameter.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_l490_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x1c6_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad X1 Carbon Gen 6",
+    "board_code": "NM-B481",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "X1 Carbon Gen 6 takes 30 seconds to show display.",
+    "description": "Resets Intel 8th Gen ME timeout registers.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x1c6_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x270_delay_fix",
+    "brand": "LENOVO",
+    "model": "ThinkPad X270",
+    "board_code": "NM-B061",
+    "title": "Display Delay Fix",
+    "category": "Delay Fix",
+    "symptom": "20 seconds delay before display appears on X270.",
+    "description": "Clears corrupted CSME telemetry in flash descriptor.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x270_delay_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_e480_fan_spin",
+    "brand": "LENOVO",
+    "model": "ThinkPad E480",
+    "board_code": "NM-B421",
+    "title": "Fan Spin No Display Fix",
+    "category": "Power Fix",
+    "symptom": "Fan spins at full speed but no display output.",
+    "description": "Restores clean EC/PCH handshake in UEFI image.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_e480_fan_spin.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x390_fastboot",
+    "brand": "LENOVO",
+    "model": "ThinkPad X390",
+    "board_code": "NM-B891",
+    "title": "Fast Boot Freeze Fix",
+    "category": "Delay Fix",
+    "symptom": "Intermittent freeze on red Lenovo logo during fast boot.",
+    "description": "Fixes NVRAM storage fragmentation and clears MRC cache.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x390_fastboot.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_game_3_kb_lag",
+    "brand": "LENOVO",
+    "model": "IdeaPad Gaming 3-15IMH05",
+    "board_code": "NM-C871",
+    "title": "Keyboard Lag Fix",
+    "category": "General",
+    "symptom": "Keyboard input lags on BIOS setup and Windows startup.",
+    "description": "Updates EC keyboard controller buffer parameters.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_game_3_kb_lag.py",
+    "last_modified": "2026-11-05 09:05:23"
   },
   {
     "id": "lenovo_t480_ram_disable",
@@ -51,7 +2673,273 @@
       16
     ],
     "script_file": "patches/lenovo/lenovo_t480_ram_disable.py",
-    "last_modified": "2026-11-04 23:54:22"
+    "last_modified": "2026-11-05 05:43:07"
+  },
+  {
+    "id": "len_ip_320_ram_disable",
+    "brand": "LENOVO",
+    "model": "IdeaPad 320-15IKB",
+    "board_code": "NM-B242",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered DDR4 RAM causes black screen or freezing.",
+    "description": "Disables onboard RAM in BIOS SPD mapping, enables SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_320_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_330_ram_disable",
+    "brand": "LENOVO",
+    "model": "IdeaPad 330-15IKB",
+    "board_code": "NM-B452",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Failed onboard memory on IdeaPad 330.",
+    "description": "Bypasses Channel A onboard memory ICs entirely.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_330_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_3_14itl_ram",
+    "brand": "LENOVO",
+    "model": "IdeaPad 3-14ITL05",
+    "board_code": "NM-D151",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard memory error on 11th Gen IdeaPad 3.",
+    "description": "Forces memory controller to external slot only.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_3_14itl_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_3_15itl_ram",
+    "brand": "LENOVO",
+    "model": "IdeaPad 3-15ITL05",
+    "board_code": "NM-D152",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM failure causes blue screens and freezes.",
+    "description": "Disables soldered RAM bank in BIOS configuration.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_3_15itl_ram.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_s145_ram_disable",
+    "brand": "LENOVO",
+    "model": "IdeaPad S145-15IWL",
+    "board_code": "NM-C121",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard RAM chips bad, no display on boot.",
+    "description": "Switches memory configuration to external SODIMM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_s145_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_e490_ram_disable",
+    "brand": "LENOVO",
+    "model": "ThinkPad E490",
+    "board_code": "NM-B911",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Defective onboard memory causes restarts.",
+    "description": "Disables soldered memory Channel 0.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_e490_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_t460_ram_disable",
+    "brand": "LENOVO",
+    "model": "ThinkPad T460",
+    "board_code": "NM-A581",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard soldered RAM causes black screen or RAM beep code.",
+    "description": "Disables Channel 0 onboard memory in SPD mapping tables.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_t460_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_t480_ram_disable",
+    "brand": "LENOVO",
+    "model": "ThinkPad T480",
+    "board_code": "NM-B501",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard RAM failure with 5 beeps or black screen on T480.",
+    "description": "Reroutes memory controller addressing to SODIMM only.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_t480_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x280_ram_disable",
+    "brand": "LENOVO",
+    "model": "ThinkPad X280",
+    "board_code": "NM-B521",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "ThinkPad X280 soldered LPDDR4 memory error.",
+    "description": "Reconfigures memory controller to bypass damaged banks.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x280_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_v130_ram_disable",
+    "brand": "LENOVO",
+    "model": "V130-15IKB",
+    "board_code": "NM-B671",
+    "title": "Onboard RAM Disable",
+    "category": "RAM Disable",
+    "symptom": "Onboard RAM causes reboot loop or no display.",
+    "description": "Disables soldered RAM bank and enables external slot.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_v130_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_legion_y530_power",
+    "brand": "LENOVO",
+    "model": "Legion Y530",
+    "board_code": "NM-B701",
+    "title": "Power Throttling / ME Reset",
+    "category": "Power Fix",
+    "symptom": "CPU throttles to 800MHz due to corrupted ME power limits.",
+    "description": "Clears ME power limit register and restores normal clocks.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_legion_y530_power.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_x260_ram_disable",
+    "brand": "LENOVO",
+    "model": "ThinkPad X260",
+    "board_code": "NM-A531",
+    "title": "RAM Disable Patch",
+    "category": "RAM Disable",
+    "symptom": "Soldered RAM failure on ThinkPad X260 motherboard.",
+    "description": "Disables internal memory bank in BIOS DMI memory map.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_x260_ram_disable.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_ip_5_15itl_post",
+    "brand": "LENOVO",
+    "model": "IdeaPad 5-15ITL05",
+    "board_code": "NM-D212",
+    "title": "Slow POST Fix",
+    "category": "Delay Fix",
+    "symptom": "Slow POST sequence on IdeaPad 5 15-inch.",
+    "description": "Clears corrupted memory training records in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_ip_5_15itl_post.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "len_tp_l480_pass_clean",
+    "brand": "LENOVO",
+    "model": "ThinkPad L480",
+    "board_code": "NM-B461",
+    "title": "Supervisor Password Clean",
+    "category": "Security",
+    "symptom": "Supervisor password locked on ThinkPad L480.",
+    "description": "Resets security credentials and clears SVP flag in NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/lenovo/len_tp_l480_pass_clean.py",
+    "last_modified": "2026-11-05 09:05:23"
   },
   {
     "id": "me_manufacturing_mode_clear",
@@ -59,8 +2947,8 @@
     "model": "All Intel Core 4th to 14th Gen",
     "board_code": "Universal",
     "title": "Manufacturing Mode 0x33 Warning Clear",
-    "category": "Error Fix",
-    "symptom": "Shows 'Manufacturing Mode Active' or Error 0x33 during POST, requiring F1 to continue",
+    "category": "General",
+    "symptom": "Sets the ME Manufacturing Mode flag to closed/disabled in Flash Partition Table and NVAR settings to suppress the 0x33 warning.",
     "description": "Sets the ME Manufacturing Mode flag to closed/disabled in Flash Partition Table and NVAR settings to suppress the 0x33 warning.",
     "version": "1.0.0",
     "author": "R1 LAB",
@@ -71,6 +2959,120 @@
       32
     ],
     "script_file": "patches/universal/me_manufacturing_mode_clear.py",
-    "last_modified": "2026-11-04 23:54:46"
+    "last_modified": "2026-11-05 08:16:26"
+  },
+  {
+    "id": "uni_csme_endpoint_fix",
+    "brand": "UNIVERSAL",
+    "model": "All Intel Core 6th to 14th Gen",
+    "board_code": "Universal Intel PCH",
+    "title": "Universal CSME EndPoint Error Fix",
+    "category": "Error Fix",
+    "symptom": "CSME EndPoint error occurred or fails to pass CSME initial handshake on POST.",
+    "description": "Resets CSME EndPoint error flag in the descriptor/ME region and restores clean host firmware communication.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/uni_csme_endpoint_fix.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "uni_csme_v12_v16_reset",
+    "brand": "UNIVERSAL",
+    "model": "Intel Coffee Lake to Raptor Lake",
+    "board_code": "Universal Intel 300/400/500/600/700 Series",
+    "title": "Universal CSME v12 to v16 State Reset",
+    "category": "Error Fix",
+    "symptom": "Corrupted CSME state causes long boot delay or failed Intel AMT / PTT initialization.",
+    "description": "Resets CSME operational state flags across Intel CSME versions 12, 13, 14, 15, and 16.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/uni_csme_v12_v16_reset.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "uni_fastboot_timeout_clear",
+    "brand": "UNIVERSAL",
+    "model": "All Intel UEFI Desktop & Laptop",
+    "board_code": "Universal Fast Boot",
+    "title": "Universal Fast Boot Timeout Delay Clear",
+    "category": "Delay Fix",
+    "symptom": "System pauses 20 to 45 seconds on black screen before initializing display.",
+    "description": "Eliminates ME/BIOS handshake wait loops and resets Fast Boot timeout registers to immediate 0ms.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/uni_fastboot_timeout_clear.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "uni_fd_unlock_all",
+    "brand": "UNIVERSAL",
+    "model": "All Intel UEFI Motherboards",
+    "board_code": "Universal SPI Flash",
+    "title": "Universal Flash Descriptor Override",
+    "category": "Security",
+    "symptom": "Flash Descriptor is locked; cannot read or write BIOS/ME regions with software.",
+    "description": "Overrides master read/write access permissions in Flash Descriptor to 0xFFFFFFFF for full SPI unlock.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/uni_fd_unlock_all.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "uni_me_mfg_clear",
+    "brand": "UNIVERSAL",
+    "model": "All Intel Core 4th to 14th Gen",
+    "board_code": "Universal Intel ME",
+    "title": "Universal ME Manufacturing Mode Clear",
+    "category": "General",
+    "symptom": "System warns: Manufacturing Mode 0x33 or ME in Manufacturing Mode on boot.",
+    "description": "Clears the Manufacturing Mode flag in the Intel Flash Descriptor to normal production mode.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/uni_me_mfg_clear.py",
+    "last_modified": "2026-11-05 09:05:23"
+  },
+  {
+    "id": "uni_tpm_ptt_clean",
+    "brand": "UNIVERSAL",
+    "model": "All Intel TPM 2.0 / PTT Motherboards",
+    "board_code": "Universal PTT",
+    "title": "Universal TPM & Intel PTT Security Flag Clean",
+    "category": "Security",
+    "symptom": "TPM device malfunction or BitLocker PCR measurement mismatch on startup.",
+    "description": "Clears Intel Platform Trust Technology (PTT) state cache in UEFI NVRAM.",
+    "version": "1.0.0",
+    "author": "R1 LAB",
+    "target_size_mb": [
+      8,
+      16,
+      32
+    ],
+    "script_file": "patches/universal/uni_tpm_ptt_clean.py",
+    "last_modified": "2026-11-05 09:05:23"
   }
 ]

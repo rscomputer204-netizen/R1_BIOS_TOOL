@@ -128,16 +128,42 @@ class AutoPatchEngine:
 
         return "UNKNOWN", ""
 
-    def get_filtered_patches(self, brand: str = None, search_query: str = None) -> list:
+    def get_patch_dest_path(self, patch_info: dict) -> str:
+        """Returns the local client cache path for the given patch script."""
+        script_rel = patch_info.get("script_file", "")
+        return os.path.join(CACHE_DIR, script_rel.replace("/", os.sep))
+
+    def is_patch_downloaded(self, patch_info: dict) -> bool:
+        """Returns True if the patch script is already downloaded locally."""
+        dest = self.get_patch_dest_path(patch_info)
+        return os.path.exists(dest) and os.path.getsize(dest) > 0
+
+    def get_patch_download_url(self, patch_info: dict) -> str:
+        """Returns the public raw GitHub download URL for the patch script."""
+        script_rel = patch_info.get("script_file", "").lstrip("/")
+        return REMOTE_RAW_BASE + script_rel
+
+    def get_downloaded_count(self) -> int:
+        """Returns the total number of downloaded patches in local cache."""
+        return sum(1 for p in self.patches if self.is_patch_downloaded(p))
+
+    def get_filtered_patches(self, brand: str = None, search_query: str = None, filter_mode: str = "ALL") -> list:
         """
-        Returns patches filtered by brand and/or search query.
-        Universal patches are included for all brands.
+        Returns patches filtered by brand, search query, and download status.
+        filter_mode can be 'ALL', 'DOWNLOADED_ONLY', or 'CLOUD_ONLY'.
         """
         results = []
         brand = (brand or "").strip().upper()
         query = (search_query or "").strip().lower()
 
         for p in self.patches:
+            # Check download status filter
+            is_dl = self.is_patch_downloaded(p)
+            if filter_mode == "DOWNLOADED_ONLY" and not is_dl:
+                continue
+            elif filter_mode == "CLOUD_ONLY" and is_dl:
+                continue
+
             p_brand = p.get("brand", "").upper()
             
             # Brand filter: include exact match or UNIVERSAL
@@ -156,26 +182,28 @@ class AutoPatchEngine:
         return results
 
     def _load_script_module(self, patch_info: dict):
-        """Dynamically imports the patch script module."""
+        """Dynamically imports the patch script module, downloading if needed."""
         script_rel = patch_info.get("script_file")
         if not script_rel:
             raise FileNotFoundError("Patch metadata does not specify script_file.")
 
-        # Try local workspace path
-        script_path = os.path.join(LOCAL_SCRIPTS_DIR, script_rel.replace("/", os.sep))
-        
-        # If not present, try cache
-        if not os.path.exists(script_path):
-            script_path = os.path.join(CACHE_DIR, script_rel.replace("/", os.sep))
+        # 1. Check local cache (downloaded patches)
+        script_path = self.get_patch_dest_path(patch_info)
 
-        # If still missing, try downloading from GitHub
-        if not os.path.exists(script_path):
+        # 2. If not in cache, download from GitHub or fallback to dev workspace
+        if not (os.path.exists(script_path) and os.path.getsize(script_path) > 0):
             os.makedirs(os.path.dirname(script_path), exist_ok=True)
-            url = REMOTE_RAW_BASE + script_rel
+            url = self.get_patch_download_url(patch_info)
             try:
-                urllib.request.urlretrieve(url, script_path)
+                req = urllib.request.Request(url, headers={"User-Agent": "R1-BIOS-TOOL"})
+                with urllib.request.urlopen(req, timeout=10) as resp, open(script_path, "wb") as f:
+                    f.write(resp.read())
             except Exception as e:
-                raise FileNotFoundError(f"Failed to fetch script from cloud: {e}")
+                dev_path = os.path.join(LOCAL_SCRIPTS_DIR, script_rel.replace("/", os.sep))
+                if os.path.exists(dev_path):
+                    script_path = dev_path
+                else:
+                    raise FileNotFoundError(f"Failed to fetch script from cloud: {e}")
 
         module_name = f"autopatch_{patch_info.get('id', 'module')}"
         spec = importlib.util.spec_from_file_location(module_name, script_path)

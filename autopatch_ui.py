@@ -14,10 +14,57 @@ from PySide6.QtWidgets import (
     QListWidget, QListWidgetItem, QFrame, QFileDialog,
     QCheckBox, QMessageBox, QWidget, QComboBox
 )
-from PySide6.QtCore import Qt, Signal, QSize
+from PySide6.QtCore import Qt, Signal, QSize, QThread
 from PySide6.QtGui import QColor, QFont, QCursor, QDragEnterEvent, QDropEvent
 
 from autopatch_engine import AutoPatchEngine
+
+
+class PatchDownloadWorker(QThread):
+    """Asynchronously downloads a patch script from GitHub with live progress updates."""
+    progress_signal = Signal(str, int)       # (patch_id, percent 0-100)
+    finished_signal = Signal(str, bool, str) # (patch_id, success, message)
+
+    def __init__(self, patch_info: dict, url: str, dest_path: str):
+        super().__init__()
+        self.patch_info = patch_info
+        self.url = url
+        self.dest_path = dest_path
+
+    def run(self):
+        import urllib.request
+        import time
+        pid = self.patch_info.get("id", "patch")
+        try:
+            req = urllib.request.Request(self.url, headers={"User-Agent": "R1-BIOS-TOOL"})
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                total_str = resp.headers.get("content-length")
+                total = int(total_str) if total_str else 0
+                os.makedirs(os.path.dirname(self.dest_path), exist_ok=True)
+                downloaded = 0
+                chunks = []
+                while True:
+                    chunk = resp.read(512)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                    downloaded += len(chunk)
+                    if total > 0:
+                        pct = min(99, int((downloaded / total) * 100))
+                    else:
+                        pct = min(95, downloaded // 30)
+                    self.progress_signal.emit(pid, pct)
+                    time.sleep(0.02)  # Smooth visible percentage progression
+
+                with open(self.dest_path, "wb") as f:
+                    for c in chunks:
+                        f.write(c)
+
+            self.progress_signal.emit(pid, 100)
+            time.sleep(0.04)
+            self.finished_signal.emit(pid, True, "Download completed")
+        except Exception as e:
+            self.finished_signal.emit(pid, False, str(e))
 
 
 CYBER_STYLE = """
@@ -185,8 +232,8 @@ class AutoPatchDialog(QDialog):
     def __init__(self, parent=None, initial_file=None, dmi_hint=None):
         super().__init__(parent)
         self.setWindowTitle("AutoPatch — Smart BIOS Firmware Fixer")
-        self.resize(1060, 680)
-        self.setMinimumSize(940, 600)
+        self.resize(1080, 680)
+        self.setMinimumSize(960, 600)
         self.setStyleSheet(CYBER_STYLE)
 
         self.engine = AutoPatchEngine()
@@ -195,6 +242,8 @@ class AutoPatchDialog(QDialog):
         self.detected_brand = "UNKNOWN"
         self.detected_model = ""
         self.selected_patch = None
+        self.active_downloads = {}  # patch_id -> PatchDownloadWorker
+        self.patch_badges = {}      # patch_id -> QLabel
 
         self.setup_ui()
         self.initialize_state()
@@ -226,7 +275,6 @@ class AutoPatchDialog(QDialog):
         root_layout.addLayout(top_row)
 
         # ── 2. Top Info Banner: 2 Lines for Selected Patch Information ─────
-        # (This replaces the old drop bar, as requested by the user!)
         self.banner_frame = QFrame()
         self.banner_frame.setObjectName("TopBannerFrame")
         banner_layout = QHBoxLayout(self.banner_frame)
@@ -249,7 +297,7 @@ class AutoPatchDialog(QDialog):
 
         banner_layout.addLayout(patch_info_vbox, stretch=4)
 
-        # Right side of banner: Target detected badge & discreet filter
+        # Right side of banner: Target detected badge & Cloud database badge
         right_meta_layout = QHBoxLayout()
         right_meta_layout.setSpacing(8)
 
@@ -259,52 +307,70 @@ class AutoPatchDialog(QDialog):
         )
         right_meta_layout.addWidget(self.lbl_brand_badge)
 
+        self.lbl_cloud_badge = QLabel(f"🟢 {len(self.engine.patches)} Cloud Patches")
+        self.lbl_cloud_badge.setStyleSheet(
+            "font-size: 11px; font-weight: bold; color: #22c55e; background: #0c2018; padding: 5px 10px; border-radius: 4px; border: 1px solid #16a34a;"
+        )
+        right_meta_layout.addWidget(self.lbl_cloud_badge)
+
+        banner_layout.addLayout(right_meta_layout)
+        root_layout.addWidget(self.banner_frame)
+
+        # ── 3. Main Center Split (Left: Locked 390px, Right: Big Drop Zone) ─
+        main_h_layout = QHBoxLayout()
+        main_h_layout.setSpacing(14)
+
+        # ── LEFT PANEL: Fixed & Locked Width ──────────────────────────────
+        left_card = QFrame()
+        left_card.setObjectName("Card")
+        left_card.setFixedWidth(390)
+        left_layout = QVBoxLayout(left_card)
+        left_layout.setContentsMargins(10, 10, 10, 10)
+        left_layout.setSpacing(6)
+
+        # 1. Search Bar
+        search_row = QHBoxLayout()
+        self.txt_search = QLineEdit()
+        self.txt_search.setPlaceholderText("🔍 Search issue, model, or board code...")
+        self.txt_search.textChanged.connect(self.refresh_patch_list)
+        search_row.addWidget(self.txt_search)
+        left_layout.addLayout(search_row)
+
+        # 2. Filter Selector Row (Brand + Download status)
+        filter_row = QHBoxLayout()
+        filter_row.setSpacing(6)
+
+        lbl_f = QLabel("FILTER:")
+        lbl_f.setStyleSheet("font-size: 10px; font-weight: bold; color: #00adb5;")
+        filter_row.addWidget(lbl_f)
+
         self.cmb_filter = QComboBox()
         self.cmb_filter.addItems([
-            "Auto (Detected)",
-            "All Brands",
+            "All Patches",
+            "⚡ Downloaded Only",
+            "☁️ Cloud Only",
             "Dell",
-            "Lenovo",
             "HP",
+            "Lenovo",
             "Asus",
             "Acer",
             "Apple",
             "Universal"
         ])
         self.cmb_filter.currentIndexChanged.connect(self.refresh_patch_list)
-        right_meta_layout.addWidget(self.cmb_filter)
-
-        banner_layout.addLayout(right_meta_layout)
-        root_layout.addWidget(self.banner_frame)
-
-        # ── 3. Main Center Split (Left: Locked 380px, Right: Big Drop Zone) ─
-        main_h_layout = QHBoxLayout()
-        main_h_layout.setSpacing(14)
-
-        # ── LEFT PANEL: Fixed & Locked Width (Cannot be resized) ───────────
-        left_card = QFrame()
-        left_card.setObjectName("Card")
-        left_card.setFixedWidth(380)  # <-- LOCKED SIZE AS REQUESTED
-        left_layout = QVBoxLayout(left_card)
-        left_layout.setContentsMargins(10, 10, 10, 10)
-        left_layout.setSpacing(6)
-
-        # Search Bar & Count
-        search_row = QHBoxLayout()
-        self.txt_search = QLineEdit()
-        self.txt_search.setPlaceholderText("🔍 Search issue, model, or board code...")
-        self.txt_search.textChanged.connect(self.refresh_patch_list)
-        search_row.addWidget(self.txt_search)
+        filter_row.addWidget(self.cmb_filter, 1)
 
         self.lbl_count = QLabel("0 available")
-        self.lbl_count.setStyleSheet("font-size: 10px; color: #64748b;")
-        search_row.addWidget(self.lbl_count)
-        left_layout.addLayout(search_row)
+        self.lbl_count.setStyleSheet("font-size: 10px; font-weight: bold; color: #38bdf8;")
+        filter_row.addWidget(self.lbl_count)
 
-        # Patch List
+        left_layout.addLayout(filter_row)
+
+        # Patch List with Double-click download trigger
         self.list_patches = QListWidget()
         self.list_patches.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.list_patches.itemSelectionChanged.connect(self.on_patch_selected)
+        self.list_patches.itemDoubleClicked.connect(self.on_patch_double_clicked)
         left_layout.addWidget(self.list_patches)
 
         main_h_layout.addWidget(left_card)
@@ -443,57 +509,105 @@ class AutoPatchDialog(QDialog):
             self.lbl_loaded_meta.setText(f"Size: {file_size_mb:.2f} MB  •  Platform: Unknown")
             self.lbl_status.setText("Brand could not be determined automatically. Showing all patches.")
 
-        # Refresh patches with Auto filter
-        self.cmb_filter.setCurrentIndex(0)
+        # Select detected brand in cmb_filter if found
+        if brand and brand != "UNKNOWN":
+            for i in range(self.cmb_filter.count()):
+                if self.cmb_filter.itemText(i).upper() == brand.upper():
+                    self.cmb_filter.setCurrentIndex(i)
+                    break
+        else:
+            self.cmb_filter.setCurrentIndex(0)
+
         self.refresh_patch_list()
         self.update_verification_and_button_state()
 
-    def get_selected_brand_filter(self) -> str:
-        idx = self.cmb_filter.currentIndex()
-        if idx == 0:  # Auto (Detected)
-            return self.detected_brand if self.detected_brand != "UNKNOWN" else "ALL"
-        elif idx == 1:  # All Brands
-            return "ALL"
-        else:
-            return self.cmb_filter.currentText().strip().upper()
-
     def refresh_patch_list(self):
-        active_brand = self.get_selected_brand_filter()
+        filter_text = self.cmb_filter.currentText().strip()
         query = self.txt_search.text().strip()
 
-        patches = self.engine.get_filtered_patches(brand=active_brand, search_query=query)
+        brand = "ALL"
+        filter_mode = "ALL"
+
+        if "Downloaded" in filter_text:
+            filter_mode = "DOWNLOADED_ONLY"
+        elif "Cloud" in filter_text:
+            filter_mode = "CLOUD_ONLY"
+        elif filter_text in ("All Patches", "All Brands", "ALL"):
+            brand = "ALL"
+        else:
+            brand = filter_text.upper()
+
+        patches = self.engine.get_filtered_patches(brand=brand, search_query=query, filter_mode=filter_mode)
         self.list_patches.clear()
-        self.lbl_count.setText(f"{len(patches)} available")
+        self.patch_badges.clear()
+
+        # Update counter
+        dl_count = self.engine.get_downloaded_count()
+        if filter_mode == "DOWNLOADED_ONLY":
+            self.lbl_count.setText(f"{len(patches)} downloaded")
+        else:
+            self.lbl_count.setText(f"{len(patches)} found ({dl_count} ready)")
 
         for p in patches:
             item = QListWidgetItem()
-            item.setSizeHint(QSize(350, 62))
+            item.setSizeHint(QSize(360, 64))
             item.setData(Qt.ItemDataRole.UserRole, p)
 
             # Compact custom widget
             w = QWidget()
-            layout = QVBoxLayout(w)
-            layout.setContentsMargins(4, 3, 4, 3)
-            layout.setSpacing(2)
+            layout = QHBoxLayout(w)
+            layout.setContentsMargins(8, 4, 8, 4)
+            layout.setSpacing(8)
 
-            top_row = QHBoxLayout()
+            # Left column: Title on top, Model & Symptom below
+            left_vbox = QVBoxLayout()
+            left_vbox.setSpacing(2)
+            left_vbox.setContentsMargins(0, 0, 0, 0)
+
             title_lbl = QLabel(p.get("title", "Untitled"))
             title_lbl.setStyleSheet("font-weight: bold; font-size: 12px; color: #ffffff;")
-            top_row.addWidget(title_lbl)
-            top_row.addStretch()
+            left_vbox.addWidget(title_lbl)
 
-            brand_tag = QLabel(p.get("brand", "ALL"))
-            brand_tag.setStyleSheet("font-size: 9px; font-weight: bold; background: #132030; color: #38bdf8; padding: 2px 6px; border-radius: 3px;")
-            top_row.addWidget(brand_tag)
-            layout.addLayout(top_row)
-
-            # Sub line: Model & Symptom preview
             sub_text = f"{p.get('model', 'Universal')}  •  {p.get('symptom', '')}"
-            if len(sub_text) > 52:
-                sub_text = sub_text[:49] + "..."
+            if len(sub_text) > 44:
+                sub_text = sub_text[:42] + "..."
             sub_lbl = QLabel(sub_text)
             sub_lbl.setStyleSheet("font-size: 10px; color: #94a3b8;")
-            layout.addWidget(sub_lbl)
+            left_vbox.addWidget(sub_lbl)
+            layout.addLayout(left_vbox, 1)
+
+            # Right column: Brand Tag on top, Status Badge on bottom (matches user's green drawings!)
+            right_vbox = QVBoxLayout()
+            right_vbox.setSpacing(3)
+            right_vbox.setContentsMargins(0, 0, 0, 0)
+            right_vbox.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
+
+            brand_tag = QLabel(p.get("brand", "ALL"))
+            brand_tag.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            brand_tag.setStyleSheet("font-size: 9px; font-weight: bold; background: #132030; color: #38bdf8; padding: 2px 7px; border-radius: 3px;")
+            right_vbox.addWidget(brand_tag)
+
+            # Status badge (Green if downloaded, Cloud if not, % if downloading)
+            pid = p.get("id", "")
+            is_dl = self.engine.is_patch_downloaded(p)
+            badge_lbl = QLabel()
+            badge_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.patch_badges[pid] = badge_lbl
+
+            if pid in self.active_downloads:
+                badge_lbl.setText("⏳ DL...")
+                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #422006; color: #fbbf24; border: 1px solid #f59e0b; padding: 2px 7px; border-radius: 4px;")
+            elif is_dl:
+                badge_lbl.setText("✓ READY")
+                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 2px 7px; border-radius: 4px;")
+                badge_lbl.setToolTip("Patch is downloaded locally and ready for execution.")
+            else:
+                badge_lbl.setText("☁️ Get")
+                badge_lbl.setStyleSheet("font-size: 9px; font-weight: bold; background: #0b1119; color: #64748b; border: 1px solid #1e293b; padding: 2px 7px; border-radius: 4px;")
+                badge_lbl.setToolTip("Double-click to download this patch from GitHub cloud.")
+
+            right_vbox.addWidget(badge_lbl)
+            layout.addLayout(right_vbox)
 
             self.list_patches.addItem(item)
             self.list_patches.setItemWidget(item, w)
@@ -503,8 +617,67 @@ class AutoPatchDialog(QDialog):
         else:
             self.selected_patch = None
             self.lbl_top_title.setText("No patches available for this filter")
-            self.lbl_top_desc.setText("Select 'All Brands' in the dropdown above to view all patches.")
+            self.lbl_top_desc.setText("Change the FILTER dropdown above to view other patches.")
             self.update_verification_and_button_state()
+
+    def on_patch_double_clicked(self, item: QListWidgetItem):
+        """Triggered when user double clicks any patch item in the list."""
+        p = item.data(Qt.ItemDataRole.UserRole)
+        if not p:
+            return
+        pid = p.get("id", "")
+        if self.engine.is_patch_downloaded(p):
+            self.lbl_status.setText(f"✓ '{p.get('title')}' is already downloaded and ready to execute!")
+            return
+
+        if pid in self.active_downloads:
+            self.lbl_status.setText(f"Patch '{p.get('title')}' is already downloading...")
+            return
+
+        self.start_patch_download(p)
+
+    def start_patch_download(self, p: dict):
+        pid = p.get("id", "")
+        url = self.engine.get_patch_download_url(p)
+        dest = self.engine.get_patch_dest_path(p)
+
+        badge = self.patch_badges.get(pid)
+        if badge:
+            badge.setText("⏳ 0%")
+            badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #422006; color: #fbbf24; border: 1px solid #f59e0b; padding: 2px 7px; border-radius: 4px;")
+
+        self.lbl_status.setText(f"Downloading '{p.get('title')}' from GitHub...")
+
+        worker = PatchDownloadWorker(p, url, dest)
+        worker.progress_signal.connect(self.on_download_progress)
+        worker.finished_signal.connect(self.on_download_finished)
+        self.active_downloads[pid] = worker
+        worker.start()
+
+    def on_download_progress(self, pid: str, percent: int):
+        badge = self.patch_badges.get(pid)
+        if badge:
+            badge.setText(f"⏳ {percent}%")
+
+    def on_download_finished(self, pid: str, success: bool, msg: str):
+        if pid in self.active_downloads:
+            del self.active_downloads[pid]
+
+        badge = self.patch_badges.get(pid)
+        if success:
+            if badge:
+                badge.setText("✓ READY")
+                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #064e3b; color: #34d399; border: 1px solid #10b981; padding: 2px 7px; border-radius: 4px;")
+                badge.setToolTip("Patch downloaded locally and ready to execute.")
+            self.lbl_status.setText("✓ Patch downloaded successfully! Ready to execute.")
+            dl_count = self.engine.get_downloaded_count()
+            self.lbl_count.setText(f"{len(self.engine.patches)} found ({dl_count} ready)")
+            self.update_verification_and_button_state()
+        else:
+            if badge:
+                badge.setText("⚠️ Failed")
+                badge.setStyleSheet("font-size: 9px; font-weight: bold; background: #450a0a; color: #f87171; border: 1px solid #ef4444; padding: 2px 7px; border-radius: 4px;")
+            self.lbl_status.setText(f"Download failed: {msg}")
 
     def on_patch_selected(self):
         items = self.list_patches.selectedItems()
