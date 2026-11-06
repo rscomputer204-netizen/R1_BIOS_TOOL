@@ -127,6 +127,7 @@ class R1CSMEAnalyzer:
             "date": "Unknown",
             "size_hex": "0x0",
             "fs_stage": "Unconfigured",
+            "fs_state": "Unconfigured",
             "fitc_ver": "N/A",
             "full_tag": "Unknown",
             "is_valid_me": False,
@@ -379,15 +380,25 @@ class R1CSMEAnalyzer:
             return
 
         has_oem_config = False
-        has_dirty_mfs = False
-        fitc_found = False
+        fitc_part_found = False
+        oemp_part_found = False
+        cdmd_part_found = False
+        mfsb_part_found = False
+        mfs_buf = None
 
         primary_fpt = found_fpts[0]
+        # In Intel SPI image, partition offsets in FPT are relative to ME base
+        if self.info["me_fd_start"] > 0 and primary_fpt == self.info["me_fd_start"] + 0x10:
+            fpt_base = self.info["me_fd_start"]
+        elif primary_fpt == 0x10 or (primary_fpt >= 0x10 and data[primary_fpt - 0x10 : primary_fpt] == b"\x00" * 16):
+            fpt_base = primary_fpt - 0x10
+        else:
+            fpt_base = primary_fpt
+
         if primary_fpt + 32 <= len(data):
             fit_maj, fit_min, fit_hot, fit_bld = struct.unpack("<HHHH", data[primary_fpt+0x18 : primary_fpt+0x20])
             if fit_maj > 0 and fit_maj != 0xFFFF:
                 self.info["fitc_ver"] = f"{fit_maj}.{fit_min}.{fit_hot}.{fit_bld}"
-                fitc_found = True
 
             # Extract partitions from primary FPT
             num_entries = struct.unpack("<I", data[primary_fpt+4 : primary_fpt+8])[0]
@@ -408,15 +419,23 @@ class R1CSMEAnalyzer:
                             "end": f"0x{poff+psize:06X}"
                         })
 
-                    if pname in ["FITC", "IVBP", "OEMP", "CDMD", "PSVN", "UTOK"]:
+                    abs_p = fpt_base + poff
+                    p_valid = (psize > 0 and abs_p + psize <= len(data) and data[abs_p : abs_p + min(psize, 64)] != b"\xFF" * min(psize, 64))
+
+                    if pname == "FITC" and p_valid:
+                        fitc_part_found = True
+                    elif pname == "OEMP" and p_valid:
+                        oemp_part_found = True
+                    elif pname == "CDMD" and p_valid:
+                        cdmd_part_found = True
+                    elif pname == "MFSB" and p_valid:
+                        mfsb_part_found = True
+                    elif pname in ["UTOK", "STKN"] and p_valid:
                         has_oem_config = True
 
-                    if pname in ["MFS", "FLOG", "ELOG", "EFS"]:
-                        abs_p = primary_fpt + poff
-                        if abs_p + 512 <= len(data):
-                            chunk = data[abs_p : abs_p + 512]
-                            if chunk != b"\xFF" * len(chunk):
-                                has_dirty_mfs = True
+                    if pname in ["MFS", "MFSB"]:
+                        if abs_p + psize <= len(data):
+                            mfs_buf = data[abs_p : abs_p + psize]
 
         # Calculate exact 4KB-aligned payload size of ME Region
         me_start = self.info["me_fd_start"]
@@ -433,13 +452,155 @@ class R1CSMEAnalyzer:
         else:
             self.info["size_hex"] = f"0x{self.file_size:X}"
 
+        fs_state, mfs_has_oem_file = self._determine_mfs_state(
+            mfs_buf,
+            has_oem_config=(has_oem_config or oemp_part_found or fitc_part_found or cdmd_part_found or mfsb_part_found)
+        )
+
+        if mfs_has_oem_file or oemp_part_found or fitc_part_found:
+            has_oem_config = True
+
         self.info["oem_config"] = "Yes" if has_oem_config else "No"
-        if has_dirty_mfs:
-            self.info["fs_stage"] = "Initialized"
-        elif has_oem_config or fitc_found:
-            self.info["fs_stage"] = "Configured"
-        else:
-            self.info["fs_stage"] = "Unconfigured"
+        self.info["fs_stage"] = fs_state
+        self.info["fs_state"] = fs_state
+
+    @staticmethod
+    def _crc16_14(w, crc=0x3FFF):
+        """MFS 14-bit CRC-16 for System Page Chunk Indexes."""
+        table = [0] * 256
+        for i in range(256):
+            r = i << 8
+            for _ in range(8):
+                r = (r << 1) ^ (0x1021 if r & 0x8000 else 0)
+            table[i] = r & 0xFFFF
+        for b in bytearray(struct.pack("<H", w)):
+            crc = (table[b ^ (crc >> 8)] ^ (crc << 8)) & 0x3FFF
+        return crc
+
+    def _determine_mfs_state(self, mfs_buf, has_oem_config=False):
+        """
+        Determines Intel CSME File System State: Initialized, Configured, or Unconfigured.
+        Conforms strictly to Intel CSME MFS volume and FAT specifications.
+        Returns: (state_str, has_oem_file_in_mfs)
+        """
+        if not mfs_buf or len(mfs_buf) < 0x2000:
+            return ("Configured" if has_oem_config else "Unconfigured"), False
+
+        # Check for MFS Backup (MFSB) partition
+        if mfs_buf[:4] == b"MFSB":
+            return "Configured", True
+
+        # Verify MFS signature (0x877855AA or 0xAA557887)
+        sig1 = mfs_buf[:4]
+        sig2 = mfs_buf[0x2000:0x2004] if len(mfs_buf) >= 0x2004 else b""
+        if b"\xAA\x55\x78\x87" not in (sig1, sig2) and b"\x87\x78\x55\xAA" not in (sig1, sig2):
+            return ("Configured" if has_oem_config else "Unconfigured"), False
+
+        page_size = 0x2000
+        page_hdr_size = 0x12
+        chunk_all_size = 0x42
+        chunk_raw_size = 0x40
+        index_size_sys = 2
+        page_count = len(mfs_buf) // page_size
+
+        sys_pages = []
+        chunks_count_sys = 0xFFFF
+
+        for p in range(page_count):
+            p_start = p * page_size
+            p_hdr = mfs_buf[p_start : p_start + page_hdr_size]
+            if len(p_hdr) < page_hdr_size:
+                continue
+            p_tag = struct.unpack("<I", p_hdr[:4])[0]
+            if p_tag not in (0xAA557887, 0x877855AA):
+                continue
+            tag, p_num, erase_cnt, next_erase, first_chunk, crc8, res = struct.unpack("<IIIHHBB", p_hdr[:18])
+            if first_chunk == 0:
+                sys_pages.append((p_num, mfs_buf[p_start : p_start + page_size]))
+            else:
+                chunks_count_sys = min(chunks_count_sys, first_chunk)
+
+        if not sys_pages:
+            return ("Configured" if has_oem_config else "Unconfigured"), False
+
+        sys_pages.sort(key=lambda x: x[0])
+
+        all_chunks_dict = {}
+        for p_num, p_data in sys_pages:
+            chunk_count = (page_size - page_hdr_size - index_size_sys) // (index_size_sys + chunk_all_size)
+            index_size = chunk_count * index_size_sys + index_size_sys
+            index_data_obf = p_data[page_hdr_size : page_hdr_size + index_size]
+            index_values_obf = struct.unpack("<%dH" % (chunk_count + 1), index_data_obf)
+            chunk_start = page_hdr_size + index_size
+
+            chunk_index = 0
+            chunk_indexes = []
+            for i in range(len(index_values_obf)):
+                if index_values_obf[i] & 0xC000:
+                    break
+                chunk_index = self._crc16_14(chunk_index) ^ index_values_obf[i]
+                chunk_indexes.append(chunk_index)
+
+            for i, c_idx in enumerate(chunk_indexes):
+                c_offset = chunk_start + chunk_all_size * i
+                c_raw = p_data[c_offset : c_offset + chunk_raw_size]
+                all_chunks_dict[c_idx] = c_raw
+
+        if 0 not in all_chunks_dict:
+            for p_num, p_data in sys_pages:
+                idx = p_data.find(b"\x01\x62\x4F\x72")
+                if idx != -1:
+                    all_chunks_dict[0] = p_data[idx : idx + chunk_raw_size]
+                    break
+
+        if 0 not in all_chunks_dict:
+            return ("Configured" if has_oem_config else "Unconfigured"), False
+
+        c0 = all_chunks_dict[0]
+        vol_sig, ftbl_dict, ftbl_plat, ftbl_res, vol_size, vol_file_rec = struct.unpack("<IBBHIH", c0[:14])
+        if vol_sig != 0x724F6201:
+            return ("Configured" if has_oem_config else "Unconfigured"), False
+
+        if chunks_count_sys == 0xFFFF:
+            chunks_count_sys = max(all_chunks_dict.keys()) + 1 if all_chunks_dict else 1
+
+        sys_buf = bytearray(chunks_count_sys * chunk_raw_size)
+        for c_idx in range(chunks_count_sys):
+            if c_idx in all_chunks_dict:
+                sys_buf[c_idx * chunk_raw_size : (c_idx + 1) * chunk_raw_size] = all_chunks_dict[c_idx]
+
+        fat_count = vol_file_rec
+        fat_bytes = sys_buf[14 : 14 + fat_count * 2]
+        fat_values = struct.unpack("<%dH" % (len(fat_bytes) // 2), fat_bytes)
+
+        # In Intel CSME, File 0..5, 8 are runtime markers created/written upon booting on board:
+        # File 8 = Home Directory (/home records)
+        # File 2, 3 = Anti-Replay monotonic counters
+        # File 4 = SVN Migration
+        # File 5 = Quota Storage
+        # File 6 = Intel Configuration (present in both Configured and Initialized)
+        # File 7 = OEM Configuration / fitc.cfg (present in Configured)
+        # File 9 = Manifest Backup (present in Configured)
+        # Unused FAT values: 0x0000 (unused), 0xFFFE (erased), 0xFFFF (empty)
+        is_initialized = False
+        for idx, val in enumerate(fat_values):
+            if idx not in (6, 7, 9) and val not in (0x0000, 0xFFFE, 0xFFFF):
+                is_initialized = True
+                break
+
+        if is_initialized:
+            return "Initialized", True
+
+        has_cfg_files = False
+        for idx in (7, 9):
+            if idx < len(fat_values) and fat_values[idx] not in (0x0000, 0xFFFE, 0xFFFF):
+                has_cfg_files = True
+                break
+
+        if has_cfg_files or has_oem_config:
+            return "Configured", has_cfg_files
+
+        return "Unconfigured", False
 
     def _parse_sub_firmwares(self):
         """

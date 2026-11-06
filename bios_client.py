@@ -2175,7 +2175,9 @@ class BiosServiceTool(QMainWindow):
                         
                         # --- AUTO DECOMPILE SETUP ---
                         self.auto_decompile_pending = True
-                        mea_py = os.path.join(get_app_root(), "ME Analyzer", "MEA.py")
+                        mea_py = os.path.join(get_app_root(), "external", "MEAnalyzer", "MEA.py")
+                        if not os.path.exists(mea_py):
+                            mea_py = os.path.join(get_app_root(), "ME Analyzer", "MEA.py")
                         if not os.path.exists(mea_py):
                             self.run_auto_decompile()
                     else:

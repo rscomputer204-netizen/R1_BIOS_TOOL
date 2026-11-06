@@ -27,6 +27,14 @@ def log(msg, level="INFO"):
     print(f"[{timestamp}] [{level}] {msg}")
 
 def run_mea_analysis(file_path):
+    try:
+        from R1_CSME_Analyzer.r1_csme_parser import R1CSMEAnalyzer
+        a = R1CSMEAnalyzer(str(file_path))
+        res = a.parse()
+        if res and res.get("version"):
+            return res
+    except Exception:
+        pass
     mea_py = Path("external/MEAnalyzer/MEA.py")
     if not mea_py.exists(): mea_py = Path("ME Analyzer/MEA.py")
     if not mea_py.exists(): return {}

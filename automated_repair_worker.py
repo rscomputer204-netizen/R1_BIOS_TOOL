@@ -24,25 +24,10 @@ def run_automated_task():
     bios_path = bios_files[0]
     log(f"Found BIOS: {bios_path.name}")
 
-    # 2. Analyze with ME Analyzer
-    mea_py = root / "ME Analyzer" / "MEA.py"
-    if not mea_py.exists():
-        log("MEA.py not found!")
-        return
-
+    # 2. Analyze with native R1 / ME Analyzer
     log("Running ME Analyzer...")
-    proc = subprocess.Popen(
-        get_script_cmd(mea_py) + [str(bios_path)],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=str(mea_py.parent)
-    )
-    stdout, _ = proc.communicate(input=b"\n\n")
-    mea_output = stdout.decode("utf-8", errors="replace")
-
-    # 3. Parse Metadata
-    meta = mea_parser.parse_mea_output(mea_output)
+    from fit_automator import run_me_analyzer_internal
+    meta = run_me_analyzer_internal(str(bios_path), log)
     if not meta or not meta.get("version"):
         log("Failed to parse MEA output.")
         return

@@ -83,9 +83,20 @@ class AnalysisSuite:
             return False
 
     @staticmethod
+    def _find_mea_script():
+        root = get_app_root()
+        possible_mea = [
+            os.path.join(root, "external", "MEAnalyzer", "MEA.py"),
+            os.path.join(root, "ME Analyzer", "MEA.py"),
+            os.path.join(root, "ME_Analyzer_LATEST", "MEA.py"),
+            os.path.join(root, "external", "MEA_Compare r374", "MEA.py"),
+        ]
+        return next((p for p in possible_mea if os.path.exists(p)), os.path.join(root, "external", "MEAnalyzer", "MEA.py"))
+
+    @staticmethod
     def run_me_analyzer(file_path: str, terminal_callback):
         """Runs ME Analyzer (MEA.py)"""
-        script = os.path.join(get_app_root(), "ME Analyzer", "MEA.py")
+        script = AnalysisSuite._find_mea_script()
         if terminal_callback:
             terminal_callback("[INFO] Starting ME Analyzer...")
         return AnalysisSuite._run_script(script, file_path, terminal_callback)
@@ -93,7 +104,7 @@ class AnalysisSuite:
     @staticmethod
     def run_security_descriptor_parser(file_path: str, terminal_callback):
         """Runs ME Analyzer with -dfpt flag to show Intel Security Descriptors"""
-        script = os.path.join(get_app_root(), "ME Analyzer", "MEA.py")
+        script = AnalysisSuite._find_mea_script()
         if terminal_callback:
             terminal_callback("\n" + "="*50)
             terminal_callback("--- PHASE 1: INTEL SECURITY DESCRIPTORS ---")

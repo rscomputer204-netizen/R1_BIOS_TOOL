@@ -52,13 +52,18 @@ def _root() -> Path:
 
 def get_paths():
     root = _root()
+    mea_py = root / "external" / "MEAnalyzer" / "MEA.py"
+    if not mea_py.exists():
+        mea_py = root / "ME Analyzer" / "MEA.py"
+    if not mea_py.exists():
+        mea_py = root / "ME_Analyzer_LATEST" / "MEA.py"
     return {
         "fw_repo_me":   root / "Firmware_Repository" / "ME_Region",
         "fw_repo_pmc":  root / "Firmware_Repository" / "PMC_Region",
         "fw_repo_pchc": root / "Firmware_Repository" / "PCHC_Region",
         "fw_repo_phy":  root / "Firmware_Repository" / "PHY_Region",
         "fit_tools":    root / "external" / "FLASH System Tools",
-        "mea_py":       root / "ME Analyzer" / "MEA.py",
+        "mea_py":       mea_py,
         "repaired_dir": root / "REPAIRED_BIOS",
         "final_dir":    root / "TESTING_AREA" / "FINAL BIOS",
         "fit_workspace":root / "FIT_WORKSPACE",
@@ -986,13 +991,14 @@ def run_smart_repair(bios_path, mea_meta, log_cb, progress_cb=None, deliver_to_f
                         result["final_path"] = final_path
                         log_cb("[ACTION] Running Final Verification...")
                         from fit_automator import run_me_analyzer_internal
-                        final_meta = run_me_analyzer_internal(final_path, log_cb)
-                        fs_state = final_meta.get("fs_state", "") if final_meta else ""
-                        log_cb(f"[VERIFY] File System State: {fs_state} | Type: {final_meta.get('type') if final_meta else 'N/A'}")
+                        final_meta = run_me_analyzer_internal(final_path, log_cb) or {}
+                        fs_state = final_meta.get("fs_state", "")
+                        log_cb(f"[VERIFY] File System State: {fs_state} | Type: {final_meta.get('type', 'N/A')}")
                         if fs_state == "Configured":
                             log_cb(f"[VERIFY] CSME File System is 100% Configured & Clean ({final_meta.get('version', '')}, {final_meta.get('sku', '')}). [OK]")
                         else:
-                            log_cb(f"[VERIFY] State: {fs_state or 'Verified'} ({final_meta.get('version', '')}). [OK]")
+                            ver_str = f" ({final_meta.get('version', '')})" if final_meta.get('version') else ""
+                            log_cb(f"[VERIFY] State: {fs_state or 'Verified'}{ver_str}. [OK]")
                     log_repair_event("SUCCESS", mea_meta, repair_set)
                     return result
             
@@ -1083,13 +1089,14 @@ def _run_smart_repair_internal(bios_path, mea_meta, log_cb, progress_cb=None, de
             result["final_path"] = final_path
             log_cb("[ACTION] Running Final Verification...")
             from fit_automator import run_me_analyzer_internal
-            final_meta = run_me_analyzer_internal(final_path, log_cb)
-            fs_state = final_meta.get("fs_state", "") if final_meta else ""
-            log_cb(f"[VERIFY] File System State: {fs_state} | Type: {final_meta.get('type') if final_meta else 'N/A'}")
+            final_meta = run_me_analyzer_internal(final_path, log_cb) or {}
+            fs_state = final_meta.get("fs_state", "")
+            log_cb(f"[VERIFY] File System State: {fs_state} | Type: {final_meta.get('type', 'N/A')}")
             if fs_state == "Configured":
                 log_cb(f"[VERIFY] CSME File System is 100% Configured & Clean ({final_meta.get('version', '')}, {final_meta.get('sku', '')}). [OK]")
             else:
-                log_cb(f"[VERIFY] State: {fs_state or 'Verified'} ({final_meta.get('version', '')}). [OK]")
+                ver_str = f" ({final_meta.get('version', '')})" if final_meta.get('version') else ""
+                log_cb(f"[VERIFY] State: {fs_state or 'Verified'}{ver_str}. [OK]")
         log_repair_event("SUCCESS", mea_meta, repair_set)
     else:
         log_repair_event("FAILED", mea_meta, repair_set, error_msg="Pipeline failed")

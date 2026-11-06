@@ -8,7 +8,9 @@ from mea_parser import parse_mea_output
 from fit_automator import execute_fit_rebuild
 
 ROOT = Path(os.getcwd())
-MEA_PY = ROOT / "ME Analyzer" / "MEA.py"
+MEA_PY = ROOT / "external" / "MEAnalyzer" / "MEA.py"
+if not MEA_PY.exists():
+    MEA_PY = ROOT / "ME Analyzer" / "MEA.py"
 MAIN_BIOS_DIR = ROOT / "TESTING_AREA" / "MAIN BIOS"
 FINAL_BIOS_DIR = ROOT / "TESTING_AREA" / "FINAL BIOS"
 TARGET_FILE = "HP 280 G3  FX ISL-4 REV A BSCKUP.BIN"
