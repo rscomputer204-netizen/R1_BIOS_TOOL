@@ -127,6 +127,31 @@ class DropZone(QLabel):
         super().paintEvent(event)
 
 
+class CloseCrossButton(QPushButton):
+    """Vector-drawn cross button with zero font dependencies."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(30, 30)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip("Close")
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        is_hover = self.underMouse()
+        bg_color = QColor("#e03131") if is_hover else QColor("#252a2f")
+        border_color = QColor("#ff4d4f") if is_hover else QColor("#4a5568")
+        cross_color = QColor("#ffffff") if is_hover else QColor("#e2e8f0")
+        painter.setBrush(QBrush(bg_color))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawEllipse(1, 1, 28, 28)
+        pen = QPen(cross_color, 2.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawLine(10, 10, 20, 20)
+        painter.drawLine(10, 20, 20, 10)
+        painter.end()
+
+
 class ExtractorDropDialog(QDialog):
     """
     A glossy, reusable drag-and-drop popup for file extraction operations.
@@ -212,21 +237,7 @@ class ExtractorDropDialog(QDialog):
         header.addLayout(icon_title)
         
         # Close button
-        close_btn = QPushButton("✕")
-        close_btn.setFixedSize(30, 30)
-        close_btn.setStyleSheet("""
-            QPushButton {
-                background: transparent;
-                color: #445;
-                border: none;
-                font-size: 16px;
-                border-radius: 15px;
-            }
-            QPushButton:hover {
-                background: #ff4444;
-                color: #fff;
-            }
-        """)
+        close_btn = CloseCrossButton(self)
         close_btn.clicked.connect(self.reject)
         header.addWidget(close_btn, 0, Qt.AlignmentFlag.AlignTop)
         card_layout.addLayout(header)

@@ -8158,9 +8158,9 @@ class BiosServiceTool(QMainWindow):
             
         self.is_auto_saving = True
         self.auto_save_countdown = seconds
-        self.btn_save.setText("")
+        self.btn_save.setText(f"SAVE ({self.auto_save_countdown}s)")
         self.btn_save.setToolTip(f"SAVE ({self.auto_save_countdown}s)")
-        self.btn_save.setStyleSheet("border-color: #00ff41; color: #00ff41; font-weight: bold;") # Matrix Green for notice
+        self.btn_save.setStyleSheet("border: 1px solid #00ff41; color: #00ff41; font-weight: bold;") # Matrix Green for notice
         self.auto_save_timer.start(1000)
 
     def start_auto_save_countdown(self):
@@ -8173,24 +8173,26 @@ class BiosServiceTool(QMainWindow):
         
         if self.auto_save_countdown <= 0:
             self.auto_save_timer.stop()
-            self.btn_save.setText("")
-            self.btn_save.setToolTip("SAVE CHANGES")
-            self.btn_save.setStyleSheet("border-color: #ff00ff; color: #ff00ff;") # Reset to Purple
             self.is_auto_saving = False
+            self.btn_save.setText("SAVE")
+            self.btn_save.setToolTip(t("btn_save", "SAVE CHANGES"))
+            self.btn_save.setStyleSheet("") # Reset to default toolbar style
             # Trigger the save dialog
             self.save_bios_changes()
         else:
-            self.btn_save.setText("")
-        self.btn_save.setToolTip(f"SAVE ({self.auto_save_countdown}s)")
+            self.btn_save.setText(f"SAVE ({self.auto_save_countdown}s)")
+            self.btn_save.setToolTip(f"SAVE ({self.auto_save_countdown}s)")
+            self.btn_save.setStyleSheet("border: 1px solid #00ff41; color: #00ff41; font-weight: bold;")
 
     def save_bios_changes(self):
-        # Stop auto-save if user clicks manually
+        # Stop auto-save if user clicks manually or timer triggered
         if self.is_auto_saving:
             self.auto_save_timer.stop()
             self.is_auto_saving = False
-            self.btn_save.setText("")
-            self.btn_save.setToolTip("SAVE CHANGES")
-            self.btn_save.setStyleSheet("border-color: #ff00ff; color: #ff00ff;")
+            
+        self.btn_save.setText("SAVE")
+        self.btn_save.setToolTip(t("btn_save", "SAVE CHANGES"))
+        self.btn_save.setStyleSheet("")
             
         if not self.current_bios_file:
             return
@@ -8204,13 +8206,13 @@ class BiosServiceTool(QMainWindow):
         # Suggest the current filename in the last used directory
         suggested_path = os.path.join(self.last_directory, filename)
         
-        reply = QFileDialog.getSaveFileName(
-            self, "Save BIOS Changes", suggested_path, "BIOS Files (*.bin *.rom *.fd *.cap);;All Files (*)"
-        )
-        
-        if reply[0]:
-            self.last_directory = os.path.dirname(reply[0])
-            try:
+        try:
+            reply = QFileDialog.getSaveFileName(
+                self, "Save BIOS Changes", suggested_path, "BIOS Files (*.bin *.rom *.fd *.cap);;All Files (*)"
+            )
+            
+            if reply[0]:
+                self.last_directory = os.path.dirname(reply[0])
                 with open(reply[0], "wb") as f:
                     f.write(self.hex_model.get_data())
                 self.log_to_terminal(f"[SUCCESS] Changes saved successfully to: {os.path.basename(reply[0])}")
@@ -8222,9 +8224,12 @@ class BiosServiceTool(QMainWindow):
                 self._reload_timer.setSingleShot(True)
                 self._reload_timer.timeout.connect(lambda: self.load_bios_file(saved_path))
                 self._reload_timer.start(2000)
-                
-            except Exception as e:
-                self.log_to_terminal(f"[ERROR] Failed to save changes: {str(e)}")
+        except Exception as e:
+            self.log_to_terminal(f"[ERROR] Failed to save changes: {str(e)}")
+        finally:
+            self.btn_save.setText("SAVE")
+            self.btn_save.setToolTip(t("btn_save", "SAVE CHANGES"))
+            self.btn_save.setStyleSheet("")
 
     @Slot(str, str, bool)
     def show_error_prompt_sync(self, title: str, message: str, allow_custom_fit: bool = False):

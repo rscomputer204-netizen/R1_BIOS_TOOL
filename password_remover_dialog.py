@@ -60,8 +60,7 @@ class DropZone(QLabel):
 
     def _update_text(self):
         self.setText(
-            "<div style='text-align:center; line-height:1.6;'>"
-            "<span style='font-size:28px;'>⚡</span><br>"
+            "<div style='text-align:center; line-height:1.6; padding: 14px 0;'>"
             "<span style='font-size:13px; font-weight:900; letter-spacing:2px; color:#00f3ff;'>"
             "DROP LOCKED BIOS BINARY HERE</span><br>"
             "<span style='font-size:11px; color:#888;'>or click to browse (.bin, .rom, .fd)</span>"
@@ -146,6 +145,40 @@ class DropZone(QLabel):
         super().paintEvent(event)
 
 
+class CloseCrossButton(QPushButton):
+    """
+    A custom vector-drawn cross button that guarantees pixel-perfect,
+    high-contrast close icon rendering without any Unicode font glyph dependency.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(30, 30)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip("Close")
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        is_hover = self.underMouse()
+        bg_color = QColor("#e03131") if is_hover else QColor("#252a2f")
+        border_color = QColor("#ff4d4f") if is_hover else QColor("#4a5568")
+        cross_color = QColor("#ffffff") if is_hover else QColor("#e2e8f0")
+        
+        # Circle button background
+        painter.setBrush(QBrush(bg_color))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawEllipse(1, 1, 28, 28)
+        
+        # Crisp anti-aliased cross lines
+        pen = QPen(cross_color, 2.2, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        
+        painter.drawLine(10, 10, 20, 20)
+        painter.drawLine(10, 20, 20, 10)
+        painter.end()
+
+
 class PasswordRemoverDialog(QDialog):
     """
     Enterprise Edition Password Remover Dialog matching R1 editor's Slate & Teal Theme.
@@ -198,7 +231,7 @@ class PasswordRemoverDialog(QDialog):
 
         title_col = QVBoxLayout()
         title_col.setSpacing(2)
-        lbl_title = QLabel("⚡ BIOS PASSWORD UNLOCK ENGINE")
+        lbl_title = QLabel("BIOS PASSWORD UNLOCK ENGINE")
         lbl_title.setStyleSheet("font-family:'Segoe UI', sans-serif; font-size: 15px; font-weight: 800; color: #4cd3e3; letter-spacing: 1.5px;")
         
         lbl_sub = QLabel("Automated Multi-Brand Firmware Password Detection & Surgical Erasure")
@@ -227,24 +260,7 @@ class PasswordRemoverDialog(QDialog):
         header.addWidget(self.badge_brand)
 
         # Close Button
-        btn_close = QPushButton("✕")
-        btn_close.setFixedSize(30, 30)
-        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.setStyleSheet("""
-            QPushButton {
-                background: #252a2f;
-                color: #94a3b8;
-                border: 1px solid #3c444d;
-                border-radius: 15px;
-                font-size: 13px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background: #e03131;
-                color: white;
-                border-color: #e03131;
-            }
-        """)
+        btn_close = CloseCrossButton(self)
         btn_close.clicked.connect(self.reject)
         header.addWidget(btn_close)
 
@@ -369,7 +385,7 @@ class PasswordRemoverDialog(QDialog):
         btn_layout.addWidget(self.btn_scan)
 
         # PASSWORD REMOVE BUTTON (Inactive until password is found!)
-        self.btn_final_remove = QPushButton("⚡ PASSWORD REMOVE")
+        self.btn_final_remove = QPushButton("PASSWORD REMOVE")
         self.btn_final_remove.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_final_remove.setMinimumHeight(44)
         self.btn_final_remove.setStyleSheet("""
@@ -480,7 +496,7 @@ class PasswordRemoverDialog(QDialog):
         self.btn_scan.setEnabled(True)
         self.btn_scan.setText("🔍 DETECT PASSWORD")
         self.btn_final_remove.setEnabled(False)
-        self.btn_final_remove.setText("⚡ PASSWORD REMOVE")
+        self.btn_final_remove.setText("PASSWORD REMOVE")
 
     # ─── DETECTION ROUTINE (Triggered when user clicks 'DETECT PASSWORD') ───
     def detect_password_routine(self):
@@ -538,13 +554,13 @@ class PasswordRemoverDialog(QDialog):
                     f"  - CSME / Intel ME region remains untouched.\n"
                     f"============================================================\n"
                     f" [ACTION READY] Password found!\n"
-                    f" Click '⚡ PASSWORD REMOVE' button below to unlock and save."
+                    f" Click 'PASSWORD REMOVE' button below to unlock and save."
                 )
                 self.txt_details.setPlainText(detail_msg)
 
                 # ACTIVATE PASSWORD REMOVE BUTTON
                 self.btn_final_remove.setEnabled(True)
-                self.btn_final_remove.setText("⚡ PASSWORD REMOVE")
+                self.btn_final_remove.setText("PASSWORD REMOVE")
 
             else:
                 # ── PASSWORD NOT FOUND! ──
@@ -576,7 +592,7 @@ class PasswordRemoverDialog(QDialog):
 
                 # KEEP PASSWORD REMOVE BUTTON DISABLED
                 self.btn_final_remove.setEnabled(False)
-                self.btn_final_remove.setText("⚡ PASSWORD REMOVE")
+                self.btn_final_remove.setText("PASSWORD REMOVE")
 
         except Exception as e:
             self.badge_status.setText("ERROR")

@@ -19,6 +19,12 @@ dist/
 *.tar
 *.gz
 
+# Rust app directory & build artifacts (Never push to GitHub)
+Rust app/
+Rust_app/
+target/
+Cargo.lock
+
 # Ignore ALL BIOS dump binaries everywhere
 **/*.bin
 **/*.BIN

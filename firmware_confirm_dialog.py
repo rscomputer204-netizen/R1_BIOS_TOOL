@@ -13,7 +13,32 @@ from PySide6.QtWidgets import (
     QPushButton, QFrame, QGraphicsDropShadowEffect, QWidget
 )
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor, QFont, QPainter, QPen, QBrush
+
+
+class CloseCrossButton(QPushButton):
+    """Vector-drawn cross button with zero font dependencies."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(28, 28)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip("Close")
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        is_hover = self.underMouse()
+        bg_color = QColor("#e03131") if is_hover else QColor("#252a2f")
+        border_color = QColor("#ff4d4f") if is_hover else QColor("#3c444d")
+        cross_color = QColor("#ffffff") if is_hover else QColor("#e2e8f0")
+        painter.setBrush(QBrush(bg_color))
+        painter.setPen(QPen(border_color, 1))
+        painter.drawEllipse(1, 1, 26, 26)
+        pen = QPen(cross_color, 2.0, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        painter.drawLine(9, 9, 19, 19)
+        painter.drawLine(9, 19, 19, 9)
+        painter.end()
 
 
 class FirmwareConfirmDialog(QDialog):
@@ -97,24 +122,7 @@ class FirmwareConfirmDialog(QDialog):
 
         header.addStretch()
 
-        btn_close = QPushButton("✕")
-        btn_close.setFixedSize(28, 28)
-        btn_close.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_close.setStyleSheet("""
-            QPushButton {
-                background: #252a2f;
-                color: #94a3b8;
-                border: 1px solid #3c444d;
-                border-radius: 14px;
-                font-size: 12px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background: #e03131;
-                color: white;
-                border-color: #e03131;
-            }
-        """)
+        btn_close = CloseCrossButton(self)
         btn_close.clicked.connect(self.reject)
         header.addWidget(btn_close)
 

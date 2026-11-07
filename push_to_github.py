@@ -226,8 +226,12 @@ def analyze_git_changes():
             status_code = parts[0]
             filepath = parts[1].replace('"', '')
 
-            # Ignore transient logs & cache
-            if filepath.endswith(".log") or "__pycache__" in filepath or filepath.startswith(".gemini") or filepath.endswith(".tmp"):
+            # Ignore transient logs, cache & Rust app workspace
+            norm_path = filepath.replace("\\", "/").lower()
+            if (filepath.endswith(".log") or "__pycache__" in filepath or 
+                filepath.startswith(".gemini") or filepath.endswith(".tmp") or
+                norm_path.startswith("rust app") or norm_path.startswith("rust_app") or
+                "/rust app/" in norm_path or "/rust_app/" in norm_path):
                 continue
 
             change_type = "MODIFIED"
