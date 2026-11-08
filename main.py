@@ -7916,6 +7916,7 @@ class BiosServiceTool(QMainWindow):
         if urls and urls[0].isLocalFile():
             file_path = urls[0].toLocalFile()
             event.acceptProposedAction()  # Release Windows OLE drag-drop lock immediately!
+            self.switch_display_tab("TERMINAL")
             self.log_to_terminal(f"[INFO] File dropped: {os.path.basename(file_path)}")
             # Defer showing the dialog so dropEvent finishes cleanly and Windows returns to normal
             QTimer.singleShot(10, lambda p=file_path: self.prompt_and_load_bios(p))
@@ -7935,6 +7936,7 @@ class BiosServiceTool(QMainWindow):
 
         if file_path:
             self.last_directory = os.path.dirname(file_path)
+            self.switch_display_tab("TERMINAL")
             self.log_to_terminal(f"[INFO] User selected file: {os.path.basename(file_path)}")
             self.prompt_and_load_bios(file_path)
 
@@ -7958,6 +7960,7 @@ class BiosServiceTool(QMainWindow):
             from firmware_confirm_dialog import FirmwareConfirmDialog
             dlg = FirmwareConfirmDialog(file_path, parent=self)
             if dlg.exec() == QDialog.DialogCode.Accepted:
+                self.switch_display_tab("TERMINAL")
                 self.log_to_terminal(f"[INFO] Ingestion confirmed for: {os.path.basename(file_path)}")
                 QApplication.processEvents()
                 # Run immediately with zero latency
@@ -7965,6 +7968,7 @@ class BiosServiceTool(QMainWindow):
             else:
                 self.log_to_terminal(f"[INFO] Ingestion cancelled by technician: {os.path.basename(file_path)}")
         except Exception as e:
+            self.switch_display_tab("TERMINAL")
             self.log_to_terminal(f"[WARNING] Confirmation dialog fallback ({e}). Proceeding to load.")
             self.load_bios_file(file_path)
 
@@ -8127,6 +8131,7 @@ class BiosServiceTool(QMainWindow):
             return
 
         # ── 1. INSTANT ZERO-LATENCY UI RESPONSE (0ms) ──
+        self.switch_display_tab("TERMINAL")
         self.is_task_running = True
         estimate = tracker.get_estimate("load_bios_file", 6.0)
         self._handle_loading_state(True, "Reading Firmware Image...", estimate)
