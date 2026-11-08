@@ -4057,6 +4057,166 @@ class InternetStatusWidget(QLabel):
                 " font-family: 'Segoe UI', sans-serif; font-size: 10px; letter-spacing: 0.5px;"
             )
 
+
+class DmiSerialLabel(QLabel):
+    """
+    Interactive DMI Serial Label:
+    - Normal state: dark slate background, grey text if N/A, cyan bold text if valid.
+    - Hover state: glowing cyan border & text, pointing hand cursor.
+    - Double click: Copies serial to clipboard & opens official OEM support portal with serial prefilled.
+    - Right click: Context menu to copy serial or search online (dynamically tailored to detected brand).
+    """
+    double_clicked = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__("N/A", parent)
+        self.setObjectName("DmiSerialLabel")
+        self.setWordWrap(True)
+        self.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
+        self._target_brand = ""
+        self._update_style(False)
+
+    def get_current_brand(self) -> str:
+        """Dynamically detect current brand from main window or cached target brand."""
+        win = self.window()
+        if hasattr(win, 'dmi_lbl_brand'):
+            b = win.dmi_lbl_brand.text().strip()
+            if b and b not in ("N/A", "Unknown", "", "Detecting...", "?"):
+                return b
+        if self._target_brand and self._target_brand not in ("N/A", "Unknown", "", "Detecting...", "?"):
+            return self._target_brand
+        return "HP"
+
+    def get_brand_portal_info(self):
+        """Returns (Portal Name, Portal Domain / Description) based on current brand."""
+        brand_raw = self.get_current_brand().upper()
+        if "DELL" in brand_raw:
+            return "Dell Support", "dell.com/support"
+        elif "LENOVO" in brand_raw:
+            return "Lenovo Support", "pcsupport.lenovo.com"
+        elif "ACER" in brand_raw:
+            return "Acer Support", "acer.com/support"
+        elif "ASUS" in brand_raw:
+            return "ASUS Support", "asus.com/searchresult"
+        elif "APPLE" in brand_raw:
+            return "Apple Support", "support.apple.com"
+        elif "MSI" in brand_raw:
+            return "MSI Support", "msi.com/support"
+        elif "TOSHIBA" in brand_raw or "DYNABOOK" in brand_raw:
+            return "Dynabook Support", "support.dynabook.com"
+        elif "SAMSUNG" in brand_raw:
+            return "Samsung Support", "samsung.com/support"
+        elif "GIGABYTE" in brand_raw:
+            return "Gigabyte Support", "gigabyte.com/support"
+        else:
+            return "HP Support", "support.hp.com"
+
+    def set_serial_value(self, val: str, brand: str = ""):
+        if brand and brand not in ("N/A", "Unknown", "", "Detecting...", "?"):
+            self._target_brand = brand
+        is_valid = bool(val and str(val).strip() not in ("N/A", "Unknown", "", "Detecting...", "?"))
+        display_text = str(val).strip() if is_valid else "N/A"
+        self.setText(display_text)
+        self._update_style(is_valid)
+
+    def _update_style(self, is_valid: bool):
+        if is_valid:
+            portal_name, _ = self.get_brand_portal_info()
+            self.setCursor(Qt.CursorShape.PointingHandCursor)
+            self.setToolTip(f"Double-click to open {portal_name} (Serial copied to clipboard)\nRight-click for options")
+            self.setStyleSheet("""
+                QLabel#DmiSerialLabel {
+                    color: #4cd3e3;
+                    background-color: #172227;
+                    border: 1px solid #1f4a56;
+                    font-family: Consolas, monospace;
+                    font-weight: bold;
+                    border-radius: 4px;
+                    padding: 2px 6px;
+                }
+                QLabel#DmiSerialLabel:hover {
+                    color: #00f3ff;
+                    background-color: #1c2e38;
+                    border: 1px solid #00f3ff;
+                }
+            """)
+        else:
+            self.setCursor(Qt.CursorShape.ArrowCursor)
+            self.setToolTip("")
+            self.setStyleSheet("""
+                QLabel#DmiSerialLabel {
+                    color: #556270;
+                    background-color: #14171a;
+                    border: 1px solid #273038;
+                    font-family: Consolas, monospace;
+                    font-weight: bold;
+                    border-radius: 4px;
+                    padding: 2px 6px;
+                }
+            """)
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            text = self.text().strip()
+            if text and text not in ("N/A", "Unknown", "", "Detecting...", "?"):
+                self.double_clicked.emit(text)
+                event.accept()
+                return
+        super().mouseDoubleClickEvent(event)
+
+    def _show_context_menu(self, pos):
+        text = self.text().strip()
+        if not text or text in ("N/A", "Unknown", "", "Detecting...", "?"):
+            return
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #0f1722;
+                color: #e2e8f0;
+                border: 1px solid #0284c7;
+                border-radius: 6px;
+                padding: 4px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+            }
+            QMenu::item {
+                padding: 5px 18px 5px 12px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #0284c7;
+                color: #ffffff;
+            }
+        """)
+        portal_name, portal_domain = self.get_brand_portal_info()
+        copy_act = menu.addAction(f"Copy Serial ({text})")
+        portal_act = menu.addAction(f"Open {portal_name} ({portal_domain})")
+        asus_laptop_act = None
+        if "ASUS" in self.get_current_brand().upper():
+            asus_laptop_act = menu.addAction("Open ASUS Laptop Support (id=155)")
+        google_act = menu.addAction("Search Drivers on Google")
+
+        action = menu.exec(self.mapToGlobal(pos))
+        if action == copy_act:
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(text)
+        elif action == portal_act:
+            self.double_clicked.emit(text)
+        elif asus_laptop_act and action == asus_laptop_act:
+            import webbrowser
+            clipboard = QApplication.clipboard()
+            if clipboard:
+                clipboard.setText(text)
+            webbrowser.open("https://www.asus.com/support/?id=155")
+        elif action == google_act:
+            import webbrowser, urllib.parse
+            brand = self.get_current_brand()
+            webbrowser.open(f"https://www.google.com/search?q={urllib.parse.quote(brand + ' ' + text + ' bios firmware download')}")
+
+
 class BiosServiceTool(QMainWindow):
     mea_output_signal = Signal(list, list)
     progress_signal = Signal(int)
@@ -4751,7 +4911,8 @@ class BiosServiceTool(QMainWindow):
         self.dmi_lbl_model = create_value_label()
         self.dmi_lbl_platform = create_value_label()
         self.dmi_lbl_mac = create_value_label()
-        self.dmi_lbl_serial = create_value_label()
+        self.dmi_lbl_serial = DmiSerialLabel()
+        self.dmi_lbl_serial.double_clicked.connect(self._on_dmi_serial_double_clicked)
         
         form_layout.addRow(create_key_label("Brand:"), self.dmi_lbl_brand)
         form_layout.addRow(create_key_label("Model:"), self.dmi_lbl_model)
@@ -4889,6 +5050,11 @@ class BiosServiceTool(QMainWindow):
 
     def _set_dmi_label(self, lbl, value):
         """Update a DMI label: cyan+bold if real value, grey if N/A."""
+        if hasattr(lbl, 'set_serial_value'):
+            brand = self.dmi_lbl_brand.text().strip() if hasattr(self, 'dmi_lbl_brand') else ""
+            lbl.set_serial_value(value, brand)
+            return
+
         if value and value not in ("N/A", "Unknown", "", "Detecting..."):
             lbl.setText(value)
             lbl.setStyleSheet(
@@ -4911,6 +5077,66 @@ class BiosServiceTool(QMainWindow):
                 "border-radius: 4px;"
                 "padding: 2px 6px;"
             )
+
+    @Slot(str)
+    def _on_dmi_serial_double_clicked(self, serial: str):
+        """Handle double-click on DMI serial number: copy to clipboard and open HP / OEM support portal."""
+        if not serial or serial in ("N/A", "Unknown", "", "Detecting...", "?"):
+            return
+
+        # 1. Copy serial directly to clipboard for instant pasting
+        clipboard = QApplication.clipboard()
+        if clipboard:
+            clipboard.setText(serial)
+
+        # 2. Determine target brand portal
+        brand = ""
+        if hasattr(self, 'dmi_lbl_brand'):
+            brand = self.dmi_lbl_brand.text().strip().upper()
+        if not brand or brand in ("N/A", "UNKNOWN", "DETECTING...", "?"):
+            if hasattr(self, 'dmi_lbl_serial') and hasattr(self.dmi_lbl_serial, 'get_current_brand'):
+                brand = self.dmi_lbl_serial.get_current_brand().upper()
+
+        if "DELL" in brand:
+            url = f"https://www.dell.com/support/home/en-us/product-support/servicetag/{serial}/drivers"
+            portal_name = "Dell Support"
+        elif "LENOVO" in brand:
+            url = f"https://pcsupport.lenovo.com/us/en/products/search?query={serial}"
+            portal_name = "Lenovo Support"
+        elif "ACER" in brand:
+            url = f"https://www.acer.com/us-en/support/drivers-and-manuals?search={serial}"
+            portal_name = "Acer Support"
+        elif "ASUS" in brand:
+            url = f"https://www.asus.com/searchresult?searchType=support&searchKey={serial}"
+            portal_name = "ASUS Support"
+        elif "APPLE" in brand:
+            url = f"https://support.apple.com/specs/{serial}"
+            portal_name = "Apple Support"
+        elif "MSI" in brand:
+            url = f"https://www.msi.com/search/{serial}"
+            portal_name = "MSI Support"
+        elif "TOSHIBA" in brand or "DYNABOOK" in brand:
+            url = f"https://support.dynabook.com/support/modelHome?freeText={serial}"
+            portal_name = "Dynabook Support"
+        elif "SAMSUNG" in brand:
+            url = f"https://www.samsung.com/us/support/search/?searchvalue={serial}"
+            portal_name = "Samsung Support"
+        elif "GIGABYTE" in brand:
+            url = f"https://www.gigabyte.com/Search?kw={serial}"
+            portal_name = "Gigabyte Support"
+        else:
+            # HP Support (Primary / Default) - query parameter automatically populates search & resolves device
+            url = f"https://support.hp.com/us-en/search?q={serial}"
+            portal_name = "HP Support"
+
+        try:
+            import webbrowser
+            webbrowser.open(url)
+            self.log_to_terminal(f"[ONLINE] Serial '{serial}' copied to clipboard & opened {portal_name}.")
+            if hasattr(self, 'statusBar') and self.statusBar():
+                self.statusBar().showMessage(f"Serial '{serial}' copied to clipboard! Opening {portal_name}...", 5000)
+        except Exception as e:
+            self.log_to_terminal(f"[ERROR] Failed to launch support portal: {e}")
 
     def _refresh_save_dmi_state(self):
         """
@@ -5825,6 +6051,10 @@ class BiosServiceTool(QMainWindow):
 
             except (ValueError, Exception):
                 pass
+
+    def log(self, message):
+        """Convenience alias for log_to_terminal."""
+        self.log_to_terminal(message)
 
     @Slot(str)
     def log_to_terminal(self, message):
