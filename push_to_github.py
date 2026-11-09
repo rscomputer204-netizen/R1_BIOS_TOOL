@@ -870,14 +870,30 @@ class GitPushGUI:
                         dest_dir = os.path.join(payload_content, cdir)
                         if os.path.exists(dest_dir):
                             shutil.rmtree(dest_dir, ignore_errors=True)
-                        shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.tmp"))
+                        shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns(
+                            "__pycache__", "*.pyc", "*.tmp",
+                            "github_token.json", "key_generator_config.json"
+                        ))
 
                         # Also mirror core engine into _internal for frozen PyInstaller onedir compatibility
                         if cdir in ("R1_CSME_Analyzer", "R1_Universal_Extractor", "rg_engine", "brands", "BIOSUtilities", "translations", "assets"):
                             dest_internal = os.path.join(payload_internal, cdir)
                             if os.path.exists(dest_internal):
                                 shutil.rmtree(dest_internal, ignore_errors=True)
-                            shutil.copytree(src_dir, dest_internal, ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.tmp"))
+                            shutil.copytree(src_dir, dest_internal, ignore=shutil.ignore_patterns(
+                                "__pycache__", "*.pyc", "*.tmp",
+                                "github_token.json", "key_generator_config.json"
+                            ))
+
+                # Security: Ensure no sensitive tokens/secrets ever leak into the update payload
+                for secret_file in ["github_token.json", "key_generator_config.json"]:
+                    for root_check in [payload_content, payload_internal]:
+                        leak_p = os.path.join(root_check, "config", secret_file)
+                        if os.path.exists(leak_p):
+                            try:
+                                os.remove(leak_p)
+                            except Exception:
+                                pass
 
                 # Copy core python files from root
                 for f in os.listdir(BASE_DIR):

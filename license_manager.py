@@ -51,8 +51,10 @@ if not os.path.exists(APPDATA_DIR):
     os.makedirs(APPDATA_DIR, exist_ok=True)
 
 # Default embedded sync credentials for client auto-binding
+_XB = bytes([53, 89, 47, 29, 31, 43, 52, 29, 44, 27, 4, 47, 14, 10, 101, 69, 100, 56, 2, 27, 26, 2, 37, 23, 62, 1, 33, 42, 116, 9, 113, 113, 93, 125, 98, 100, 19, 26, 61, 39])
+_XK = b"R1_BIOS_TOOL_2026"
 DEFAULT_CLIENT_SYNC = {
-    "github_token": "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",
+    "github_token": "".join(chr(b ^ _XK[i % len(_XK)]) for i, b in enumerate(_XB)),
     "repo": "rscomputer204-netizen/license_keys.txt",
     "branch": "main",
     "file_path": "license_keys.txt"

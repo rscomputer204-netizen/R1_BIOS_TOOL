@@ -64,18 +64,34 @@ class HPBIOSRepairer:
                     match_code = code
                     break
             if not selected_dir:
-                self.log_error("No matching folder code found.")
-                return None, None
+                self.log_info("No folder code matched. Scanning extraction root for BIOS binaries...")
+                selected_dir = self.extracted_dir
+                match_code = None
         elif len(subdirs) == 1:
             selected_dir = subdirs[0]
             match_code = selected_dir.name.encode('utf-8')
         else:
             selected_dir = self.extracted_dir
-            # For root files, we might not have a code, so we'll try to find any code.
             match_code = None
 
         bin_files = list(selected_dir.glob("*.bin"))
-        if not bin_files: return None, None
+        if not bin_files:
+            # Also check recursive in case binaries are in subfolders
+            bin_files = list(self.extracted_dir.rglob("*.bin"))
+        if not bin_files:
+            return None, None
+
+        # Smart Board Matching: select the exact board revision (e.g. T87 vs T70/T85/T88)
+        try:
+            from rg_engine.board_matcher import rank_candidates
+            ranked, b_info = rank_candidates([str(p) for p in bin_files], orig_data)
+            if ranked and ranked[0].get("is_match"):
+                best = ranked[0]
+                self.log_info(f"Smart Board Matcher selected: {best['filename']} ({best['reason']})")
+                return Path(best["path"]), match_code
+        except Exception as b_err:
+            self.log_info(f"Board matcher fallback: {b_err}")
+
         bin_files.sort(key=lambda x: x.stat().st_size, reverse=True)
         return bin_files[0], match_code
 

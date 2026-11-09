@@ -105,6 +105,9 @@ backup/
 
 # Local Secrets & Configuration
 config/github_token.json
+config/key_generator_config.json
+**/key_generator_config.json
+**/github_token.json
 
 # Web bundle binaries (keep html/css/js assets)
 web/*.exe

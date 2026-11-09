@@ -7181,7 +7181,7 @@ class BiosServiceTool(QMainWindow):
     def _show_rg_exe_selection_dialog(self, extracted_files):
         from rg_engine.ui import ExtractedFileListDialog
         
-        dialog = ExtractedFileListDialog(extracted_files, parent=self)
+        dialog = ExtractedFileListDialog(extracted_files, original_bios_path=self.current_bios_file, parent=self)
         if dialog.exec() != QDialog.Accepted or not dialog.selected_file:
             self.log_to_terminal("[INFO] User cancelled file selection.")
             self.initiate_loader_stop(0)
