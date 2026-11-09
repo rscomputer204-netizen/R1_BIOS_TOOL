@@ -7135,10 +7135,30 @@ class BiosServiceTool(QMainWindow):
         from rg_engine.replacer import replace_bios_region
         import time
 
+        # Auto-detect matching exe or directory if already present in workspace
+        init_exe = None
+        init_dir = getattr(self, "last_directory", "")
+        if hasattr(self, "current_bios_file") and self.current_bios_file:
+            curr = str(self.current_bios_file)
+            if curr.lower().endswith(".exe") and os.path.exists(curr):
+                init_exe = curr
+            else:
+                bios_dir = os.path.dirname(curr)
+                if os.path.isdir(bios_dir):
+                    init_dir = bios_dir
+                    for f in os.listdir(bios_dir):
+                        if f.lower().endswith(".exe"):
+                            cand_exe = os.path.join(bios_dir, f)
+                            if os.path.isfile(cand_exe):
+                                init_exe = cand_exe
+                                break
+
         dialog = ExtractorDropDialog(
             title="BIOS RG .EXE EXTRACTOR",
             subtitle="Drop an Official BIOS Update Package (.exe)",
             accepted_exts=[".exe"],
+            initial_file=init_exe,
+            initial_dir=init_dir,
             parent=self
         )
 
