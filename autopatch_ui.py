@@ -322,7 +322,7 @@ class AutoPatchDialog(QDialog):
         top_row.addStretch()
 
         # Cloud sync button
-        btn_sync = QPushButton("☁ Sync Cloud")
+        btn_sync = QPushButton("Sync Cloud")
         btn_sync.setObjectName("SecondaryBtn")
         btn_sync.clicked.connect(self.sync_cloud_patches)
         top_row.addWidget(btn_sync)
@@ -341,7 +341,7 @@ class AutoPatchDialog(QDialog):
 
         # Line 1: Patch Title & Brand Tag
         self.lbl_top_title = QLabel("Select a patch from the list")
-        self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #00f3ff;")
+        self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;")
         patch_info_vbox.addWidget(self.lbl_top_title)
 
         # Line 2: Patch 1-line Description / How it works
@@ -498,7 +498,7 @@ class AutoPatchDialog(QDialog):
         right_layout.addWidget(self.chk_backup)
 
         # Big Action Button (Enabled ONLY when both file and patch are ready)
-        self.btn_execute = QPushButton("⚡ EXECUTE AUTO PATCH")
+        self.btn_execute = QPushButton("EXECUTE AUTO PATCH")
         self.btn_execute.setObjectName("ExecuteBtn")
         self.btn_execute.setEnabled(False)  # <-- DISABLED BY DEFAULT
         self.btn_execute.clicked.connect(self.execute_patch_action)
@@ -671,13 +671,17 @@ class AutoPatchDialog(QDialog):
             self.list_patches.addItem(item)
             self.list_patches.setItemWidget(item, w)
 
-        if len(patches) > 0:
-            self.list_patches.setCurrentRow(0)
-        else:
-            self.selected_patch = None
+        self.list_patches.clearSelection()
+        self.selected_patch = None
+        if len(patches) == 0:
             self.lbl_top_title.setText("No patches available for this filter")
+            self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;")
             self.lbl_top_desc.setText("Change the FILTER dropdown above to view other patches.")
-            self.update_verification_and_button_state()
+        else:
+            self.lbl_top_title.setText("Select a patch from the list")
+            self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;")
+            self.lbl_top_desc.setText("Choose any patch on the left to inspect and apply to your BIOS image.")
+        self.update_verification_and_button_state()
 
     def on_patch_double_clicked(self, item: QListWidgetItem):
         """Triggered when user double clicks any patch item in the list."""
@@ -868,6 +872,11 @@ class AutoPatchDialog(QDialog):
     def on_patch_selected(self):
         items = self.list_patches.selectedItems()
         if not items:
+            self.selected_patch = None
+            self.lbl_top_title.setText("Select a patch from the list")
+            self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #64748b;")
+            self.lbl_top_desc.setText("Choose any patch on the left to inspect and apply to your BIOS image.")
+            self.update_verification_and_button_state()
             return
         p = items[0].data(Qt.ItemDataRole.UserRole)
         if not p:
@@ -881,6 +890,7 @@ class AutoPatchDialog(QDialog):
         model = p.get('model', '')
         meta_str = f"[{brand} - {model}]" if model else f"[{brand}]"
         self.lbl_top_title.setText(f"{p.get('title', '')}  {meta_str}")
+        self.lbl_top_title.setStyleSheet("font-size: 14px; font-weight: bold; color: #00f3ff;")
 
         # Line 2: 1-line description / how it works
         desc_line = p.get('description', '') or p.get('symptom', '') or "Standard binary patch."

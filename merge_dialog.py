@@ -1,10 +1,8 @@
 """
-merge_dialog.py - BIOS Merge Tool Dialog
-Allows the user to select two firmware/binary files (via browse or drag-and-drop)
-and merge them into a single output file.
-
-After merge completes in memory, a Save As dialog automatically opens
-with the Downloads folder pre-selected and a default filename.
+merge_dialog.py - Compact BIOS Firmware Merge Tool
+Allows selecting two firmware/binary files by clicking or drag-and-drop,
+and merging them into a single output file with automatic Save As prompt.
+Clean, modern, and compact interface with zero emojis.
 """
 
 import os
@@ -21,7 +19,6 @@ from PySide6.QtCore import Qt, Signal, QObject
 #  Worker signal bridge (thread-safe UI updates)
 # -----------------------------------------------------------------
 class _WorkerBridge(QObject):
-    # finished now carries the raw merged bytes (as bytes object via a holder)
     ready    = Signal(object)  # merged bytes object wrapper
     failed   = Signal(str)     # error message
     progress = Signal(int)     # 0-100
@@ -34,63 +31,69 @@ class _BytesHolder:
 
 
 # -----------------------------------------------------------------
-#  Drop Zone Widget
+#  Interactive Clickable Drop Zone Widget
 # -----------------------------------------------------------------
 class _DropZone(QFrame):
-    """A drag-and-drop capable file drop zone."""
+    """Clickable and drag-and-drop file selection box."""
 
     file_dropped = Signal(str)
+    clicked = Signal()
 
     IDLE_STYLE = """
         QFrame {
-            background-color: #171a1d;
-            border: 2px dashed #2d363f;
+            background-color: #0c1017;
+            border: 1.5px dashed #1e293b;
             border-radius: 10px;
-            min-height: 130px;
+            min-height: 105px;
+        }
+        QFrame:hover {
+            background-color: #101722;
+            border: 1.5px dashed #38bdf8;
         }
     """
     HOVER_STYLE = """
         QFrame {
-            background-color: #1c2228;
-            border: 2px dashed #0ef6fd;
+            background-color: #0f1c2e;
+            border: 2px dashed #00f3ff;
             border-radius: 10px;
-            min-height: 130px;
+            min-height: 105px;
         }
     """
     LOADED_STYLE = """
         QFrame {
-            background-color: #172221;
-            border: 2px solid #2ac4db;
+            background-color: #0b1724;
+            border: 1.5px solid #0284c7;
             border-radius: 10px;
-            min-height: 130px;
+            min-height: 105px;
+        }
+        QFrame:hover {
+            background-color: #0d1e30;
+            border: 1.5px solid #38bdf8;
         }
     """
 
     def __init__(self, label: str, parent=None):
         super().__init__(parent)
         self.setAcceptDrops(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setStyleSheet(self.IDLE_STYLE)
 
+        self._label_text = label
         self._file_path = ""
 
         layout = QVBoxLayout(self)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        layout.setSpacing(6)
-
-        self._icon_lbl = QLabel("📂")
-        self._icon_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._icon_lbl.setStyleSheet(
-            "font-size: 30px; background: transparent; border: none;"
-        )
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(4)
 
         self._title_lbl = QLabel(label)
         self._title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._title_lbl.setStyleSheet(
-            "color: #4cd3e3; font-size: 11px; font-weight: bold; "
+            "color: #38bdf8; font-size: 11px; font-weight: bold; "
             "background: transparent; border: none; font-family: 'Segoe UI', sans-serif;"
         )
 
-        self._hint_lbl = QLabel("Drop file here or click Browse")
+        self._hint_lbl = QLabel("Drop file here or click to browse")
         self._hint_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._hint_lbl.setStyleSheet(
             "color: #64748b; font-size: 10px; background: transparent; border: none; font-family: 'Segoe UI', sans-serif;"
@@ -100,16 +103,19 @@ class _DropZone(QFrame):
         self._file_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._file_lbl.setWordWrap(True)
         self._file_lbl.setStyleSheet(
-            "color: #00ff88; font-size: 10px; background: transparent; "
+            "color: #00f3ff; font-size: 11px; font-weight: bold; background: transparent; "
             "border: none; font-family: 'Consolas', monospace;"
         )
 
-        layout.addWidget(self._icon_lbl)
         layout.addWidget(self._title_lbl)
         layout.addWidget(self._hint_lbl)
         layout.addWidget(self._file_lbl)
 
-    # ── Drag events ────────────────────────────────────────────────────
+    # ── Click & Drag events ───────────────────────────────────────────
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
@@ -135,8 +141,15 @@ class _DropZone(QFrame):
     def clear(self):
         self._file_path = ""
         self._file_lbl.setText("")
-        self._icon_lbl.setText("📂")
-        self._hint_lbl.setText("Drop file here or click Browse")
+        self._title_lbl.setText(self._label_text)
+        self._title_lbl.setStyleSheet(
+            "color: #38bdf8; font-size: 11px; font-weight: bold; "
+            "background: transparent; border: none; font-family: 'Segoe UI', sans-serif;"
+        )
+        self._hint_lbl.setText("Drop file here or click to browse")
+        self._hint_lbl.setStyleSheet(
+            "color: #64748b; font-size: 10px; background: transparent; border: none; font-family: 'Segoe UI', sans-serif;"
+        )
         self.setStyleSheet(self.IDLE_STYLE)
 
     # ── Private ────────────────────────────────────────────────────────
@@ -151,34 +164,41 @@ class _DropZone(QFrame):
             if size_b < 1024 * 1024
             else f"{size_b/1024/1024:.2f} MB"
         )
-        self._file_lbl.setText(f"✅ {name}\n({size_str})")
-        self._icon_lbl.setText("🔒")
-        self._hint_lbl.setText("File loaded")
+        self._title_lbl.setText(f"{self._label_text} [LOADED]")
+        self._title_lbl.setStyleSheet(
+            "color: #22c55e; font-size: 10px; font-weight: bold; "
+            "background: transparent; border: none; font-family: 'Segoe UI', sans-serif;"
+        )
+        self._file_lbl.setText(f"{name}\n({size_str})")
+        self._hint_lbl.setText("Click or drop to replace")
+        self._hint_lbl.setStyleSheet(
+            "color: #94a3b8; font-size: 9px; background: transparent; border: none; font-family: 'Segoe UI', sans-serif;"
+        )
         self.setStyleSheet(self.LOADED_STYLE)
         self.file_dropped.emit(path)
 
 
 # -----------------------------------------------------------------
-#  Main Merge Dialog
+#  Main Merge Dialog (Compact & Minimalist)
 # -----------------------------------------------------------------
 class MergeDialog(QDialog):
-    """Dialog for merging two firmware/binary files into one."""
+    """Compact dialog for merging two firmware/binary files into one."""
 
     _STYLE = """
         QDialog {
-            background-color: #171a1d;
+            background-color: #0b0f15;
             color: #e2e8f0;
         }
         QLabel#TitleLabel {
-            color: #4cd3e3;
-            font-size: 18px;
+            color: #00f3ff;
+            font-size: 15px;
             font-weight: 800;
             font-family: 'Segoe UI', sans-serif;
-            letter-spacing: 2px;
+            letter-spacing: 1.5px;
         }
         QLabel#SubLabel {
-            color: #94a3b8;
-            font-size: 11px;
+            color: #64748b;
+            font-size: 10px;
             font-family: 'Segoe UI', sans-serif;
         }
         QLabel {
@@ -187,105 +207,56 @@ class MergeDialog(QDialog):
             font-family: 'Segoe UI', sans-serif;
         }
         QPushButton {
-            background-color: #252a2e;
-            color: #e2e8f0;
-            border: 1px solid #3c444d;
+            background-color: #1e293b;
+            color: #94a3b8;
+            border: 1px solid #334155;
             border-radius: 6px;
-            padding: 7px 16px;
+            padding: 6px 18px;
             font-family: 'Segoe UI', sans-serif;
             font-size: 11px;
-            font-weight: 600;
+            font-weight: bold;
         }
         QPushButton:hover {
-            background-color: #2e353b;
-            border-color: #4cd3e3;
+            background-color: #334155;
             color: #ffffff;
         }
-        QPushButton#MergeBtn {
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #8fe3ea, stop:0.5 #3598a6, stop:1 #247d8a);
-            color: #0b151a;
-            border: none;
-            font-size: 13px;
-            padding: 10px 32px;
-            border-radius: 8px;
-            font-family: 'Segoe UI', sans-serif;
-            font-weight: 900;
-            letter-spacing: 1px;
-        }
-        QPushButton#MergeBtn:hover {
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #bbf2f6, stop:0.5 #45b1bf, stop:1 #2ca0b0);
-            color: #000000;
-        }
-        QPushButton#MergeBtn:disabled {
-            background: #1b2024;
-            color: #475569;
-            border: 1px solid #272e36;
-        }
-        QPushButton#ClearBtn {
-            background-color: transparent;
-            color: #ef4444;
-            border: 1px solid #451a1a;
-            font-size: 11px;
-            padding: 4px 10px;
-            border-radius: 4px;
-        }
-        QPushButton#ClearBtn:hover {
-            background-color: #2a1515;
-            border-color: #ef4444;
-        }
         QComboBox {
-            background-color: #252a2e;
+            background-color: #161e2e;
             color: #f1f5f9;
-            border: 1px solid #3c444d;
+            border: 1px solid #334155;
             border-radius: 6px;
-            padding: 6px 12px;
+            padding: 5px 10px;
             font-family: 'Segoe UI', sans-serif;
             font-size: 11px;
         }
         QComboBox::drop-down { border: none; }
         QComboBox QAbstractItemView {
-            background-color: #252a2e;
+            background-color: #161e2e;
             color: #f1f5f9;
-            selection-background-color: #3598a6;
+            selection-background-color: #0284c7;
             selection-color: #ffffff;
         }
         QProgressBar {
-            background-color: #14171a;
-            border: 1px solid #283038;
-            border-radius: 6px;
-            min-height: 14px;
-            max-height: 14px;
+            background-color: #0f172a;
+            border: 1px solid #1e293b;
+            border-radius: 4px;
+            min-height: 8px;
+            max-height: 8px;
             text-align: center;
-            color: transparent;
         }
         QProgressBar::chunk {
-            background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #2ac4db, stop:1 #0ef6fd);
-            border-radius: 5px;
+            background: #38bdf8;
+            border-radius: 3px;
         }
         QFrame#Divider {
-            background-color: #283038;
+            background-color: #1e293b;
             max-height: 1px;
-        }
-        QLabel#StatusLabel {
-            color: #64748b;
-            font-size: 10px;
-            font-family: 'Consolas', monospace;
-        }
-        QLabel#InfoBox {
-            color: #38bdf8;
-            font-size: 11px;
-            font-family: 'Consolas', monospace;
-            background-color: #101316;
-            border: 1px solid #22272e;
-            border-radius: 6px;
-            padding: 8px 12px;
         }
     """
 
     # ── Default download folder helper ────────────────────────────────
     @staticmethod
     def _downloads_dir() -> str:
-        """Return the user's Downloads folder path."""
         home = os.path.expanduser("~")
         dl = os.path.join(home, "Downloads")
         return dl if os.path.isdir(dl) else home
@@ -293,23 +264,18 @@ class MergeDialog(QDialog):
     # ── Default output filename helper ───────────────────────────────
     @staticmethod
     def _default_name(f1: str, f2: str) -> str:
-        """Generate a sensible default output filename from the two input names."""
-        n1 = os.path.splitext(os.path.basename(f1))[0] if f1 else "FILE1"
-        n2 = os.path.splitext(os.path.basename(f2))[0] if f2 else "FILE2"
-        # Keep it short — just use 'merged_BIOS_output.bin' as default
         return "merged_BIOS_output.bin"
 
     # ── Constructor ───────────────────────────────────────────────────
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("⚡ MERGE — BIOS Tool")
+        self.setWindowTitle("MERGE — BIOS Tool")
         self.setStyleSheet(self._STYLE)
-        self.setMinimumSize(700, 530)
+        self.setFixedSize(540, 395)
         self.setWindowFlags(
             self.windowFlags() | Qt.WindowType.WindowStaysOnTopHint
         )
 
-        # Merged data is kept here until saved
         self._merged_bytes: bytes | None = None
 
         self._bridge = _WorkerBridge()
@@ -323,88 +289,55 @@ class MergeDialog(QDialog):
     # ── UI Construction ────────────────────────────────────────────────
     def _build_ui(self):
         root = QVBoxLayout(self)
-        root.setContentsMargins(28, 22, 28, 22)
-        root.setSpacing(14)
+        root.setContentsMargins(20, 16, 20, 16)
+        root.setSpacing(10)
 
-        # Title
-        title = QLabel("⚡ FIRMWARE MERGE TOOL")
+        # Header Title
+        title = QLabel("FIRMWARE MERGE TOOL")
         title.setObjectName("TitleLabel")
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(title)
 
-        sub = QLabel(
-            "Select or drag & drop two firmware/binary files to merge them into one"
-        )
+        sub = QLabel("Drop or click to select two binary files to merge into one")
         sub.setObjectName("SubLabel")
         sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
         root.addWidget(sub)
 
         # Divider
-        root.addWidget(self._divider())
+        divider = QFrame()
+        divider.setObjectName("Divider")
+        root.addWidget(divider)
 
-        # ── Drop zones ────────────────────────────────────────────────
+        # ── Drop zones Row (Clickable & Drag-and-drop) ─────────────────
         zones_row = QHBoxLayout()
-        zones_row.setSpacing(14)
+        zones_row.setSpacing(10)
 
-        # File 1
-        f1_col = QVBoxLayout()
-        lbl1 = QLabel("FILE 1  (Base)")
-        lbl1.setStyleSheet(
-            "color:#00f3ff; font-weight:bold; font-size:10px; font-family:'Consolas',monospace;"
-        )
-        lbl1.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._zone1 = _DropZone("FILE 1 — Base Firmware")
+        # Zone 1 (Base)
+        self._zone1 = _DropZone("FILE 1 — Base")
+        self._zone1.clicked.connect(lambda: self._browse(self._zone1))
         self._zone1.file_dropped.connect(self._update_state)
-        browse1 = QPushButton("Browse...")
-        browse1.clicked.connect(lambda: self._browse(self._zone1))
-        clear1 = QPushButton("✕ Clear")
-        clear1.setObjectName("ClearBtn")
-        clear1.clicked.connect(lambda: self._clear_zone(self._zone1))
-        f1_col.addWidget(lbl1)
-        f1_col.addWidget(self._zone1)
-        br1 = QHBoxLayout()
-        br1.addWidget(browse1)
-        br1.addWidget(clear1)
-        f1_col.addLayout(br1)
 
-        # Plus sign
+        # Plus Sign Separator
         plus = QLabel("+")
         plus.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        plus.setStyleSheet("color:#00f3ff; font-size:36px; font-weight:bold; padding:0 4px;")
-        plus.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        plus.setStyleSheet("color: #00f3ff; font-size: 26px; font-weight: bold;")
+        plus.setFixedWidth(28)
 
-        # File 2
-        f2_col = QVBoxLayout()
-        lbl2 = QLabel("FILE 2  (Patch / Donor)")
-        lbl2.setStyleSheet(
-            "color:#00f3ff; font-weight:bold; font-size:10px; font-family:'Consolas',monospace;"
-        )
-        lbl2.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._zone2 = _DropZone("FILE 2 — Patch / Donor Firmware")
+        # Zone 2 (Patch / Donor)
+        self._zone2 = _DropZone("FILE 2 — Patch / Donor")
+        self._zone2.clicked.connect(lambda: self._browse(self._zone2))
         self._zone2.file_dropped.connect(self._update_state)
-        browse2 = QPushButton("Browse...")
-        browse2.clicked.connect(lambda: self._browse(self._zone2))
-        clear2 = QPushButton("✕ Clear")
-        clear2.setObjectName("ClearBtn")
-        clear2.clicked.connect(lambda: self._clear_zone(self._zone2))
-        f2_col.addWidget(lbl2)
-        f2_col.addWidget(self._zone2)
-        br2 = QHBoxLayout()
-        br2.addWidget(browse2)
-        br2.addWidget(clear2)
-        f2_col.addLayout(br2)
 
-        zones_row.addLayout(f1_col)
+        zones_row.addWidget(self._zone1, stretch=1)
         zones_row.addWidget(plus)
-        zones_row.addLayout(f2_col)
+        zones_row.addWidget(self._zone2, stretch=1)
         root.addLayout(zones_row)
 
-        root.addWidget(self._divider())
-
-        # ── Merge mode ────────────────────────────────────────────────
+        # ── Merge mode Row ────────────────────────────────────────────
         mode_row = QHBoxLayout()
+        mode_row.setSpacing(8)
         mode_lbl = QLabel("Merge Mode:")
-        mode_lbl.setStyleSheet("color:#8899aa; font-size:11px;")
+        mode_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: bold;")
         self._mode_combo = QComboBox()
         self._mode_combo.addItems([
             "Append  (File1 + File2)",
@@ -415,13 +348,10 @@ class MergeDialog(QDialog):
         mode_row.addStretch()
         root.addLayout(mode_row)
 
-        # ── Save info box ─────────────────────────────────────────────
-        self._info_lbl = QLabel(
-            f"💾  After merging, a Save dialog will open automatically.\n"
-            f"    Default location: {self._downloads_dir()}\n"
-            f"    Default filename:  merged_BIOS_output.bin"
-        )
-        self._info_lbl.setObjectName("InfoBox")
+        # ── Compact Info / Status Strip ───────────────────────────────
+        self._info_lbl = QLabel("Select two binary files to begin.")
+        self._info_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._info_lbl.setWordWrap(True)
         root.addWidget(self._info_lbl)
 
         # ── Progress bar ──────────────────────────────────────────────
@@ -431,31 +361,65 @@ class MergeDialog(QDialog):
         self._progress.setVisible(False)
         root.addWidget(self._progress)
 
-        # ── Status label ──────────────────────────────────────────────
-        self._status_lbl = QLabel("Select two files to begin.")
-        self._status_lbl.setObjectName("StatusLabel")
-        self._status_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        root.addWidget(self._status_lbl)
-
         # ── Action buttons ────────────────────────────────────────────
         btn_row = QHBoxLayout()
-        self._merge_btn = QPushButton("⚡  MERGE")
-        self._merge_btn.setObjectName("MergeBtn")
-        self._merge_btn.clicked.connect(self._start_merge)
-        close_btn = QPushButton("Close")
+        btn_row.setSpacing(10)
+
+        close_btn = QPushButton("Cancel")
+        close_btn.setFixedHeight(36)
+        close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.clicked.connect(self.reject)
-        btn_row.addStretch()
-        btn_row.addWidget(self._merge_btn)
-        btn_row.addSpacing(12)
+
+        self._merge_btn = QPushButton("MERGE")
+        self._merge_btn.setFixedHeight(36)
+        self._merge_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._merge_btn.setEnabled(False)
+        self._apply_merge_btn_style(False)
+        self._merge_btn.clicked.connect(self._start_merge)
+
         btn_row.addWidget(close_btn)
         btn_row.addStretch()
+        btn_row.addWidget(self._merge_btn)
         root.addLayout(btn_row)
 
-    # ── Helpers ────────────────────────────────────────────────────────
-    def _divider(self) -> QFrame:
-        f = QFrame()
-        f.setObjectName("Divider")
-        return f
+    # ── Style Helper for MERGE Button ─────────────────────────────────
+    def _apply_merge_btn_style(self, enabled: bool):
+        if enabled:
+            self._merge_btn.setStyleSheet("""
+                QPushButton {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #38bdf8, stop:0.5 #0ea5e9, stop:1 #0284c7);
+                    color: #041018;
+                    border: 1px solid #7dd3fc;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 900;
+                    letter-spacing: 1.5px;
+                    padding: 0 28px;
+                }
+                QPushButton:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #7dd3fc, stop:0.5 #38bdf8, stop:1 #0ea5e9);
+                    color: #000000;
+                    border-color: #bae6fd;
+                }
+                QPushButton:pressed {
+                    background: #0369a1;
+                }
+            """)
+        else:
+            self._merge_btn.setStyleSheet("""
+                QPushButton {
+                    background: #161e2e;
+                    color: #475569;
+                    border: 1px solid #1e293b;
+                    border-radius: 6px;
+                    font-size: 12px;
+                    font-weight: 900;
+                    letter-spacing: 1.5px;
+                    padding: 0 28px;
+                }
+            """)
 
     # ── Actions ────────────────────────────────────────────────────────
     def _browse(self, zone: _DropZone):
@@ -467,15 +431,12 @@ class MergeDialog(QDialog):
             zone.set_file(path)
             self._update_state()
 
-    def _clear_zone(self, zone: _DropZone):
-        zone.clear()
-        self._update_state()
-
     def _update_state(self, *_):
         f1 = self._zone1.get_file()
         f2 = self._zone2.get_file()
         ready = bool(f1 and f2)
         self._merge_btn.setEnabled(ready)
+        self._apply_merge_btn_style(ready)
 
         if ready:
             s1 = os.path.getsize(f1)
@@ -489,26 +450,38 @@ class MergeDialog(QDialog):
                     else f"{b/1024/1024:.2f} MB"
                 )
 
-            self._status_lbl.setStyleSheet(
-                "color: #5a7080; font-size:10px; font-family:'Consolas',monospace;"
-            )
-            self._status_lbl.setText(
-                f"Ready — estimated output size: ~{_fmt(total)}  "
-                f"({_fmt(s1)} + {_fmt(s2)})"
-            )
-
-            # Update default filename in info box
             default_name = self._default_name(f1, f2)
             self._info_lbl.setText(
-                f"💾  After merging, a Save dialog will open automatically.\n"
-                f"    Default location: {self._downloads_dir()}\n"
-                f"    Default filename:  {default_name}"
+                f"Ready to merge: ~{_fmt(total)} ({_fmt(s1)} + {_fmt(s2)})\n"
+                f"Auto-save location: Downloads / {default_name}"
             )
+            self._info_lbl.setStyleSheet("""
+                QLabel {
+                    color: #38bdf8;
+                    font-size: 10px;
+                    font-family: 'Consolas', monospace;
+                    background-color: #081523;
+                    border: 1px solid #0284c7;
+                    border-radius: 6px;
+                    padding: 6px 10px;
+                }
+            """)
         else:
-            self._status_lbl.setText("Select two files to begin.")
+            self._info_lbl.setText("Select two binary files to merge them into one.")
+            self._info_lbl.setStyleSheet("""
+                QLabel {
+                    color: #64748b;
+                    font-size: 10px;
+                    font-family: 'Segoe UI', sans-serif;
+                    background-color: #0a0e16;
+                    border: 1px solid #1a2332;
+                    border-radius: 6px;
+                    padding: 6px 10px;
+                }
+            """)
 
     def _start_merge(self):
-        """Read both files and merge them in a background thread (no disk write yet)."""
+        """Read both files and merge them in a background thread."""
         f1 = self._zone1.get_file()
         f2 = self._zone2.get_file()
         mode = self._mode_combo.currentIndex()  # 0=append, 1=prepend
@@ -516,10 +489,7 @@ class MergeDialog(QDialog):
         self._merge_btn.setEnabled(False)
         self._progress.setVisible(True)
         self._progress.setValue(0)
-        self._status_lbl.setStyleSheet(
-            "color: #8899aa; font-size:10px; font-family:'Consolas',monospace;"
-        )
-        self._status_lbl.setText("⏳  Merging in memory…")
+        self._info_lbl.setText("Merging in memory...")
 
         def _worker():
             try:
@@ -556,19 +526,14 @@ class MergeDialog(QDialog):
         # ── Auto-open Save As dialog ──────────────────────────────────
         save_path, _ = QFileDialog.getSaveFileName(
             self,
-            "💾  Save Merged Firmware As",
+            "Save Merged Firmware As",
             default_path,
             "Binary Files (*.bin);;ROM Files (*.rom);;All Files (*.*)",
         )
 
         if not save_path:
-            # User cancelled the save dialog
-            self._status_lbl.setStyleSheet(
-                "color: #f59e0b; font-size:10px; font-family:'Consolas',monospace;"
-            )
-            self._status_lbl.setText(
-                "⚠️  Save cancelled.  Click MERGE again to retry."
-            )
+            self._info_lbl.setText("Save cancelled. Click MERGE again to retry.")
+            self._info_lbl.setStyleSheet("color: #f59e0b; font-size: 10px; font-family: 'Consolas', monospace; background-color: #081523; border: 1px solid #f59e0b; border-radius: 6px; padding: 6px 10px;")
             self._merged_bytes = None
             return
 
@@ -588,29 +553,23 @@ class MergeDialog(QDialog):
         )
         self._merged_bytes = None
 
-        self._status_lbl.setStyleSheet(
-            "color:#00ff88; font-size:10px; font-family:'Consolas',monospace;"
-        )
-        self._status_lbl.setText(
-            f"✅  Saved: {os.path.basename(save_path)}  ({size_str})"
-        )
+        self._info_lbl.setText(f"Saved: {os.path.basename(save_path)}  ({size_str})")
+        self._info_lbl.setStyleSheet("color: #00ff88; font-size: 10px; font-family: 'Consolas', monospace; background-color: #081523; border: 1px solid #00ff88; border-radius: 6px; padding: 6px 10px;")
 
         QMessageBox.information(
             self,
-            "✅ Merge Successful",
+            "Merge Successful",
             f"Files merged and saved successfully!\n\n"
-            f"📄 Output : {save_path}\n"
-            f"📦 Size    : {size_str}",
+            f"Output : {save_path}\n"
+            f"Size   : {size_str}",
         )
 
     def _on_merge_failed(self, error: str):
         self._progress.setVisible(False)
         self._merge_btn.setEnabled(True)
         self._merged_bytes = None
-        self._status_lbl.setStyleSheet(
-            "color:#ff4444; font-size:10px; font-family:'Consolas',monospace;"
-        )
-        self._status_lbl.setText(f"❌  Error: {error}")
+        self._info_lbl.setText(f"Error: {error}")
+        self._info_lbl.setStyleSheet("color: #ff4444; font-size: 10px; font-family: 'Consolas', monospace; background-color: #081523; border: 1px solid #ff4444; border-radius: 6px; padding: 6px 10px;")
         QMessageBox.critical(
-            self, "❌ Merge Failed", f"An error occurred:\n\n{error}"
+            self, "Merge Failed", f"An error occurred:\n\n{error}"
         )

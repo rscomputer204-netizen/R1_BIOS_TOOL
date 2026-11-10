@@ -5356,7 +5356,7 @@ class BiosServiceTool(QMainWindow):
         self.btn_universal_extract.clicked.connect(self.universal_extract_handler)
         self.btn_universal_extract.setStyleSheet(cyber_btn_style)
 
-        self.btn_merge = QPushButton("⚡ MERGE")
+        self.btn_merge = QPushButton("MERGE")
         self.btn_merge.setEnabled(True)
         self.btn_merge.clicked.connect(self.merge_handler)
         self.btn_merge.setStyleSheet(cyber_btn_style)
