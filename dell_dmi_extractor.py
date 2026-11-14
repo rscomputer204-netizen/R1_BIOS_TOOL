@@ -13,6 +13,7 @@ Handles:
 
 import os
 import re
+import tempfile
 
 
 class DellDMIExtractor:
@@ -48,10 +49,102 @@ class DellDMIExtractor:
         # Reject purely repetitive characters (e.g. AAAAAAA, 1111111)
         if len(set(tag_upper)) <= 2:
             return False
-        # Reject common NVRAM / firmware keywords
-        if any(kw in tag_upper for kw in ["NVAR", "PASS", "BIOS", "WINDOWS", "DIAG", "SETUP"]):
+        # Reject common NVRAM / firmware / English keywords
+        if any(kw in tag_upper for kw in [
+            "NVAR", "PASS", "BIOS", "WINDOWS", "DIAG", "SETUP", "ARCHIVE",
+            "FACTORY", "RESTORE", "SUPPORT", "PRODUCT", "DEFAULT", "RELEASE",
+            "VERSION", "PACKAGE", "BACKUP", "INSTALL", "RECOVERY", "SERVICE"
+        ]):
+            return False
+        # Dell Service Tags practically always consist of a mix of letters and digits
+        if not (any(c.isdigit() for c in tag_upper) and any(c.isalpha() for c in tag_upper)):
             return False
         return True
+
+    @staticmethod
+    def _detect_companion_service_tag(bios_path: str, log_cb=None):
+        """
+        Detects companion Service Tag files commonly placed alongside Dell dumps by technicians
+        (e.g., 'ST CJV0B53.txt', 'ST_CJV0B53.txt', 'Service Tag CJV0B53.txt', or companion zip files).
+        Restricted to dedicated folder hierarchy to avoid global directory leakage.
+        """
+        import zipfile
+        if not bios_path or not os.path.exists(bios_path):
+            return None
+
+        folder = os.path.dirname(os.path.abspath(bios_path))
+        search_dirs = [folder]
+
+        # Ignore broad system roots
+        system_roots = {
+            os.path.expanduser("~").lower(),
+            os.path.join(os.path.expanduser("~"), "Desktop").lower(),
+            os.path.join(os.path.expanduser("~"), "Downloads").lower(),
+            tempfile.gettempdir().lower(),
+            "c:\\", "d:\\"
+        }
+
+        parent = os.path.dirname(folder)
+        if parent and parent != folder and parent.lower() not in system_roots:
+            search_dirs.append(parent)
+            grandparent = os.path.dirname(parent)
+            if grandparent and grandparent != parent and grandparent.lower() not in system_roots:
+                search_dirs.append(grandparent)
+
+        def _log(m):
+            if log_cb: log_cb(m)
+
+        for d in search_dirs:
+            if not os.path.isdir(d):
+                continue
+            try:
+                for fname in os.listdir(d):
+                    # 1. Filename match: e.g. 'ST CJV0B53.txt', 'ST_CJV0B53.txt', 'Service Tag CJV0B53.txt'
+                    m = re.search(r'\b(?:ST|Service[ _]?Tag)[ _\-:]*([A-Z0-9]{7})\b', fname, re.IGNORECASE)
+                    if m:
+                        cand = m.group(1).upper()
+                        if DellDMIExtractor.is_valid_service_tag(cand):
+                            _log(f"[Dell] Detected companion Service Tag file: {fname} -> {cand}")
+                            return cand, f"File: {fname}"
+
+                    # 2. Dedicated text files: 'tag.txt', 'st.txt', 'service_tag.txt' or files containing 'Service Tag: ...'
+                    if fname.lower() in ('tag.txt', 'st.txt', 'service_tag.txt', 'servicetag.txt') or 'tag' in fname.lower():
+                        txt_path = os.path.join(d, fname)
+                        try:
+                            with open(txt_path, 'r', encoding='utf-8', errors='ignore') as f:
+                                lines = f.readlines()
+                                for line in lines:
+                                    m_txt = re.search(r'(?:ST|Service[ _]?Tag|Serial)[:\s\-]*([A-Z0-9]{7})\b', line, re.IGNORECASE)
+                                    if m_txt:
+                                        cand = m_txt.group(1).upper()
+                                        if DellDMIExtractor.is_valid_service_tag(cand):
+                                            _log(f"[Dell] Detected Service Tag inside companion text file {fname}: {cand}")
+                                            return cand, f"Content of {fname}"
+                                    # Standalone line with exactly a 7-character tag
+                                    stripped = line.strip().upper()
+                                    if len(stripped) == 7 and DellDMIExtractor.is_valid_service_tag(stripped):
+                                        _log(f"[Dell] Detected Service Tag on line in {fname}: {stripped}")
+                                        return stripped, f"Content of {fname}"
+                        except Exception:
+                            pass
+
+                    # 3. Companion zip archive check
+                    if fname.lower().endswith('.zip'):
+                        zip_path = os.path.join(d, fname)
+                        try:
+                            with zipfile.ZipFile(zip_path, 'r') as z:
+                                for entry in z.namelist():
+                                    m_zip = re.search(r'\b(?:ST|Service[ _]?Tag)[ _\-:]*([A-Z0-9]{7})\b', entry, re.IGNORECASE)
+                                    if m_zip:
+                                        cand = m_zip.group(1).upper()
+                                        if DellDMIExtractor.is_valid_service_tag(cand):
+                                            _log(f"[Dell] Detected companion Service Tag in archive {fname} ({entry}): {cand}")
+                                            return cand, f"Archive {fname} -> {os.path.basename(entry)}"
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+        return None
 
     @staticmethod
     def extract(bios_path: str, log_cb=None) -> dict:
@@ -304,6 +397,13 @@ class DellDMIExtractor:
                         tag_off = dvar_found + m.start()
                         st_candidates.append((tag_str, tag_off, 100, "ASCII (DVAR)"))
 
+        # Tier 5: Companion Tag Detection (For factory virgin / stock / merged dumps)
+        if not st_candidates and bios_path:
+            companion = DellDMIExtractor._detect_companion_service_tag(bios_path, log_cb=_log)
+            if companion:
+                comp_tag, comp_src = companion
+                st_candidates.append((comp_tag, 0, 75, f"Companion ({comp_src})"))
+
         # Selection of best candidate
         if st_candidates:
             # Score bonus for tags that contain both digits and letters (standard Dell Service Tag syntax)
@@ -319,13 +419,18 @@ class DellDMIExtractor:
             best_tag, best_off, best_score, best_enc = max(scored_candidates, key=lambda x: x[2])
             results["Details"]["Service Tag"] = best_tag
             results["Details"]["Serial Number"] = best_tag
-            results["Offsets"]["Service Tag"] = f"0x{best_off:X}"
-            results["Offsets"]["Serial Number"] = f"0x{best_off:X}"
+            results["Offsets"]["Service Tag"] = f"0x{best_off:X}" if best_off > 0 else "Companion"
+            results["Offsets"]["Serial Number"] = f"0x{best_off:X}" if best_off > 0 else "Companion"
             results["Lengths"]["Service Tag"] = len(best_tag)
             results["Lengths"]["Serial Number"] = len(best_tag)
             results["Encodings"]["Service Tag"] = best_enc
             results["Encodings"]["Serial Number"] = best_enc
-            _log(f"[Dell] Service Tag: {best_tag} @ 0x{best_off:X} ({best_enc})")
+            _log(f"[Dell] Service Tag: {best_tag} @ {results['Offsets']['Service Tag']} ({best_enc})")
+        else:
+            # Inform technician clearly that firmware is factory stock / unprogrammed
+            results["Details"]["Service Tag"] = "[Not Set - Factory Stock]"
+            results["Details"]["Serial Number"] = "[Not Set - Factory Stock]"
+            _log("[Dell] Service Tag: Not programmed in binary (Factory Stock / Virgin BIOS)")
 
         if found_asset_tag and "Asset Tag" not in results["Details"]:
             results["Details"]["Asset Tag"] = found_asset_tag
