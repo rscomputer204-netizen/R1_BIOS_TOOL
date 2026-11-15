@@ -50,11 +50,11 @@ CPUID_MAP = {
     "000B06A0": ("Raptor Lake (13th/14th Gen)", "RPL-HX B"),
     "000B06F2": ("Raptor Lake (13th/14th Gen)", "RPL-P B"),
     # Core Ultra 1st Gen (Meteor Lake)
-    "000706E5": ("Meteor Lake (Core Ultra)", "MTL-M/P A"),
-    "000A06A0": ("Meteor Lake (Core Ultra)", "MTL-S A"),
-    "000A06A1": ("Meteor Lake (Core Ultra)", "MTL-M/P A"),
-    "000A06A2": ("Meteor Lake (Core Ultra)", "MTL-M/P A"),
-    "000A06A4": ("Meteor Lake (Core Ultra)", "MTL-M/P A"),
+    "000706E5": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
+    "000A06A0": ("Meteor Lake (14th Gen)", "Meteor Lake S"),
+    "000A06A1": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
+    "000A06A2": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
+    "000A06A4": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
     # Core Ultra 2nd Gen (Lunar Lake / Arrow Lake)
     "000B06D0": ("Lunar Lake (Core Ultra 2)", "LNL-M A"),
     "000C0650": ("Arrow Lake (Core Ultra 2)", "ARL-S A"),
@@ -70,15 +70,38 @@ CPUID_MAP = {
     "000906EB": ("Coffee Lake (8th/9th Gen)", "CNP-H B"),
     "000906EC": ("Coffee Lake (8th/9th Gen)", "CNP B"),
     "000906ED": ("Coffee Lake (8th/9th Gen)", "CNP B"),
-    "000806EA": ("Whiskey Lake / Kaby Lake-R (8th Gen)", "CNP-LP B"),
     "000806EB": ("Whiskey Lake (8th Gen)", "CNP-LP B"),
     # 6th / 7th Gen Skylake / Kaby Lake
     "000406E3": ("Skylake (6th Gen)", "SPT-LP B"),
+    "000406E8": ("Skylake (6th Gen)", "SPT-LP B"),
     "000506E3": ("Skylake (6th Gen)", "SPT-H B"),
-    "000906E9": ("Kaby Lake (7th Gen)", "KBP-LP B"),
+    "000806E9": ("Kaby Lake (7th Gen)", "SPT/KBP-LP C"),
+    "000806EA": ("Kaby Lake (7th Gen)", "SPT/KBP-LP C"),
+    "000906E9": ("Kaby Lake (7th Gen)", "KBP-S B"),
     # 4th / 5th Gen Haswell / Broadwell
     "000306C3": ("Haswell (4th Gen)", "LPT"),
     "00040651": ("Broadwell (5th Gen)", "WPT"),
+}
+
+GEN_RANK = {
+    "arrow lake": 16,
+    "lunar lake": 15,
+    "panther lake": 15,
+    "meteor lake": 14,
+    "raptor lake": 13,
+    "alder lake": 12,
+    "tiger lake": 11,
+    "comet lake": 10,
+    "ice lake": 10,
+    "coffee lake": 9,
+    "whiskey lake": 8,
+    "kaby lake-r": 8,
+    "kaby lake": 7,
+    "skylake": 6,
+    "broadwell": 5,
+    "haswell": 4,
+    "ivy bridge": 3,
+    "sandy bridge": 2,
 }
 
 GEN_FAMILY_MAP = {
@@ -88,10 +111,10 @@ GEN_FAMILY_MAP = {
     14: ("Comet Lake (10th Gen)", "CMP-LP A"),
     15: ("Tiger Lake (11th Gen)", "TGP-LP B"),
     16: ("Alder Lake / Raptor Lake (12th/13th Gen)", "ADP-P/M B"),
-    17: ("Meteor Lake (Core Ultra)", "MTL-M/P A"),
-    18: ("Lunar Lake (Core Ultra 2nd Gen)", "LNL-M A"),
-    19: ("Arrow Lake / Panther Lake", "PTL A"),
-    20: ("Nova Lake (Next-Gen)", "NVL A"),
+    17: ("Meteor Lake (14th Gen)", "Meteor Lake P"),
+    18: ("Meteor Lake (14th Gen)", "Meteor Lake P"),
+    19: ("Arrow Lake / Lunar Lake (15th Gen)", "Arrow Lake"),
+    20: ("Panther Lake (Next-Gen)", "PTL A"),
     21: ("Next-Gen Ultra CSME 21+", "GEN21 A"),
 }
 
@@ -221,12 +244,24 @@ class R1CSMEAnalyzer:
                 unique_cpuids = sorted(list(set(cpuids)))
                 self.info["cpuids"] = unique_cpuids
                 if unique_cpuids:
+                    best_rank = -1
+                    best_gen = None
+                    best_chipset = None
                     for cid in unique_cpuids:
                         if cid in CPUID_MAP:
                             gen_str, chipset_val = CPUID_MAP[cid]
-                            self.info["cpu_gen"] = f"Intel | {gen_str} | {', '.join(unique_cpuids)}"
-                            self.info["chipset"] = chipset_val
-                            return
+                            rank = 0
+                            for k, r in GEN_RANK.items():
+                                if k in gen_str.lower():
+                                    rank = max(rank, r)
+                            if rank > best_rank:
+                                best_rank = rank
+                                best_gen = gen_str
+                                best_chipset = chipset_val
+                    if best_gen:
+                        self.info["cpu_gen"] = f"Intel | {best_gen} | {', '.join(unique_cpuids)}"
+                        self.info["chipset"] = best_chipset
+                        return
                     self.info["cpu_gen"] = f"Intel | Generic Intel x86 | {', '.join(unique_cpuids)}"
 
     def _parse_flash_descriptor(self):
@@ -341,6 +376,37 @@ class R1CSMEAnalyzer:
 
     def _parse_extension_sku(self):
         data = self.raw_data
+
+        # 1. Primary: Check Extension 0x0C (CLIENT_SYSTEM_INFO_EXTENSION)
+        # Tag 0x0000000C, Size 0x00000030. Used in CSME 11 to 21+ for actual SKU
+        pos = 0
+        ext12_sku_map = {
+            0: ("Corporate", "COR"),
+            1: ("Consumer", "CON"),
+            2: ("Slim", "SLM"),
+            3: ("Server", "SVR"),
+            5: ("Chrome", "CHR"),
+        }
+        while True:
+            pos = data.find(b"\x0c\x00\x00\x00\x30\x00\x00\x00", pos)
+            if pos == -1:
+                break
+            if pos + 0x30 <= len(data):
+                fw_attrib = struct.unpack("<Q", data[pos + 0x28 : pos + 0x30])[0]
+                stype = (fw_attrib >> 4) & 0x07
+                if stype in ext12_sku_map:
+                    sname, scode = ext12_sku_map[stype]
+                    is_lp = (self.info["major"] in [14, 15, 16, 17, 18, 19] or "LP" in self.info["chipset"])
+                    if is_lp:
+                        self.info["sku"] = f"{sname} LP"
+                        self.info["sku_code"] = f"{scode}_LP"
+                    else:
+                        self.info["sku"] = sname
+                        self.info["sku_code"] = scode
+                    return
+            pos += 4
+
+        # 2. Fallback: Extension 0x0F (System Info)
         pos = 0
         while True:
             pos = data.find(b"FTPR", pos)
@@ -428,6 +494,13 @@ class R1CSMEAnalyzer:
                         oemp_part_found = True
                     elif pname == "CDMD" and p_valid:
                         cdmd_part_found = True
+                        if abs_p + psize <= len(data):
+                            cdmd_data = data[abs_p : abs_p + psize]
+                            m = re.search(rb'Intel\(R\)\s+([A-Za-z0-9_\-\s]+?)\s+Chipset', cdmd_data)
+                            if m:
+                                raw_chip = m.group(1).decode('ascii', errors='ignore').strip()
+                                formatted_chip = re.sub(r'([a-z])([A-Z])', r'\1 \2', raw_chip)
+                                self.info["chipset"] = formatted_chip
                     elif pname == "MFSB" and p_valid:
                         mfsb_part_found = True
                     elif pname in ["UTOK", "STKN"] and p_valid:
@@ -437,29 +510,61 @@ class R1CSMEAnalyzer:
                         if abs_p + psize <= len(data):
                             mfs_buf = data[abs_p : abs_p + psize]
 
-        # Calculate exact 4KB-aligned payload size of ME Region
-        me_start = self.info["me_fd_start"]
-        me_end = self.info["me_fd_end"]
-        if me_end > me_start and me_start > 0:
-            scan_end = min(len(data), me_end)
-            me_chunk = data[me_start:scan_end]
-            non_ff_len = len(me_chunk.rstrip(b"\xFF"))
-            if non_ff_len > 0:
-                payload_size = (non_ff_len + 0xFFF) & ~0xFFF
-                self.info["size_hex"] = f"0x{payload_size:X}"
-            else:
-                self.info["size_hex"] = f"0x{me_end - me_start:X}"
+        # Determine maximum partition end from FPT entries
+        fpt_max_end = 0
+        if self.info["fpt_entries"]:
+            for entry in self.info["fpt_entries"]:
+                try:
+                    off_val = int(entry["offset"], 16) if str(entry["offset"]).startswith("0x") else int(entry["offset"])
+                    sz_val = int(entry["size"], 16) if str(entry["size"]).startswith("0x") else int(entry["size"])
+                    if off_val != 0xFFFFFFFF and sz_val != 0xFFFFFFFF:
+                        fpt_max_end = max(fpt_max_end, off_val + sz_val)
+                except Exception:
+                    pass
+
+        # In Intel CSME, check for IFWI CSE Layout Table (CSE LT - IFWI 1.6 / 1.7)
+        cse_lt_max_end = 0
+        me_start = self.info.get("me_fd_start", 0)
+        candidates = [me_start] if me_start > 0 else []
+        candidates.extend([0, 0x1000, 0x2000, 0x3000])
+        candidates = sorted(list(set(candidates)))
+
+        for base in candidates:
+            if base + 56 <= len(data):
+                sz = struct.unpack("<H", data[base + 0x10 : base + 0x12])[0]
+                if sz in (0x40, 0x48):
+                    try:
+                        r0, r1, r2, r3, sz, flg, res, csum, data_off, data_sz, bp1_off, bp1_sz, bp2_off, bp2_sz, bp3_off, bp3_sz = struct.unpack("<IIIIHBBIIIIIIIII", data[base : base + 56])
+                        entries = [(data_off, data_sz), (bp1_off, bp1_sz), (bp2_off, bp2_sz), (bp3_off, bp3_sz)]
+                        for off, s in entries:
+                            if off != 0xFFFFFFFF and s != 0xFFFFFFFF and s > 0:
+                                cse_lt_max_end = max(cse_lt_max_end, off + s)
+                        if cse_lt_max_end > 0:
+                            break
+                    except Exception:
+                        pass
+
+        total_fw_size = max(fpt_max_end, cse_lt_max_end)
+        if total_fw_size > 0:
+            self.info["size_hex"] = f"0x{total_fw_size:X}"
         else:
-            self.info["size_hex"] = f"0x{self.file_size:X}"
+            me_start = self.info["me_fd_start"]
+            me_end = self.info["me_fd_end"]
+            if me_end > me_start and me_start > 0:
+                scan_end = min(len(data), me_end)
+                me_chunk = data[me_start:scan_end]
+                non_ff_len = len(me_chunk.rstrip(b"\xFF"))
+                non_ff_aligned = (non_ff_len + 0xFFF) & ~0xFFF if non_ff_len > 0 else (me_end - me_start)
+                self.info["size_hex"] = f"0x{non_ff_aligned:X}"
+            else:
+                self.info["size_hex"] = f"0x{self.file_size:X}"
 
         fs_state, mfs_has_oem_file = self._determine_mfs_state(
             mfs_buf,
-            has_oem_config=(has_oem_config or oemp_part_found or fitc_part_found or cdmd_part_found or mfsb_part_found)
+            has_oem_config=(oemp_part_found or cdmd_part_found or fitc_part_found)
         )
 
-        if mfs_has_oem_file or oemp_part_found or fitc_part_found:
-            has_oem_config = True
-
+        has_oem_config = mfs_has_oem_file or oemp_part_found or fitc_part_found or cdmd_part_found
         self.info["oem_config"] = "Yes" if has_oem_config else "No"
         self.info["fs_stage"] = fs_state
         self.info["fs_state"] = fs_state
@@ -588,17 +693,18 @@ class R1CSMEAnalyzer:
                 is_initialized = True
                 break
 
-        if is_initialized:
-            return "Initialized", True
+        # Check if OEM Configuration file (File 7: fitc.cfg) is allocated and valid
+        has_oem_file = False
+        if len(fat_values) > 7 and fat_values[7] not in (0x0000, 0xFFFE, 0xFFFF):
+            has_oem_file = True
 
-        has_cfg_files = False
-        for idx in (7, 9):
-            if idx < len(fat_values) and fat_values[idx] not in (0x0000, 0xFFFE, 0xFFFF):
-                has_cfg_files = True
-                break
+        if is_initialized:
+            return "Initialized", has_oem_file
+
+        has_cfg_files = has_oem_file or (len(fat_values) > 9 and fat_values[9] not in (0x0000, 0xFFFE, 0xFFFF))
 
         if has_cfg_files or has_oem_config:
-            return "Configured", has_cfg_files
+            return "Configured", has_oem_file
 
         return "Unconfigured", False
 
@@ -707,7 +813,21 @@ class R1CSMEAnalyzer:
         self.info["sub_firmwares"] = sub_fw
 
     def _build_full_tag(self):
-        major = self.info["major"]
+        major = self.info.get("major", 0)
+        minor = self.info.get("minor", 0)
+        sku = self.info.get("sku", "")
+
+        # Precise chipset / stepping correction for Intel ME 11
+        if major == 11:
+            if minor == 8 and "LP" in sku:
+                self.info["chipset"] = "SPT/KBP-LP C"
+                self.info["stepping"] = "C"
+            elif minor == 8 and ("H" in sku or "Corporate" in sku):
+                self.info["chipset"] = "SPT/KBP-H D"
+                self.info["stepping"] = "D"
+            elif "LP" in sku and self.info.get("stepping") in ("Unknown", "B"):
+                self.info["chipset"] = "SPT-LP B"
+                self.info["stepping"] = "B"
 
         if "Unknown" in self.info["cpu_gen"] and major in GEN_FAMILY_MAP:
             gen_str, pch_code = GEN_FAMILY_MAP[major]
@@ -716,18 +836,28 @@ class R1CSMEAnalyzer:
                 self.info["chipset"] = pch_code
 
         chipset = self.info["chipset"]
-        if " " in chipset:
+        if " " in chipset and self.info.get("stepping", "Unknown") == "Unknown":
             parts = chipset.split()
             stepping = parts[-1]
+            self.info["stepping"] = stepping
         else:
-            stepping = "B"
+            stepping = self.info.get("stepping", "B")
 
         release = "PRD"
-        me_type = "EXTR-N" if self.info["fs_stage"] != "Configured" else "EXTR-Y"
+        has_oem = (self.info.get("oem_config") == "Yes")
+        sku_code = self.info["sku_code"]
+        # In Intel CSME, only Corporate images with OEM/IUP include the -Y / -N modifier
+        me_type = "EXTR-Y" if (has_oem and "COR" in sku_code) else "EXTR"
 
         ver = self.info["version"]
-        sku_code = self.info["sku_code"]
-        self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_{release}_{me_type}"
+
+        if major == 11 and "LP" in sku:
+            self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_NPDM_{release}_{me_type}"
+        elif major >= 18:
+            # CSME 18+ uses full platform/chipset name in release tag
+            self.info["full_tag"] = f"{ver}_{sku_code}_{chipset}_{release}_{me_type}"
+        else:
+            self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_{release}_{me_type}"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
