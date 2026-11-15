@@ -120,11 +120,16 @@ class DMIInjector:
                 pass
         elif field_name == "UUID" or re.match(r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$', val_str):
             try:
-                clean_hex = re.sub(r'[^0-9a-fA-F]', '', val_str)
-                if len(clean_hex) == 32:
-                    hex_b = bytes.fromhex(clean_hex)
+                import uuid
+                u_obj = uuid.UUID(val_str)
+                hex_b = u_obj.bytes_le
             except Exception:
-                pass
+                try:
+                    clean_hex = re.sub(r'[^0-9a-fA-F]', '', val_str)
+                    if len(clean_hex) == 32:
+                        hex_b = bytes.fromhex(clean_hex)
+                except Exception:
+                    pass
 
         # 1. Check exact expected target_off first
         if target_off is not None and 0 <= target_off < len(data):
@@ -405,10 +410,19 @@ class DMIInjector:
             if ok:
                 injected_count += 1
             else:
-                _log(
-                    f"  - <font color='#ff4444'><b>[SKIPPED]</b></font> "
-                    f"{field_name} = '{val_str}': could not locate slot in target binary."
-                )
+                is_companion = (str(off_str).strip().lower() in ("companion", "n/a (companion)") or
+                                "companion" in str(explicit_enc or "").lower())
+                if is_companion:
+                    _log(
+                        f"  - <font color='#38bdf8'><b>[INFO - DELL FACTORY STOCK]</b></font> "
+                        f"{field_name} = '{val_str}': Target is a clean/virgin BIOS (no pre-existing slot to overwrite). "
+                        f"Flash this BIOS to the chip, and on first boot the Dell screen will prompt to enter '{val_str}'."
+                    )
+                else:
+                    _log(
+                        f"  - <font color='#ff4444'><b>[SKIPPED]</b></font> "
+                        f"{field_name} = '{val_str}': could not locate slot in target binary."
+                    )
                 skipped_count += 1
 
             # ─── Synchronize secondary / mirror occurrences ───
@@ -665,6 +679,15 @@ class DMIInjector:
                 _log(f"  - <font color='#ffd600'>[LENOVO MTM REPLACE]</font> Found MTM slot @ 0x{found:X} - replacing with original...")
                 return DMIInjector._write_at(data, found, val_str, field_name, end_off=found + len(val_str),
                                              label="Lenovo MTM slot", log_cb=log_cb)
+
+        # 5b. Targeted replacement for Lenovo Serial Number (8 chars: GM, PF, MP, YD, PC, PW, PK, MJ, LR, R9, W8, etc.)
+        if field_name in ["Serial Number", "System Serial Number"] and len(val_str) == 8 and re.match(r'^(?:GM|PF|MP|YD|PC|PW|PK|MJ|LR|R9|W8|L3|8S|VK|W4|HA|PH|PL|YM|ZN)[A-Z0-9]{6}$', val_str):
+            m = re.search(rb'\b(?:GM|PF|MP|YD|PC|PW|PK|MJ|LR|R9|W8|L3|8S|VK|W4|HA|PH|PL|YM|ZN)[A-Z0-9]{6}\b', bytes(data))
+            if m:
+                found = m.start()
+                _log(f"  - <font color='#ffd600'>[LENOVO SERIAL REPLACE]</font> Found serial slot @ 0x{found:X} - replacing with original...")
+                return DMIInjector._write_at(data, found, val_str, field_name, end_off=found + 8,
+                                             label="Lenovo Serial Number slot", log_cb=log_cb)
 
         # 6. Targeted replacement for Lenovo Barcode (1S... pattern)
         if field_name == "Barcode" and val_str.startswith("1S"):

@@ -257,9 +257,9 @@ def select_phy(chipset_hint: str, log_cb, mea_meta: dict) -> str | None:
     return None
 
 def build_repair_set(mea_meta: dict, log_cb) -> dict:
-    version = mea_meta.get("version", "")
-    sku = mea_meta.get("sku", "")
-    chipset = mea_meta.get("chipset", "")
+    version = mea_meta.get("version") or mea_meta.get("Version", "")
+    sku = mea_meta.get("sku") or mea_meta.get("SKU", "")
+    chipset = mea_meta.get("chipset") or mea_meta.get("Chipset Support") or mea_meta.get("Chipset", "")
     parts = version.split(".")
     major = int(parts[0]) if parts[0].isdigit() else 0
     minor = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
@@ -1044,14 +1044,15 @@ def _run_smart_repair_internal(bios_path, mea_meta, log_cb, progress_cb=None, de
     out_path = str(get_paths()["repaired_dir"] / out_name)
     get_paths()["repaired_dir"].mkdir(parents=True, exist_ok=True)
     
-    major = int(mea_meta.get("version", "0").split(".")[0])
+    ver_str = mea_meta.get("version") or mea_meta.get("Version", "0")
+    major = int(ver_str.split(".")[0]) if ver_str.split(".")[0].isdigit() else 0
     success = False
 
     try:
         # ── STAGE 1: FIT Rebuild (legacy < v15) ──────────────────────────────────
         if major < 15:
             log_cb("[INFO] Attempting FIT Rebuild...")
-            success = run_full_fit_rebuild(bios_path, repair_set, mea_meta["version"], out_path, log_cb, custom_fit_exe=custom_fit_exe)
+            success = run_full_fit_rebuild(bios_path, repair_set, ver_str, out_path, log_cb, custom_fit_exe=custom_fit_exe)
 
         # ── STAGE 2: Surgical Modern Repair (v15+) ───────────────────────────────
         # NOTE: This stage may raise PipelineHaltError on critical failures.

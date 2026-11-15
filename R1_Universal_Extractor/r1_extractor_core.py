@@ -20,8 +20,14 @@ import shutil
 import struct
 import subprocess
 import contextlib
+import time
 from pathlib import Path
 from typing import Callable, Optional, Dict, List, Tuple
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 # Ensure project root is in sys.path so biosutilities can be imported
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -128,6 +134,15 @@ class R1ExtractorCore:
                 extracted_any = True
                 method_used = "Aptio Capsule Stripper"
                 log(f"[SUCCESS] Tier 2 Extracted raw BIOS from Capsule: {os.path.basename(t2_file)}")
+
+        # Check for standalone protected OEM SFX Executable (HP, Acer, Lenovo, Dell, Asus, Clevo, etc.)
+        if not extracted_any and cls._is_protected_sfx(input_file):
+            log("[PROTECTED SFX] Detected standalone OEM protected SFX container...")
+            sfx_ok, sfx_files = cls._extract_protected_sfx_live(input_file, output_dir, log)
+            if sfx_ok and sfx_files:
+                extracted_any = True
+                method_used = "Universal OEM Protected SFX Live Unpacker"
+                log(f"[SUCCESS] Extracted {len(sfx_files)} BIOS binary file(s) from protected SFX!")
 
         # -------------------------------------------------------------
         # TIER 3: Container & Installer Decompression (7-Zip & InnoUnp)
@@ -380,6 +395,198 @@ class R1ExtractorCore:
         return carved
 
     # -----------------------------------------------------------------
+    # Universal OEM Protected SFX Live Unpacker (All Brands)
+    # -----------------------------------------------------------------
+    @classmethod
+    def _is_protected_sfx(cls, file_path: str) -> bool:
+        """
+        Detects whether an executable or payload file is an OEM protected 7z SFX container
+        (used by HP, Acer, Lenovo, Toshiba, Clevo, Asus, etc.) with custom/locked stubs.
+        """
+        try:
+            if not os.path.isfile(file_path):
+                return False
+            sz = os.path.getsize(file_path)
+            if sz < 1024 * 1024 or sz > 500 * 1024 * 1024:
+                return False
+
+            with open(file_path, "rb") as f:
+                head = f.read(2 * 1024 * 1024)
+
+            # Heuristic 1: Any 7z SFX configuration block (used by OEM flashers of all brands)
+            if b";!@Install@!" in head:
+                return True
+
+            # Heuristic 2: OEM flasher executable stubs
+            lower_head = head.lower()
+            if b"hpflashwin" in lower_head or b"h2offt" in lower_head or b"isflash" in lower_head or b"afuwin" in lower_head or b"winflash" in lower_head:
+                return True
+
+            # Heuristic 3: Check file tail or overlay for ;!@Install@!
+            if sz > 4 * 1024 * 1024:
+                with open(file_path, "rb") as f:
+                    f.seek(max(0, sz - 1024 * 1024))
+                    tail = f.read()
+                if b";!@Install@!" in tail:
+                    return True
+
+        except Exception:
+            pass
+        return False
+
+    _is_insyde_sfx = _is_protected_sfx
+
+    @classmethod
+    def _extract_protected_sfx_live(cls, exe_path: str, dest_dir: str, log: Callable[[str], None]) -> Tuple[bool, List[str]]:
+        """
+        Universal live extractor for OEM protected SFX packages across all brands (HP, Acer, Lenovo, Asus, etc.).
+        Patches requireAdministrator to asInvoker in-memory, spawns unpacker,
+        intercepts the unpacked temporary working directory (via cwd, child process paths, or temp scan),
+        copies all firmware files, and cleanly terminates the flasher GUI before any window displays.
+        """
+        proc = None
+        temp_runner = None
+        found_cwd = None
+        extracted_bios_files = []
+
+        try:
+            with open(exe_path, "rb") as f:
+                data = bytearray(f.read())
+
+            # Universal UAC bypass: Patch manifest requireAdministrator -> asInvoker preserving exact byte count
+            req_admin = b'level="requireAdministrator"'
+            needed = len(req_admin) - len(b'level="asInvoker"')
+            as_invoker = b'level="asInvoker"' + (b' ' * needed)
+            if req_admin in data:
+                data = data.replace(req_admin, as_invoker)
+                log("  [PROTECTED SFX] Bypassed UAC requirement via PE manifest patch.")
+
+            temp_runner = os.path.join(dest_dir, f"_oem_unpack_{int(time.time())}.exe")
+            with open(temp_runner, "wb") as f:
+                f.write(data)
+
+            log("  [PROTECTED SFX] Invoking self-extracting payload engine...")
+            proc = subprocess.Popen([temp_runner], cwd=dest_dir)
+
+            user_temp = os.environ.get("TEMP", os.path.expanduser("~\\AppData\\Local\\Temp"))
+            win_temp = r"C:\Windows\Temp"
+
+            # Poll for unpacker payload location for up to 15 seconds
+            start_time = time.time()
+            while time.time() - start_time < 15:
+                time.sleep(0.4)
+                if not psutil or not proc:
+                    continue
+
+                try:
+                    p_obj = psutil.Process(proc.pid)
+                    # 1. Check parent working directory
+                    c = p_obj.cwd()
+                    if c and c.lower() != dest_dir.lower() and os.path.isdir(c):
+                        found_cwd = c
+                        break
+
+                    # 2. Check child processes (flasher utility launched by SFX)
+                    children = p_obj.children(recursive=True)
+                    if children:
+                        for ch in children:
+                            try:
+                                ch_exe = ch.exe()
+                                if ch_exe and os.path.isfile(ch_exe):
+                                    ch_dir = os.path.dirname(ch_exe)
+                                    if ch_dir and ch_dir.lower() != dest_dir.lower() and os.path.isdir(ch_dir):
+                                        found_cwd = ch_dir
+                                        break
+                                ch_cwd = ch.cwd()
+                                if ch_cwd and ch_cwd.lower() != dest_dir.lower() and os.path.isdir(ch_cwd):
+                                    found_cwd = ch_cwd
+                                    break
+                            except Exception:
+                                pass
+                    if found_cwd:
+                        break
+
+                    # 3. Check temp directories for newly created 7zS or flasher folders with firmware
+                    for t_base in [user_temp, win_temp]:
+                        if os.path.isdir(t_base):
+                            try:
+                                for entry in os.listdir(t_base):
+                                    entry_lower = entry.lower()
+                                    if (entry_lower.startswith("7zs") or "flash" in entry_lower) and ".tmp" in entry_lower:
+                                        full_t = os.path.join(t_base, entry)
+                                        if os.path.isdir(full_t):
+                                            try:
+                                                if os.path.getmtime(full_t) >= start_time - 2:
+                                                    flist = os.listdir(full_t)
+                                                    if any(x.lower().endswith((".bin", ".fd", ".rom", ".cap", ".wph")) for x in flist):
+                                                        found_cwd = full_t
+                                                        break
+                                            except Exception:
+                                                pass
+                            except Exception:
+                                pass
+                    if found_cwd:
+                        break
+
+                except Exception:
+                    break
+
+            if found_cwd and os.path.isdir(found_cwd):
+                log(f"  [PROTECTED SFX] Intercepted unpacked firmware directory: {found_cwd}")
+                time.sleep(0.5)  # allow background file writes to complete
+                try:
+                    for item in os.listdir(found_cwd):
+                        src_path = os.path.join(found_cwd, item)
+                        dst_path = os.path.join(dest_dir, item)
+                        if os.path.isfile(src_path):
+                            shutil.copy2(src_path, dst_path)
+                            if item.lower().endswith((".bin", ".fd", ".rom", ".cap", ".wph", ".hdr", ".fv")):
+                                extracted_bios_files.append(dst_path)
+                        elif os.path.isdir(src_path):
+                            shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+                except Exception as e:
+                    log(f"  [WARN] Partial copy warning: {e}")
+
+                log(f"  [PROTECTED SFX] Successfully extracted {len(extracted_bios_files)} BIOS binary file(s)!")
+                return True, extracted_bios_files
+            else:
+                log("  [WARN] SFX payload interception timed out.")
+                return False, []
+
+        except Exception as e:
+            log(f"  [ERROR] Protected SFX extraction exception: {e}")
+            return False, []
+
+        finally:
+            # Terminate unpacker process tree cleanly
+            try:
+                if psutil and proc:
+                    p_obj = psutil.Process(proc.pid)
+                    for child in p_obj.children(recursive=True):
+                        child.kill()
+                    p_obj.kill()
+                elif proc:
+                    proc.terminate()
+            except Exception:
+                pass
+
+            # Clean up temp runner
+            try:
+                if temp_runner and os.path.exists(temp_runner):
+                    os.remove(temp_runner)
+            except Exception:
+                pass
+
+            # Clean up temporary unpacked folder
+            if found_cwd and os.path.isdir(found_cwd):
+                try:
+                    shutil.rmtree(found_cwd, ignore_errors=True)
+                except Exception:
+                    pass
+
+    _extract_insyde_sfx_live = _extract_protected_sfx_live
+
+    # -----------------------------------------------------------------
     # Recursive Sub-Extraction for nested containers
     # -----------------------------------------------------------------
     @classmethod
@@ -422,12 +629,40 @@ class R1ExtractorCore:
                     if sz > 2 * 1024 * 1024:
                         nested_out = os.path.join(root, f"{os.path.splitext(file)[0]}_extracted")
                         if not os.path.isdir(nested_out):
+                            # Check first if it is an OEM protected SFX package (HP, Acer, Lenovo, Asus, etc.)
+                            if cls._is_protected_sfx(nested_path):
+                                log(f"  [PROTECTED SFX] Detected OEM protected SFX: {file}")
+                                os.makedirs(nested_out, exist_ok=True)
+                                sfx_ok, sfx_files = cls._extract_protected_sfx_live(nested_path, nested_out, log)
+                                if sfx_ok and sfx_files:
+                                    # Copy BIOS files up to root as well for immediate visibility
+                                    for bf in sfx_files:
+                                        try:
+                                            shutil.copy2(bf, os.path.join(root, os.path.basename(bf)))
+                                        except Exception:
+                                            pass
+                                    continue
+
                             unpacked_ok = False
                             if p7z:
                                 try:
                                     cmd = [p7z, "x", nested_path, f"-o{nested_out}", "-y"]
                                     res = subprocess.run(cmd, capture_output=True, timeout=30)
                                     if res.returncode == 0 and os.path.isdir(nested_out) and os.listdir(nested_out):
+                                        # Check if 7-zip only extracted raw PE sections/overlay [0] without BIOS
+                                        inner_items = os.listdir(nested_out)
+                                        has_firmware = any(x.lower().endswith((".bin", ".fd", ".rom", ".cap", ".wph")) for x in inner_items)
+                                        if not has_firmware and ("[0]" in inner_items or any(cls._is_protected_sfx(os.path.join(nested_out, ii)) for ii in inner_items)):
+                                            log(f"  [PROTECTED SFX] Detected locked payload in {file}; invoking universal live unpacker...")
+                                            sfx_ok, sfx_files = cls._extract_protected_sfx_live(nested_path, nested_out, log)
+                                            if sfx_ok and sfx_files:
+                                                for bf in sfx_files:
+                                                    try:
+                                                        shutil.copy2(bf, os.path.join(root, os.path.basename(bf)))
+                                                    except Exception:
+                                                        pass
+                                                continue
+
                                         log(f"  [NESTED EXE UNPACK] Extracted embedded payload from {file}")
                                         unpacked_ok = True
                                         cls._recursive_sub_extract(nested_out, log, depth + 1)

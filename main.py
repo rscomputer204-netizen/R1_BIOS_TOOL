@@ -4095,7 +4095,7 @@ class DmiSerialLabel(QLabel):
         if "DELL" in brand_raw:
             return "Dell Support", "dell.com/support"
         elif "LENOVO" in brand_raw:
-            return "Lenovo Support", "pcsupport.lenovo.com"
+            return "Lenovo Support", "pcsupport.lenovo.com/sg/en"
         elif "ACER" in brand_raw:
             return "Acer Support", "acer.com/support"
         elif "ASUS" in brand_raw:
@@ -5101,8 +5101,23 @@ class BiosServiceTool(QMainWindow):
             url = f"https://www.dell.com/support/home/en-us/product-support/servicetag/{serial}/drivers"
             portal_name = "Dell Support"
         elif "LENOVO" in brand:
-            url = f"https://pcsupport.lenovo.com/us/en/products/search?query={serial}"
+            clean_sn = serial.strip()
             portal_name = "Lenovo Support"
+            url = None
+            try:
+                import urllib.request
+                import json
+                api_url = f"https://pcsupport.lenovo.com/us/en/api/v4/mse/getproducts?productId={clean_sn}"
+                req = urllib.request.Request(api_url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+                resp = urllib.request.urlopen(req, timeout=3)
+                data = json.loads(resp.read().decode('utf-8'))
+                if data and isinstance(data, list) and len(data) > 0 and 'Id' in data[0]:
+                    prod_id = str(data[0]['Id']).strip().lower()
+                    url = f"https://pcsupport.lenovo.com/sg/en/products/{prod_id}/warranty/upgrade?upgrade=true"
+            except Exception:
+                pass
+            if not url:
+                url = f"https://pcsupport.lenovo.com/sg/en/warranty-lookup?sn={clean_sn}"
         elif "ACER" in brand:
             url = f"https://www.acer.com/us-en/support/drivers-and-manuals?search={serial}"
             portal_name = "Acer Support"

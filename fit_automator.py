@@ -539,8 +539,11 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
         is_mfit_tool = fit_exe.lower().endswith("mfit.exe")
         
         # Decompile to get config
+        is_legacy_fitc = "fitc.exe" in str(fit_exe_safe).lower()
         if is_mfit_tool:
             cmd = [fit_exe_safe, "--decompose", temp_corrupt.name, "--saveconfig", xml_path.name.replace(" ", "_")]
+        elif is_legacy_fitc:
+            cmd = [fit_exe_safe, "/b", "/w", str(fit_workspace), "/s", str(fit_workspace), "/d", str(fit_workspace), "/save", xml_path.name.replace(" ", "_"), temp_corrupt.name]
         else:
             cmd = [fit_exe_safe, "-f", temp_corrupt.name, "-save", xml_path.name.replace(" ", "_")]
         
@@ -585,6 +588,11 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
         final_out = fit_workspace / "outimage.bin"
         if is_mfit_tool:
             cmd = [fit_exe_safe, "--decompose", temp_corrupt.name, "--loadconfig", xml_path.name, "--build", final_out.name]
+        elif is_legacy_fitc:
+            cmd = [fit_exe_safe, "/b", "/w", str(fit_workspace), "/s", str(fit_workspace), "/d", str(fit_workspace)]
+            if clean_paths_dict.get("ME"):
+                cmd.extend(["/me", str(clean_paths_dict["ME"])])
+            cmd.append(xml_path.name)
         else:
             cmd = [fit_exe_safe, "-f", xml_path.name, "-b", "-o", final_out.name]
             

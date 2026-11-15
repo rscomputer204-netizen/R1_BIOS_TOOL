@@ -20,7 +20,7 @@ def parse_mea_output(output_text):
         "version":  r"(?:Version|Ver)\s*[:|║│]\s*([\d\.]+)",
         "family":   r"Family\s*[:|║│]\s*([^\n\r\|║│/]+)",
         "sku":      r"SKU\s*[:|║│]\s*([^\n\r\|/║│]+)",
-        "chipset":  r"Chipset\s*[^a-zA-Z0-9\s]*\s*([^\n\r\|║│]+)",
+        "chipset":  r"Chipset(?:\s+Support)?\s*[:|║│]\s*([^\n\r\|║│/]+)",
         "stepping": r"Stepping\s*[:|║│]\s*([^\n\r\|/║│]+)",
         "release":  r"Release\s*[:|║│]\s*([^\n\r\|/║│]+)",
         "type":     r"Type\s*[:|║│]\s*([^\n\r\|/║│]+)",
