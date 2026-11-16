@@ -91,7 +91,6 @@ namespace R1Update
                 if (cacheDir == null)
                 {
                     Log("Update cache directory not found.");
-                    Relaunch(rootDir);
                     return;
                 }
 
@@ -99,7 +98,6 @@ namespace R1Update
                 if (!Directory.Exists(payloadDir))
                 {
                     Log(string.Format("Payload directory not found: {0}", payloadDir));
-                    Relaunch(rootDir);
                     return;
                 }
 
@@ -190,24 +188,5 @@ namespace R1Update
             }
         }
 
-        static void Relaunch(string rootDir)
-        {
-            string[] exeCandidates = new string[] { "R1_BIOS_TOOL.exe", "main.exe", "R1_BIOS_EDITOR.exe" };
-            foreach (string exeName in exeCandidates)
-            {
-                string exePath = Path.Combine(rootDir, exeName);
-                if (File.Exists(exePath))
-                {
-                    ProcessStartInfo psi = new ProcessStartInfo
-                    {
-                        FileName = exePath,
-                        WorkingDirectory = rootDir,
-                        UseShellExecute = true
-                    };
-                    Process.Start(psi);
-                    return;
-                }
-            }
-        }
     }
 }

@@ -209,7 +209,6 @@ def main():
     cache_path = find_cache_path(base_dir)
     if not os.path.exists(cache_path):
         log(f"Update cache not found at {cache_path}. Nothing to do.", "error")
-        relaunch_app(base_dir)
         sys.exit(1)
 
     backup_id = None

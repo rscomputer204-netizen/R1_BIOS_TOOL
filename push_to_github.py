@@ -817,6 +817,7 @@ class GitPushGUI:
                 csc_path = r"C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe"
                 updater_cs = os.path.join(BASE_DIR, "updater.cs")
                 dist_updater = os.path.join(BASE_DIR, "dist", "updater.exe")
+                dist_source = os.path.join(BASE_DIR, "dist", "R1_BIOS_TOOL")
                 if os.path.exists(csc_path) and os.path.exists(updater_cs):
                     try:
                         subprocess.run([
@@ -824,11 +825,18 @@ class GitPushGUI:
                             "/reference:System.Windows.Forms.dll",
                             f"/out:{dist_updater}", updater_cs
                         ], capture_output=True, check=False)
+                        # Immediately sync freshly compiled updater to all locations
+                        if os.path.exists(dist_updater):
+                            if os.path.exists(dist_source):
+                                shutil.copy2(dist_updater, os.path.join(dist_source, "updater.exe"))
+                                int_dir = os.path.join(dist_source, "_internal")
+                                if os.path.exists(int_dir):
+                                    shutil.copy2(dist_updater, os.path.join(int_dir, "updater.exe"))
+                            shutil.copy2(dist_updater, os.path.join(BASE_DIR, "updater.exe"))
                     except Exception:
                         pass
 
                 # Copy freshly compiled EXEs if dist/R1_BIOS_TOOL exists
-                dist_source = os.path.join(BASE_DIR, "dist", "R1_BIOS_TOOL")
                 if os.path.exists(dist_source):
                     for f in os.listdir(dist_source):
                         if f.endswith(".exe"):
@@ -836,9 +844,9 @@ class GitPushGUI:
                             dest_p = os.path.join(payload_content, f)
                             shutil.copy2(abs_p, dest_p)
 
-                # Copy updater executables & scripts
-                updater_exe_src = os.path.join(dist_source, "updater.exe") if os.path.exists(os.path.join(dist_source, "updater.exe")) else os.path.join(BASE_DIR, "dist", "updater.exe")
-                if os.path.exists(updater_exe_src):
+                # Copy updater executables & scripts (always prefer freshly compiled dist_updater)
+                updater_exe_src = dist_updater if os.path.exists(dist_updater) else (os.path.join(dist_source, "updater.exe") if os.path.exists(os.path.join(dist_source, "updater.exe")) else None)
+                if updater_exe_src and os.path.exists(updater_exe_src):
                     shutil.copy2(updater_exe_src, os.path.join(payload_content, "updater.exe"))
                     shutil.copy2(updater_exe_src, os.path.join(payload_dir, "updater.exe"))
                     shutil.copy2(updater_exe_src, os.path.join(payload_internal, "updater.exe"))
