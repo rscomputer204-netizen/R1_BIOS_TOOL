@@ -8,7 +8,8 @@ import time
 BIOS_EXTENSIONS = {
     ".bin", ".fd", ".rom", ".cap", ".img",
     ".bio", ".wph", ".efi", ".hdr", ".fv",
-    ".bios", ".bkp", ".flash"
+    ".bios", ".bkp", ".flash",
+    ".fl1", ".fl2", ".fl3"
 }
 
 def extract_bios_package(exe_path, log_callback=print):

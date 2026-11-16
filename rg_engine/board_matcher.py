@@ -51,50 +51,73 @@ def detect_board_info(orig_bios_path_or_data) -> dict:
     if not data:
         return info
 
-    # 1. HP BIOS Family detection (e.g. 'T87 Ver. 01.08.02', '0887D Ver. F.20', 'Q78 Ver. 01.05.00')
-    # Pattern: 2-8 alphanumeric characters followed by 'Ver.'
-    fam_matches = re.findall(
-        rb'(?:(?<=[\x00\xff/_\s])|^)([A-Za-z0-9_-]{2,8})\s+Ver[.]?\s*([0-9A-Za-z._]{3,15})',
-        data
-    )
-    ignored_families = {
-        'KBC', 'BINARY', 'COMPATIBLE', 'COPY', 'COPYRIGHT', 'INTEL',
-        'AMD', 'VERSION', 'FLASH', 'BUILD', 'SION', 'CODE', 'SIGN', 'ME'
-    }
-
-    for fam_bytes, ver_bytes in fam_matches:
-        try:
-            f_str = fam_bytes.decode('ascii', errors='ignore').strip().upper()
-            v_str = ver_bytes.decode('ascii', errors='ignore').strip()
-            if f_str and f_str not in ignored_families and len(f_str) >= 2:
-                # Discard purely numeric or generic strings
-                if not f_str.isdigit() and f_str not in [x['family'] for x in info["board_families"]]:
-                    info["board_families"].append({"family": f_str, "version": v_str})
-                    if not info["primary_family"]:
-                        info["primary_family"] = f_str
-                        info["primary_version"] = v_str
-        except Exception:
-            pass
-
-    # 2. HP BID Detection: e.g. 'BID 0887D', 'BID:0887D', '$BID0887D'
-    bid_matches = re.findall(rb'(?:BID\s*[:=]\s*|\$BID\s*)([A-Za-z0-9]{3,8})', data)
-    for b_bytes in bid_matches:
-        try:
-            b_str = b_bytes.decode('ascii', errors='ignore').strip().upper()
-            if b_str and b_str not in info["board_ids"] and b_str not in ignored_families:
-                info["board_ids"].append(b_str)
-                if not info["primary_family"]:
-                    info["primary_family"] = b_str
-        except Exception:
-            pass
-
-    # 3. Check for HP DMI strings or identifiers
-    if b"Hewlett-Packard" in data or b"HP " in data or b"103C_" in data:
+    # 1. Brand Detection (Strict multi-byte signatures)
+    if b"LENOVO" in data or b"ThinkPad" in data or b"Lenovo" in data:
+        info["detected_brand"] = "Lenovo"
+    elif b"Hewlett-Packard" in data or b"HP BIOS" in data or b"103C_" in data or b"HP Inc." in data:
         info["detected_brand"] = "HP"
     elif b"Dell" in data or b"DELL" in data:
         info["detected_brand"] = "Dell"
-    elif b"LENOVO" in data or b"ThinkPad" in data:
-        info["detected_brand"] = "Lenovo"
+    elif b"ASUSTeK" in data or b"ASUS" in data:
+        info["detected_brand"] = "ASUS"
+
+    # 2. Lenovo ThinkPad Detection
+    if info["detected_brand"] == "Lenovo":
+        tp_matches = re.findall(rb'([A-Z0-9]{3})(ET)([0-9]{2})W', data)
+        if tp_matches:
+            fam_bytes, tag_bytes, ver_bytes = tp_matches[-1]
+            fam = fam_bytes.decode('ascii', errors='ignore')
+            ver = f"{fam}ET{ver_bytes.decode('ascii', errors='ignore')}W"
+            info["board_families"].append({"family": fam, "version": ver})
+            info["primary_family"] = fam
+            info["primary_version"] = ver
+            info["board_ids"].append(fam)
+            info["board_ids"].append(f"{fam}ET")
+        else:
+            tp_any = re.findall(rb'([A-Z0-9]{3})(?:HT|RM)([0-9]{2})W', data)
+            if tp_any:
+                fam = tp_any[-1][0].decode('ascii', errors='ignore')
+                info["primary_family"] = fam
+                info["board_ids"].append(fam)
+
+    # 3. HP BIOS Family detection (only if brand is HP or unknown)
+    if info["detected_brand"] in ("HP", "Unknown"):
+        fam_matches = re.findall(
+            rb'(?:(?<=[\x00\xff/_\s])|^)([A-Za-z0-9_-]{2,8})\s+Ver[.]?\s*([0-9A-Za-z._]{3,15})',
+            data
+        )
+        ignored_families = {
+            'KBC', 'BINARY', 'COMPATIBLE', 'COPY', 'COPYRIGHT', 'INTEL',
+            'AMD', 'VERSION', 'FLASH', 'BUILD', 'SION', 'CODE', 'SIGN', 'ME',
+            'IP', 'TCP', 'UDP', 'HTTP', 'IPV4', 'IPV6', 'STACK', 'DRIVER',
+            'SERVER', 'CLIENT', 'TYPE2', 'REV', 'TYPE', 'DATA', 'FILE', 'BIOS',
+            'BOOT', 'CORE', 'SYS', 'ACPI', 'TABLE', 'TABLES'
+        }
+
+        for fam_bytes, ver_bytes in fam_matches:
+            try:
+                f_str = fam_bytes.decode('ascii', errors='ignore').strip().upper()
+                v_str = ver_bytes.decode('ascii', errors='ignore').strip()
+                if f_str and f_str not in ignored_families and len(f_str) >= 2:
+                    if not f_str.isdigit() and f_str not in [x['family'] for x in info["board_families"]]:
+                        info["board_families"].append({"family": f_str, "version": v_str})
+                        if not info["primary_family"]:
+                            info["primary_family"] = f_str
+                            info["primary_version"] = v_str
+            except Exception:
+                pass
+
+        # HP BID Detection
+        bid_matches = re.findall(rb'(?:BID\s*[:=]\s*|\$BID\s*)([A-Za-z0-9]{3,8})', data)
+        for b_bytes in bid_matches:
+            try:
+                b_str = b_bytes.decode('ascii', errors='ignore').strip().upper()
+                if b_str and b_str not in info["board_ids"] and b_str not in ignored_families:
+                    info["board_ids"].append(b_str)
+                    if not info["primary_family"]:
+                        info["primary_family"] = b_str
+            except Exception:
+                pass
 
     if info["primary_family"]:
         v_part = f" (v{info['primary_version']})" if info["primary_version"] else ""
@@ -123,7 +146,9 @@ def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> di
     Calculates matching score and recommendation metadata for a single candidate file.
     """
     filename = os.path.basename(cand_path)
-    base_name = os.path.splitext(filename)[0]
+    base_name, ext = os.path.splitext(filename)
+    ext = ext.lower()
+    parent_dir = os.path.basename(os.path.dirname(cand_path))
     try:
         size_bytes = os.path.getsize(cand_path)
     except Exception:
@@ -145,8 +170,37 @@ def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> di
     known_families = [f["family"] for f in board_info.get("board_families", [])]
     known_bids = board_info.get("board_ids", [])
 
+    # Special Case: Lenovo ThinkPad update packages (.FL1 = Main BIOS, .FL2 = EC)
+    if ext == ".fl1":
+        if primary_fam and (primary_fam in base_name.upper() or primary_fam in parent_dir.upper()):
+            score = 100
+            matched_id = f"{primary_fam} ({parent_dir})"
+            is_match = True
+            v_orig = board_info.get("primary_version", "")
+            reason = f"Matches Motherboard BIOS Family: {primary_fam}{f' (Backup {v_orig} → Update {parent_dir})' if v_orig else ''}"
+        elif board_info.get("detected_brand") == "Lenovo":
+            score = 90
+            matched_id = f"Lenovo BIOS ({parent_dir})"
+            is_match = True
+            reason = f"Lenovo Main System BIOS Image ({parent_dir})."
+        else:
+            score = 80
+            matched_id = "Main BIOS (.FL1)"
+            is_match = True
+            reason = "Main System BIOS Firmware Image."
+    elif ext in (".fl2", ".fl3"):
+        score = 20
+        matched_id = "EC Firmware"
+        is_match = False
+        reason = "EC/KBC Firmware (Not Main System BIOS Region)."
+    elif ext == ".efi":
+        score = 10
+        matched_id = "EFI Utility"
+        is_match = False
+        reason = "EFI Executable/Utility (Not System BIOS Image)."
+
     # Check 1: Direct match with detected primary board family (Highest Confidence: 100%)
-    if primary_fam and (cand_token == primary_fam or cand_token.startswith(primary_fam) or primary_fam.startswith(cand_token)):
+    elif primary_fam and (cand_token == primary_fam or cand_token.startswith(primary_fam) or primary_fam.startswith(cand_token)):
         score = 100
         matched_id = primary_fam
         is_match = True
@@ -183,7 +237,7 @@ def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> di
             reason = f"Matches Board Family in Firmware: {cand_token} (Backup v{detected_ver}){v_cand}"
 
     # If no match:
-    if not is_match and primary_fam:
+    if not is_match and primary_fam and reason == "No board identifier match found.":
         reason = f"Board Mismatch: Package is for '{cand_token}', but loaded board is '{primary_fam}'."
 
     return {

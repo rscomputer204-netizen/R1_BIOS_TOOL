@@ -63,6 +63,7 @@ class R1ExtractorCore:
     _NATIVE_BIN_DIR = os.path.join(os.path.dirname(__file__), "bin")
     _7Z_PATH = os.path.join(_NATIVE_BIN_DIR, "7z.exe")
     _INNOUNP_PATH = os.path.join(_NATIVE_BIN_DIR, "innounp.exe")
+    _INNOEXTRACT_PATH = os.path.join(_NATIVE_BIN_DIR, "innoextract.exe")
 
     FD_MAGIC = b"\x5A\xA5\xF0\x0F"
     UEFI_FVH_MAGIC = b"_FVH"
@@ -80,6 +81,15 @@ class R1ExtractorCore:
         if os.path.isfile(cls._INNOUNP_PATH):
             return cls._INNOUNP_PATH
         return shutil.which("innounp")
+
+    @classmethod
+    def get_innoextract_path(cls) -> Optional[str]:
+        if os.path.isfile(cls._INNOEXTRACT_PATH):
+            return cls._INNOEXTRACT_PATH
+        ext_lenovo = os.path.join(PROJECT_ROOT, "external", "LENOVO BIOS EXTRACTOR", "LENOVO BIOS EXTRACTOR.exe")
+        if os.path.isfile(ext_lenovo):
+            return ext_lenovo
+        return shutil.which("innoextract")
 
     @classmethod
     def extract(cls, input_file: str, output_dir: Optional[str] = None, logger: Optional[Callable[[str], None]] = None) -> Dict:
@@ -171,9 +181,10 @@ class R1ExtractorCore:
         # -------------------------------------------------------------
         classified = cls.classify_extracted_files(output_dir)
 
-        # If files were extracted in subdirectories, flatten or search for nested containers
-        cls._recursive_sub_extract(output_dir, log)
-        classified = cls.classify_extracted_files(output_dir)
+        # If main bios was not found yet, search for nested containers (CAB, SFX, etc.)
+        if not classified["main_bios"]:
+            cls._recursive_sub_extract(output_dir, log)
+            classified = cls.classify_extracted_files(output_dir)
 
         total_files = len(classified["all_files"])
         if total_files > 0:
@@ -280,7 +291,24 @@ class R1ExtractorCore:
     # -----------------------------------------------------------------
     @classmethod
     def _try_tier3_installer_unpack(cls, input_file: str, output_dir: str, log: Callable[[str], None]) -> Tuple[bool, str]:
-        # 1. Try Inno Setup (Lenovo, Acer, HP frequent)
+        # 1. Try InnoExtract (Modern Inno Setup 5.x / 6.x - Lenovo, Acer, HP frequent)
+        innoextract = cls.get_innoextract_path()
+        if innoextract:
+            try:
+                inno_dir = os.path.join(output_dir, "inno_extracted")
+                os.makedirs(inno_dir, exist_ok=True)
+                cmd = [innoextract, "-s", "-e", "-d", inno_dir, input_file]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
+                if res.returncode == 0 and os.path.isdir(inno_dir) and os.listdir(inno_dir):
+                    log("  [INNOEXTRACT] Inno Setup archive successfully unpacked!")
+                    return True, "Inno Setup Extractor (InnoExtract)"
+                else:
+                    if res.stderr:
+                        log(f"  [INNOEXTRACT] Error: {res.stderr.strip()}")
+            except Exception as e:
+                log(f"  [INNOEXTRACT] Debug: {e}")
+
+        # 2. Try InnoUnp fallback (Older Inno Setup archives)
         innounp = cls.get_innounp_path()
         if innounp:
             try:
@@ -288,27 +316,39 @@ class R1ExtractorCore:
                 cmd = [innounp, "-x", f"-d{inno_dir}", "-y", input_file]
                 res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
                 if res.returncode == 0 and os.path.isdir(inno_dir) and os.listdir(inno_dir):
-                    log("  [INNO] Inno Setup archive successfully unpacked!")
-                    return True, "Inno Setup Extractor"
+                    log("  [INNO] Inno Setup archive successfully unpacked via innounp!")
+                    return True, "Inno Setup Extractor (InnoUnp)"
             except Exception:
                 pass
 
-        # 2. Try 7-Zip (Comprehensive container unpacker)
+        # 3. Try 7-Zip (Comprehensive container unpacker)
         p7z = cls.get_7z_path()
         if p7z:
             try:
-                cmd = [p7z, "x", input_file, f"-o{output_dir}", "-y"]
+                temp_7z_dir = os.path.join(output_dir, "7z_extracted")
+                cmd = [p7z, "x", input_file, f"-o{temp_7z_dir}", "-y"]
                 res = subprocess.run(cmd, capture_output=True, text=True, timeout=90)
-                if res.returncode == 0:
-                    # Check if output has files
-                    files = os.listdir(output_dir)
-                    if files:
+                if res.returncode == 0 and os.path.isdir(temp_7z_dir):
+                    files = os.listdir(temp_7z_dir)
+                    # Filter out useless PE section dumps like .text, .rdata, .data, .rsrc
+                    pe_sections = {'.text', '.data', '.rdata', '.rsrc', '.bss', '.edata', '.idata', '.tls', '.didata', '.itext', 'CERTIFICATE', '[0]'}
+                    meaningful_files = [f for f in files if f not in pe_sections]
+                    if meaningful_files:
+                        # Move files up to output_dir
+                        for item in files:
+                            src_p = os.path.join(temp_7z_dir, item)
+                            dst_p = os.path.join(output_dir, item)
+                            if not os.path.exists(dst_p):
+                                shutil.move(src_p, dst_p)
+                        shutil.rmtree(temp_7z_dir, ignore_errors=True)
                         log("  [7-ZIP] Container unpack completed successfully.")
                         return True, "7-Zip Multi-Archive Engine"
+                    else:
+                        shutil.rmtree(temp_7z_dir, ignore_errors=True)
             except Exception as e:
                 log(f"  [7-ZIP] Execution error: {e}")
 
-        # 3. Native Python zipfile fallback
+        # 4. Native Python zipfile fallback
         import zipfile
         try:
             if zipfile.is_zipfile(input_file):
@@ -693,9 +733,9 @@ class R1ExtractorCore:
         if not os.path.isdir(target_dir):
             return result
 
-        bios_exts = {".bin", ".rom", ".fd", ".cap", ".wph"}
+        bios_exts = {".bin", ".rom", ".fd", ".cap", ".wph", ".fl1", ".fl2", ".fl3", ".img", ".bio", ".fv", ".bios"}
         ec_sizes = {64*1024, 128*1024, 256*1024, 512*1024, 1024*1024, 2*1024*1024}
-        bios_sizes = {4*1024*1024, 8*1024*1024, 16*1024*1024, 32*1024*1024, 64*1024*1024}
+        bios_sizes = {4*1024*1024, 8*1024*1024, 16*1024*1024, 22*1024*1024, 24*1024*1024, 32*1024*1024, 64*1024*1024}
 
         for root, _, files in os.walk(target_dir):
             for f in files:
@@ -709,8 +749,8 @@ class R1ExtractorCore:
                 except OSError:
                     continue
 
-                # Check for EC Firmware
-                if ("ec" in name_lower or "kbc" in name_lower or "ite" in name_lower or "ene" in name_lower) and fsize in ec_sizes:
+                # Check for EC Firmware (including Lenovo .FL2 / .FL3)
+                if ext in {".fl2", ".fl3"} or (("ec" in name_lower or "kbc" in name_lower or "ite" in name_lower or "ene" in name_lower) and fsize in ec_sizes):
                     result["ec_firmware"].append(full_path)
                     continue
 
@@ -719,8 +759,8 @@ class R1ExtractorCore:
                     result["me_regions"].append(full_path)
                     continue
 
-                # Check for Main System BIOS
-                if ext in bios_exts:
+                # Check for Main System BIOS (including Lenovo .FL1)
+                if ext == ".fl1" or ext in bios_exts:
                     if fsize in bios_sizes or fsize > 2 * 1024 * 1024:
                         result["main_bios"].append(full_path)
                     elif "bios" in name_lower or "isflash" in name_lower or "main" in name_lower:
