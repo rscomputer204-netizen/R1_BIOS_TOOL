@@ -130,8 +130,14 @@ namespace R1Update
                     Log(string.Format("Warning: could not delete cache: {0}", ex.Message));
                 }
 
-                Log("Update completed successfully! Relaunching application...");
-                Relaunch(rootDir);
+                Log("Update completed successfully!");
+                MessageBox.Show(
+                    "Update completed successfully!\n\nPlease launch R1 BIOS TOOL to use the latest features.",
+                    "R1 BIOS TOOL - Update Complete",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Information
+                );
+                return;
             }
             catch (Exception ex)
             {

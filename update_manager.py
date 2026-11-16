@@ -380,7 +380,7 @@ class UpdateDialog(QDialog):
             self.btn_close.setText("CLOSE")
             return
 
-        self.status_lbl.setText("Update verified! Restarting application in 1s...")
+        self.status_lbl.setText("Update verified! Closing application to apply update...")
         self.status_lbl.setStyleSheet("color: #00FFCC; font-size: 12px; font-weight: bold;")
         self.progress_bar.setValue(100)
 

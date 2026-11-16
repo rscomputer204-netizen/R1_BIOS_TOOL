@@ -227,6 +227,18 @@ def main():
         except Exception as e:
             log(f"Warning: Could not remove cache: {e}", "warning")
 
+        try:
+            ctypes.windll.user32.MessageBoxW(
+                0,
+                "Update completed successfully!\n\nPlease launch R1 BIOS TOOL to use the latest features.",
+                "R1 BIOS TOOL - Update Complete",
+                0x40  # MB_ICONINFORMATION
+            )
+        except Exception:
+            pass
+
+        sys.exit(0)
+
     except Exception as e:
         log(f"UPDATE FAILED: {e}", "error")
         import traceback
@@ -242,9 +254,7 @@ def main():
             )
         except Exception:
             pass
-
-    # Relaunch the application
-    relaunch_app(base_dir)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
