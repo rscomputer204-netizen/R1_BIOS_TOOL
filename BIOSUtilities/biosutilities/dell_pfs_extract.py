@@ -1261,6 +1261,8 @@ class DellPfsExtract(BIOSUtility):
             final_name: str = f'{safe_name(in_name=full_name)}.{bin_name.split("_")[1]}.sig'
 
             final_path: str = os.path.join(out_path, final_name)
+            if os.name == 'nt' and not final_path.startswith('\\\\?\\'):
+                final_path = '\\\\?\\' + os.path.abspath(final_path)
 
             with open(final_path, 'wb') as pfs_out:
                 pfs_out.write(bin_buff)  # Write final Data/Metadata Signature
@@ -1279,6 +1281,8 @@ class DellPfsExtract(BIOSUtility):
         final_name = f'{safe_name(in_name=full_name)}{bin_ext[:-4] + file_ext if is_text else bin_ext}'
 
         final_path = os.path.join(out_path, final_name)
+        if os.name == 'nt' and not final_path.startswith('\\\\?\\'):
+            final_path = '\\\\?\\' + os.path.abspath(final_path)
 
         # Write final Data/Metadata Payload
         with open(final_path, 'w' if is_text else 'wb', encoding='utf-8' if is_text else None) as pfs_out:

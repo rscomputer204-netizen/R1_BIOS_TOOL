@@ -137,3 +137,16 @@ web/*.zip
 
 R1_Universal_Extractor/TEST_OUTPUT_*
 R1_Universal_Extractor/TEST_WORKSPACE/
+
+# Temporary donor download staging & scratch scripts
+Downloaded_Donors_WinRaid/
+scripts/build_repaired_bios.py
+scripts/collect_winraid_donors.py
+scripts/create_readme.py
+scripts/deep_tag_search.py
+scripts/extract_dell_official.py
+scripts/install_new_donors.py
+scripts/list_extracted_official.py
+scripts/parse_winraid_repo.py
+scripts/setup_sub_firmwares.py
+

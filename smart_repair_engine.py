@@ -121,12 +121,20 @@ def select_clean_me(major: int, minor: int, sku: str, log_cb) -> str | None:
         
         bin_file = meta_file.parent / meta.get("original_filename", "")
         if bin_file.exists():
-            candidates.append((score, bin_file))
+            ver_str = meta.get("version", "0.0.0.0")
+            try:
+                ver_parts = [int(p) for p in ver_str.split(".")]
+                while len(ver_parts) < 4:
+                    ver_parts.append(0)
+                ver_tuple = tuple(ver_parts)
+            except Exception:
+                ver_tuple = (0, 0, 0, 0)
+            candidates.append((score, ver_tuple, bin_file))
             
     if not candidates: return None
-    candidates.sort(key=lambda x: x[0], reverse=True)
-    log_cb(f"[INFO] Selected ME (via Metadata): {candidates[0][1].name}")
-    return str(candidates[0][1])
+    candidates.sort(key=lambda x: (x[0], x[1]), reverse=True)
+    log_cb(f"[INFO] Selected ME (via Metadata): {candidates[0][2].name}")
+    return str(candidates[0][2])
 
 def select_pmc(chipset_hint: str, sku: str, log_cb, mea_meta: dict) -> str | None:
     pmc_dir = get_paths()["fw_repo_pmc"]

@@ -9,7 +9,10 @@ class FirmwareMatcher:
             "ME": self.base_dir / "Firmware_Repository" / "ME_Region",
             "PMC": self.base_dir / "Firmware_Repository" / "PMC_Region",
             "PCHC": self.base_dir / "Firmware_Repository" / "PCHC_Region",
-            "PHY": self.base_dir / "Firmware_Repository" / "PHY_Region"
+            "PHY": self.base_dir / "Firmware_Repository" / "PHY_Region",
+            "EC": self.base_dir / "Firmware_Repository" / "EC_Region",
+            "GBE": self.base_dir / "Firmware_Repository" / "GbE_Region",
+            "TBT": self.base_dir / "Firmware_Repository" / "TBT_Region"
         }
 
     def _extract_version(self, name):
@@ -30,9 +33,14 @@ class FirmwareMatcher:
         # Simple matching: look for the exact version or highest version in the same major range
         target_major = target_version.split('.')[0] if '.' in target_version else target_version
         
-        for file in os.listdir(repo_path):
-            if not file.lower().endswith('.bin'):
-                continue
+        # Search both root directory and nested subfolders (e.g. ME_Region/16/...)
+        search_dir = repo_path / target_major if (repo_path / target_major).exists() else repo_path
+        candidates = list(search_dir.rglob("*.bin")) if search_dir.exists() else []
+        if not candidates and search_dir != repo_path:
+            candidates = list(repo_path.rglob("*.bin"))
+
+        for bin_path in candidates:
+            file = bin_path.name
             
             file_ver = self._extract_version(file)
             if not file_ver:
@@ -41,17 +49,17 @@ class FirmwareMatcher:
             # Strict match attempt
             if file_ver == target_version:
                 if self._match_sku(target_sku, file):
-                    return str(repo_path / file)
+                    return str(bin_path)
             
             # Sub-family match attempt
             if file_ver.startswith(target_major):
                 if self._match_sku(target_sku, file):
                     if not best_file:
-                        best_file = str(repo_path / file)
+                        best_file = str(bin_path)
                     else:
                         best_ver = self._extract_version(os.path.basename(best_file))
                         if best_ver and file_ver > best_ver:
-                            best_file = str(repo_path / file)
+                            best_file = str(bin_path)
                         
         return best_file
 

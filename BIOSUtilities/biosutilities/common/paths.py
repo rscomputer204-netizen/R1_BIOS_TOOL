@@ -129,6 +129,9 @@ def make_dirs(in_path: str, parents: bool = True, exist_ok: bool = True, delete:
     if delete:
         delete_dirs(in_path=in_path)
 
+    if os.name == 'nt' and not str(in_path).startswith('\\\\?\\'):
+        in_path = '\\\\?\\' + os.path.abspath(in_path)
+
     Path.mkdir(Path(in_path), parents=parents, exist_ok=exist_ok)
 
 

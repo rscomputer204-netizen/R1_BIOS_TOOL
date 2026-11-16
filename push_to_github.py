@@ -871,7 +871,7 @@ class GitPushGUI:
                         if os.path.exists(dest_dir):
                             shutil.rmtree(dest_dir, ignore_errors=True)
                         shutil.copytree(src_dir, dest_dir, ignore=shutil.ignore_patterns(
-                            "__pycache__", "*.pyc", "*.tmp",
+                            "__pycache__", "*.pyc", "*.tmp", "*_extracted*", "*.bin", "*.BIN",
                             "github_token.json", "key_generator_config.json"
                         ))
 
@@ -881,7 +881,7 @@ class GitPushGUI:
                             if os.path.exists(dest_internal):
                                 shutil.rmtree(dest_internal, ignore_errors=True)
                             shutil.copytree(src_dir, dest_internal, ignore=shutil.ignore_patterns(
-                                "__pycache__", "*.pyc", "*.tmp",
+                                "__pycache__", "*.pyc", "*.tmp", "*_extracted*", "*.bin", "*.BIN",
                                 "github_token.json", "key_generator_config.json"
                             ))
 
