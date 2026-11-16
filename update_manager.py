@@ -414,24 +414,24 @@ class UpdateDialog(QDialog):
         cache_dir = os.path.join(app_dir, "update_cache")
         internal_cache = os.path.join(internal_dir, "update_cache")
 
-        # 1. Search for updater.exe in all possible places
+        # 1. Prioritize freshly downloaded updater.exe from update_cache
         exe_candidates = [
-            os.path.join(app_dir, "updater.exe"),
-            os.path.join(internal_dir, "updater.exe"),
             os.path.join(cache_dir, "payload", "updater.exe"),
             os.path.join(internal_cache, "payload", "updater.exe"),
             os.path.join(cache_dir, "updater.exe"),
             os.path.join(internal_cache, "updater.exe"),
+            os.path.join(app_dir, "updater.exe"),
+            os.path.join(internal_dir, "updater.exe"),
         ]
 
         # 2. Search for updater.py in all possible places
         py_candidates = [
-            os.path.join(app_dir, "updater.py"),
-            os.path.join(internal_dir, "updater.py"),
             os.path.join(cache_dir, "payload", "updater.py"),
             os.path.join(internal_cache, "payload", "updater.py"),
             os.path.join(cache_dir, "updater.py"),
             os.path.join(internal_cache, "updater.py"),
+            os.path.join(app_dir, "updater.py"),
+            os.path.join(internal_dir, "updater.py"),
         ]
 
         target_exe = next((p for p in exe_candidates if os.path.isfile(p)), None)
@@ -439,14 +439,15 @@ class UpdateDialog(QDialog):
 
         try:
             if target_exe:
-                # If target_exe was found inside update_cache, copy it to app root
-                if target_exe != os.path.join(app_dir, "updater.exe"):
-                    try:
-                        shutil.copy2(target_exe, os.path.join(app_dir, "updater.exe"))
-                        target_exe = os.path.join(app_dir, "updater.exe")
-                    except Exception:
-                        pass
-                subprocess.Popen([target_exe, str(pid), app_dir], cwd=app_dir)
+                # Copy to %TEMP% so app_dir/updater.exe is NOT locked and can be replaced cleanly
+                import tempfile
+                temp_runner = os.path.join(tempfile.gettempdir(), f"r1_updater_{pid}.exe")
+                try:
+                    shutil.copy2(target_exe, temp_runner)
+                    run_target = temp_runner
+                except Exception:
+                    run_target = target_exe
+                subprocess.Popen([run_target, str(pid), app_dir], cwd=app_dir)
             elif target_py:
                 # In frozen mode, run updater.py using pyrunner.exe so client doesn't need Python
                 runner_candidates = [
