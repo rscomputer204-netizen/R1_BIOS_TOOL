@@ -37,40 +37,70 @@ SIG_FD  = b"\x5A\xA5\xF0\x0F"
 
 # CPU Architecture Mapping by CPUID
 CPUID_MAP = {
-    # 11th Gen Tiger Lake
-    "000806C0": ("Tiger Lake (11th Gen)", "TGP-LP B"),
-    "000806C1": ("Tiger Lake (11th Gen)", "TGP-LP B"),
-    "000806C2": ("Tiger Lake (11th Gen)", "TGP-H A"),
-    # 12th Gen Alder Lake
-    "00090672": ("Alder Lake (12th Gen)", "ADP-P/M B"),
-    "00090675": ("Alder Lake (12th Gen)", "ADP-S A"),
-    "00090670": ("Alder Lake (12th Gen)", "ADP-M A"),
-    # 13th / 14th Gen Raptor Lake
-    "000B0671": ("Raptor Lake (13th/14th Gen)", "RPL-S B"),
-    "000B06A0": ("Raptor Lake (13th/14th Gen)", "RPL-HX B"),
-    "000B06F2": ("Raptor Lake (13th/14th Gen)", "RPL-P B"),
-    # Core Ultra 1st Gen (Meteor Lake)
+    # 15th / 16th Gen Core Ultra (Arrow Lake / Lunar Lake)
+    "000C0650": ("Arrow Lake (15th Gen)", "Arrow Lake S"),
+    "000C0651": ("Arrow Lake (15th Gen)", "Arrow Lake S"),
+    "000C0652": ("Arrow Lake (15th Gen)", "Arrow Lake S"),
+    "000C0660": ("Arrow Lake (15th Gen)", "Arrow Lake H"),
+    "000C0670": ("Arrow Lake (15th Gen)", "Arrow Lake U"),
+    "000B06D0": ("Lunar Lake (Core Ultra 2)", "Lunar Lake M"),
+    "000B06D1": ("Lunar Lake (Core Ultra 2)", "Lunar Lake M"),
+    "000D0600": ("Panther Lake (Next-Gen)", "PTL A"),
+    "000D0601": ("Panther Lake (Next-Gen)", "PTL A"),
+
+    # 14th Gen / Core Ultra 1 (Meteor Lake)
     "000706E5": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
     "000A06A0": ("Meteor Lake (14th Gen)", "Meteor Lake S"),
     "000A06A1": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
     "000A06A2": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
     "000A06A4": ("Meteor Lake (14th Gen)", "Meteor Lake P"),
-    # Core Ultra 2nd Gen (Lunar Lake / Arrow Lake)
-    "000B06D0": ("Lunar Lake (Core Ultra 2)", "LNL-M A"),
-    "000C0650": ("Arrow Lake (Core Ultra 2)", "ARL-S A"),
-    "000C0660": ("Arrow Lake (Core Ultra 2)", "ARL-H A"),
-    # Panther Lake (Next-Gen)
-    "000D0600": ("Panther Lake (Core Ultra 3)", "PTL A"),
-    # 10th Gen Comet Lake / Ice Lake
-    "000A0652": ("Comet Lake (10th Gen)", "CMP-H A"),
+
+    # 13th / 14th Gen Raptor Lake
+    "000B0670": ("Raptor Lake (13th Gen)", "RPL-S B"),
+    "000B0671": ("Raptor Lake (13th/14th Gen)", "RPL-S B"),
+    "000B06A0": ("Raptor Lake (13th/14th Gen)", "RPL-HX B"),
+    "000B06F2": ("Raptor Lake (13th/14th Gen)", "RPL-P B"),
+    "000B06F5": ("Raptor Lake (13th/14th Gen)", "RPL-P B"),
+
+    # 12th Gen Alder Lake
+    "00090670": ("Alder Lake (12th Gen)", "ADP-S A"),
+    "00090671": ("Alder Lake (12th Gen)", "ADP-S A"),
+    "00090672": ("Alder Lake (12th Gen)", "ADP-P/M B"),
+    "00090674": ("Alder Lake (12th Gen)", "ADP-P/M B"),
+    "00090675": ("Alder Lake (12th Gen)", "ADP-S A"),
+    "000906A0": ("Alder Lake (12th Gen)", "ADP-M A"),
+    "000906A1": ("Alder Lake (12th Gen)", "ADP-M A"),
+    "000906A2": ("Alder Lake (12th Gen)", "ADP-M A"),
+    "000906A3": ("Alder Lake (12th Gen)", "ADP-M A"),
+    "000906A4": ("Alder Lake (12th Gen)", "ADP-M A"),
+
+    # 11th Gen Tiger Lake & Rocket Lake
+    "000806C0": ("Tiger Lake (11th Gen)", "TGP-LP B"),
+    "000806C1": ("Tiger Lake (11th Gen)", "TGP-LP B"),
+    "000806C2": ("Tiger Lake (11th Gen)", "TGP-H A"),
+    "000806D0": ("Tiger Lake (11th Gen)", "TGP-LP B"),
+    "000806D1": ("Tiger Lake (11th Gen)", "TGP-LP B"),
+    "000806D2": ("Tiger Lake (11th Gen)", "TGP-LP B"),
+    "000A0670": ("Rocket Lake (11th Gen)", "RKL-S A"),
+    "000A0671": ("Rocket Lake (11th Gen)", "RKL-S A"),
+
+    # 10th Gen Comet Lake & Ice Lake
+    "000A0650": ("Comet Lake (10th Gen)", "CMP-U A"),
     "000A0651": ("Comet Lake (10th Gen)", "CMP-U A"),
-    "000706E5": ("Ice Lake (10th Gen)", "ICL-U A"),
-    # 8th / 9th Gen Coffee Lake / Whiskey Lake
+    "000A0652": ("Comet Lake (10th Gen)", "CMP-H A"),
+    "000A0653": ("Comet Lake (10th Gen)", "CMP-H A"),
+    "000A0654": ("Comet Lake (10th Gen)", "CMP-H A"),
+    "000A0655": ("Comet Lake (10th Gen)", "CMP-H A"),
+
+    # 8th / 9th Gen Coffee Lake / Whiskey Lake / Cannon Lake
     "000906EA": ("Coffee Lake (8th/9th Gen)", "CNP-H B"),
     "000906EB": ("Coffee Lake (8th/9th Gen)", "CNP-H B"),
     "000906EC": ("Coffee Lake (8th/9th Gen)", "CNP B"),
     "000906ED": ("Coffee Lake (8th/9th Gen)", "CNP B"),
     "000806EB": ("Whiskey Lake (8th Gen)", "CNP-LP B"),
+    "000806EC": ("Whiskey Lake (8th Gen)", "CNP-LP B"),
+    "00060660": ("Cannon Lake (8th Gen)", "CNP-LP B"),
+
     # 6th / 7th Gen Skylake / Kaby Lake
     "000406E3": ("Skylake (6th Gen)", "SPT-LP B"),
     "000406E8": ("Skylake (6th Gen)", "SPT-LP B"),
@@ -78,9 +108,45 @@ CPUID_MAP = {
     "000806E9": ("Kaby Lake (7th Gen)", "SPT/KBP-LP C"),
     "000806EA": ("Kaby Lake (7th Gen)", "SPT/KBP-LP C"),
     "000906E9": ("Kaby Lake (7th Gen)", "KBP-S B"),
+
     # 4th / 5th Gen Haswell / Broadwell
-    "000306C3": ("Haswell (4th Gen)", "LPT"),
+    "000306D4": ("Broadwell (5th Gen)", "WPT-LP"),
+    "00040671": ("Broadwell (5th Gen)", "WPT"),
     "00040651": ("Broadwell (5th Gen)", "WPT"),
+    "000306C1": ("Haswell (4th Gen)", "LPT"),
+    "000306C2": ("Haswell (4th Gen)", "LPT"),
+    "000306C3": ("Haswell (4th Gen)", "LPT"),
+    "00040661": ("Haswell (4th Gen)", "LPT-LP"),
+
+    # 2nd / 3rd Gen Sandy Bridge / Ivy Bridge
+    "000306A8": ("Ivy Bridge (3rd Gen)", "PPT"),
+    "000306A9": ("Ivy Bridge (3rd Gen)", "PPT"),
+    "000306E4": ("Ivy Bridge (3rd Gen)", "PPT"),
+    "000206A7": ("Sandy Bridge (2nd Gen)", "CPT"),
+    "000206D6": ("Sandy Bridge (2nd Gen)", "CPT"),
+    "000206D7": ("Sandy Bridge (2nd Gen)", "CPT"),
+
+    # Atom / Celeron / Pentium (TXE / CSE)
+    "00090660": ("Elkhart Lake (Atom/Celeron)", "EHL"),
+    "00090661": ("Elkhart Lake (Atom/Celeron)", "EHL"),
+    "000906C0": ("Jasper Lake (Celeron/Pentium)", "JSL"),
+    "000706A1": ("Gemini Lake (Atom)", "GLK"),
+    "000706A8": ("Gemini Lake (Atom)", "GLK"),
+    "000506C2": ("Apollo Lake (Atom)", "APL"),
+    "000506C9": ("Apollo Lake (Atom)", "APL"),
+    "000406C3": ("Braswell / Cherry Trail", "BSW/CHT"),
+    "000406C4": ("Braswell / Cherry Trail", "BSW/CHT"),
+    "00030673": ("Bay Trail", "BYT"),
+    "00030678": ("Bay Trail", "BYT"),
+    "00030679": ("Bay Trail", "BYT"),
+
+    # Xeon Scalable / Enterprise
+    "000806F4": ("Sapphire Rapids (Xeon)", "SPR-SP"),
+    "000806F5": ("Sapphire Rapids (Xeon)", "SPR-SP"),
+    "000C06F1": ("Emerald Rapids (Xeon)", "EMR-SP"),
+    "000606A4": ("Ice Lake SP (Xeon)", "ICX-SP"),
+    "00050654": ("Cascade Lake (Xeon)", "CLX-SP"),
+    "00050650": ("Skylake SP (Xeon)", "SKX-SP"),
 }
 
 GEN_RANK = {
@@ -91,10 +157,12 @@ GEN_RANK = {
     "raptor lake": 13,
     "alder lake": 12,
     "tiger lake": 11,
+    "rocket lake": 11,
     "comet lake": 10,
     "ice lake": 10,
     "coffee lake": 9,
     "whiskey lake": 8,
+    "cannon lake": 8,
     "kaby lake-r": 8,
     "kaby lake": 7,
     "skylake": 6,
@@ -102,20 +170,39 @@ GEN_RANK = {
     "haswell": 4,
     "ivy bridge": 3,
     "sandy bridge": 2,
+    "sapphire rapids": 14,
+    "emerald rapids": 15,
+    "granite rapids": 16,
+    "elkhart lake": 10,
+    "jasper lake": 10,
+    "gemini lake": 8,
+    "apollo lake": 6,
+    "braswell": 4,
+    "bay trail": 3,
 }
 
 GEN_FAMILY_MAP = {
+    2: ("Intel ME (Legacy)", "ICH8"),
+    3: ("Intel ME (Legacy)", "ICH9"),
+    4: ("Intel ME (Legacy)", "ICH10"),
+    5: ("Intel ME (Legacy)", "Ibex Peak"),
+    6: ("Intel ME (5 Series)", "Ibex Peak"),
+    7: ("Intel ME (6 Series)", "Cougar Point"),
+    8: ("Intel ME (7 Series)", "Panther Point"),
+    9: ("Intel ME (8 Series)", "Lynx Point"),
+    10: ("Intel ME (9 Series)", "Wildcat Point"),
     11: ("Skylake / Kaby Lake (6th/7th Gen)", "SPT-LP B"),
     12: ("Coffee Lake / Cannon Lake (8th/9th Gen)", "CNP-LP B"),
     13: ("Ice Lake (10th Gen)", "ICL-LP A"),
     14: ("Comet Lake (10th Gen)", "CMP-LP A"),
     15: ("Tiger Lake (11th Gen)", "TGP-LP B"),
-    16: ("Alder Lake / Raptor Lake (12th/13th Gen)", "ADP-P/M B"),
+    16: ("Alder Lake / Raptor Lake (12th/13th/14th Gen)", "ADP-P/M B"),
     17: ("Meteor Lake (14th Gen)", "Meteor Lake P"),
     18: ("Meteor Lake (14th Gen)", "Meteor Lake P"),
     19: ("Arrow Lake / Lunar Lake (15th Gen)", "Arrow Lake"),
     20: ("Panther Lake (Next-Gen)", "PTL A"),
-    21: ("Next-Gen Ultra CSME 21+", "GEN21 A"),
+    21: ("Nova Lake (Next-Gen)", "NVL A"),
+    22: ("Next-Gen Intel CSME 22+", "GEN22 A"),
 }
 
 SKU_CODE_MAP = {
