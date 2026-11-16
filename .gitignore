@@ -86,6 +86,28 @@ chat_history/
 mea_*.txt
 testing_area_*.txt
 test_padding.*
+external/MEAnalyzer/*.json
+scripts/*.json
+scripts/check_*.py
+scripts/debug_*.py
+scripts/find_*.py
+scripts/inspect_*.py
+scripts/patch_*.py
+scripts/print_*.py
+scripts/read_*.py
+scripts/run_*.py
+scripts/trace_*.py
+scripts/verify_*.py
+scripts/fast_*.py
+scripts/unpack_*.py
+scripts/dump_*.py
+scripts/scan_*.py
+scripts/search_*.py
+scripts/dfpt_*.py
+scripts/diag_*.py
+scripts/compare_*.py
+scripts/clean_*.py
+scripts/get_*.py
 
 # One-off scratch test scripts in root
 test_*.py
