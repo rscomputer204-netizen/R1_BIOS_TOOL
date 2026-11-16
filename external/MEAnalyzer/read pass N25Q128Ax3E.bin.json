@@ -1,0 +1,24 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\6050a2566301-a03\\read pass N25Q128Ax3E.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "9.0.22.1467",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "3",
+                "Production Ready": "Yes",
+                "Date": "2013-09-09",
+                "Size": "0x4CA000",
+                "Flash Image Tool": "9.0.22.1467",
+                "Chipset Support": "LPT",
+                "MEA Database Name": "9.0.22.1467_5MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "5929CCC768F317140903EB45A3367F746C31451B5DCEEDE87695EFD8666A3ABD"
+            }
+        ],
+        "Messages": []
+    }
+}

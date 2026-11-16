@@ -1,0 +1,563 @@
+[
+  {
+    "file": "01015fy00-388-g\\dump_main.bin",
+    "diffs": {
+      "tag": "R1=7.1.52.1176_1.5MB_PRD_EXTR vs MEA=7.1.52.1176_1.5MB_PRD_UPD"
+    }
+  },
+  {
+    "file": "01015fy00-388-g\\hp_compaq_presario_cq57-380er\\cq57.BIN",
+    "diffs": {
+      "tag": "R1=7.1.52.1176_1.5MB_PRD_EXTR vs MEA=7.1.52.1176_1.5MB_PRD_UPD"
+    }
+  },
+  {
+    "file": "01015fy00-388-g\\hp_compaq_presario_cq57-380er\\dump_main.bin",
+    "diffs": {
+      "tag": "R1=7.1.52.1176_1.5MB_PRD_EXTR vs MEA=7.1.52.1176_1.5MB_PRD_UPD"
+    }
+  },
+  {
+    "file": "10th gen_DA0X8LMB8D0 REV D\\clean test ok under side ram.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x2F4000 vs MEA=0x2F5000"
+    }
+  },
+  {
+    "file": "10th gen_DA0X8LMB8D0 REV D\\mdm message show_DA0X8LMB8D0 REV D\\25Q128JVSQ sy.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3399_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3425_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3426_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3434_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3448_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3460_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3470_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.55.3510_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.60.3561_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.65.3572_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.65.3590_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.70.3626_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.77.3664_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.78.3681_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.79.3722_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.80.3746_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.81.3781_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.81.3807_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.82.3838_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.83.3874_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.86.3877_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.86.3909_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "25B127DSIG HP 430 G7 10 GEN\\25B127DSIG HP 430 G7 10 GEN (2).bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "450 G6 DAX8JMB16E0 Rev E ok\\rr.bin",
+    "diffs": {
+      "chipset": "R1=CNP vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x27C000 vs MEA=0x27D000"
+    }
+  },
+  {
+    "file": "6050A2637901-MB-A02\\HP_6050A2637901_Clear me.bin\\HP_6050A2637901_Clear me.bin",
+    "diffs": {
+      "size": "R1=0x4CA000 vs MEA=0x5A6000"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\New folder\\read 9-6-22.bin",
+    "diffs": {
+      "sku": "R1=Corporate LP vs MEA= LP",
+      "tag": "R1=12.0.49.1534_COR_LP_C_PRD_EXTR-N vs MEA=12.0.49.1534__LP_C_PRD_EXTR"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\ok 100\\read raju.bin",
+    "diffs": {
+      "chipset": "R1=CNP/CMP-LP C vs MEA=CNP"
+    }
+  },
+  {
+    "file": "6050a2930901-mb-a01(a1)\\EC16MB\\read meraj.bin",
+    "diffs": {
+      "chipset": "R1=CNP vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x148000 vs MEA=0x77A000",
+      "fitc": "R1=12.0.64.1551 vs MEA=12.0.49.1536"
+    }
+  },
+  {
+    "file": "6050a2930901-mb-a01(a1)\\EC16MB\\read mij.bin",
+    "diffs": {
+      "chipset": "R1=CNP vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x148000 vs MEA=0x77A000",
+      "fitc": "R1=12.0.64.1551 vs MEA=12.0.49.1536"
+    }
+  },
+  {
+    "file": "6050a2930901-mb-a01(a1)\\read meraj34 message",
+    "diffs": {
+      "chipset": "R1=CNP vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x148000 vs MEA=0x77A000",
+      "fitc": "R1=12.0.64.1551 vs MEA=12.0.49.1536"
+    }
+  },
+  {
+    "file": "6930p\\read bin.bin",
+    "diffs": {
+      "size": "R1=0x102000 vs MEA=0x1FB000"
+    }
+  },
+  {
+    "file": "840 g1\\25Q128_Clear me.bin",
+    "diffs": {
+      "size": "R1=0x4CA000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "840 g1\\HP EliteBook 840 G1 6050A2560201-MB-A02_Clear me.BIN\\HP EliteBook 840 G1 6050A2560201-MB-A02_Clear me.BIN",
+    "diffs": {
+      "size": "R1=0x4CA000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "840_G5_6050A2945601-MB-A01(A1)\\840 G4 7 JEN\\g4 auto start.bin",
+    "diffs": {
+      "chipset": "R1=SPT/KBP-LP C vs MEA=SPT/KBP"
+    }
+  },
+  {
+    "file": "840_G5_6050A2945601-MB-A01(A1)\\840 G4 7 JEN\\let dis.bin",
+    "diffs": {
+      "chipset": "R1=SPT/KBP-LP C vs MEA=SPT/KBP"
+    }
+  },
+  {
+    "file": "840_G5_6050A2945601-MB-A01(A1)\\840 G5_6050A2945601-MB-A01 (A1)\\g5\\anware vai none touch do have clear enpoind clear file\\hex code hp model number scharch\\passwordedW25Q128JV@SOIC8_unlocked.BIN",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x2F4000 vs MEA=0x2F5000"
+    }
+  },
+  {
+    "file": "850 g3\\read bin.bin",
+    "diffs": {
+      "chipset": "R1=SPT/KBP-LP C vs MEA=SPT/KBP"
+    }
+  },
+  {
+    "file": "HP ZBook 15 G5 Mobile Workstation DA0XW2MBAG0 XW2A\\orginal read no power.bin",
+    "diffs": {
+      "chipset": "R1=CNP vs MEA=CNP/CMP-H B,A",
+      "size": "R1=0x7BC000 vs MEA=0x7BD000"
+    }
+  },
+  {
+    "file": "LA-J092P,2\\LA-J092P\\red ori.bin",
+    "diffs": {
+      "chipset": "R1=Unknown vs MEA=ICP-LP D",
+      "size": "R1=0x6E000 vs MEA=0x3C1000"
+    }
+  },
+  {
+    "file": "LA-J092P,2\\LA-J092P\\www.chinafix.com\u8fc5\u7ef4\u7f51_8Mla-j092p.BIN",
+    "diffs": {
+      "chipset": "R1=Unknown vs MEA=ICP-LP D",
+      "size": "R1=0x3C0000 vs MEA=0x3C1000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3399_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3425_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3426_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3434_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3448_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3460_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3470_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.55.3510_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.60.3561_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.65.3572_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.65.3590_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.70.3626_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.77.3664_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.78.3681_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.79.3722_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.80.3746_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.81.3781_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.81.3807_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.82.3838_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.83.3874_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.86.3877_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.86.3909_COR_H_DA_PRD_RGN.bin",
+    "diffs": {
+      "size": "R1=0x1C4B0000 vs MEA=0x702000"
+    }
+  },
+  {
+    "file": "dax8mmb18d0 rev d\\OK 01\\OK 01.BIN",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "dax8mmb18d0 rev d\\read bin.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x2F4000 vs MEA=0x2F5000"
+    }
+  },
+  {
+    "file": "dv6 DA0LX6MB6H1 REV.H\\ok clean main.bin",
+    "diffs": {
+      "size": "R1=0xF4000 vs MEA=0xE5000"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\HP 840 G6 crescent-6050a3022501-mb-a01\\New folder\\Orig+R70_010600\\nasir\\g6.bin",
+    "diffs": {
+      "chipset": "R1=CNP/CMP-LP C vs MEA=CNP"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\read orginal bin.bin",
+    "diffs": {
+      "size": "R1=0x148000 vs MEA=0x7BA000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\25B127DSIG HP 430 G7 10 GEN (2) cl.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\25B127DSIG HP 430 G7 10 GEN (2) cl.rom",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\25B127DSIG HP 430 G7 10 GEN (2).bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\Bios next to the wifi card_CLEAN_unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\CLEAN_FILE SYSTEM BIOS 440 G7 10TH GEN.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\hp probook 440 G5 DA0X8MMB6D0 REV D ok\\34 Mass.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\hp probook 440 G5 DA0X8MMB6D0 REV D ok\\CLEAN_FILE SYSTEM BIOS 440 G7 10TH GEN.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\me.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\Late 20 sec.rom",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x2F4000 vs MEA=0x2F5000"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\manufacture.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x2F4000 vs MEA=0x2F5000"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\okay fixed 3 sec security control inpoint remove.rom",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\PCH_25Q128JVSQ Unlocked\\PCH_25Q128JVSQ Unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\Bios next to the wifi card.BIN",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED ok file\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED\\orginal read problem.bin",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\OK 01.BIN",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x6E000 vs MEA=0x2EF000"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\zhan66 pro 15 g3\\ZHAN66 PRO_15 G3 next to the wireless network card slot.BIN",
+    "diffs": {
+      "chipset": "R1=CMP-H/LP vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x2DA000 vs MEA=0x2DB000"
+    }
+  }
+]

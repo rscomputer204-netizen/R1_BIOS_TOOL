@@ -1,0 +1,48 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\NM-B891 BIOS T490S\\MX25L25633F@WSON8_20260415_123545 Rana bai.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.47.1524",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "6",
+                "Version Control Number": "19",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2019-09-05",
+                "File System State": "Initialized",
+                "Size": "0x77D000",
+                "Flash Image Tool": "12.0.47.1524",
+                "MEA Database Name": "12.0.47.1524_COR_LP_C_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "B96A43ABCAED1467A5E0F40BC4E44D327F24CCA07E45B28338BF39423281E269"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1025",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2019-08-08",
+                "Size": "0x14000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1025_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "4C7EE81AA441FCA78213F22CFEA6EB6AFCA9722C34353C4833B67E08A65EABDA"
+            }
+        ],
+        "Messages": []
+    }
+}

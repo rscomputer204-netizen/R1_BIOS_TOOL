@@ -1,0 +1,24 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\Probook450_G2_ZPL40_ZPL50_ZPL70_LA_B181P_Rev_1_0_no hdd\\HP ProBook 440 G2 LA-B181P Rev1.0 25Q4FVSIQ.BIN": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "10.0.30.1072",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "1.5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "2",
+                "Production Ready": "Yes",
+                "Date": "2014-10-09",
+                "Size": "0x17D000",
+                "Flash Image Tool": "10.0.30.1054",
+                "Chipset Support": "WPT-LP",
+                "MEA Database Name": "10.0.30.1072_1.5MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "41C621460E5A6C7C0162D435E97A98DBDBAB3E27A94D5D11ED5D8758DF15C7D7"
+            }
+        ],
+        "Messages": []
+    }
+}

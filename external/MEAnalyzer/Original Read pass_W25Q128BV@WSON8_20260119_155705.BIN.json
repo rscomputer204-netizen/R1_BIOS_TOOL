@@ -1,0 +1,54 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\EMPIRE_6050A3074401_MB_A02 Dragon Firefily 8th gen\\Original Read pass_W25Q128BV@WSON8_20260119_155705.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.97.2608",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "15",
+                "Version Control Number": "70",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2025-02-19",
+                "File System State": "Error",
+                "Size": "0x148000",
+                "Flash Image Tool": "12.0.70.1652",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "12.0.97.2608_COR_LP_C_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "59A03BB03545DB4784C2AFFBF16EA6BDDCA06E92E4E9DD1A026578853F650D1D"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1030",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-03-18",
+                "Size": "0x11000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1030_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "ADE052EF9B2A982391C0A433551C8D2E36B0690B5B07289C34CB7855317414CD"
+            }
+        ],
+        "Messages": [
+            "Error: Firmware is incomplete/corrupted, expected 0x2000000 not 0xFFE000!",
+            "Error: Skipped MFS partition at 0x81FF0, unrecognizable format!",
+            "Warning: Firmware size exceeds Engine/Graphics region, possible data loss!",
+            "Note: Adjusted buffer to Flash Descriptor 0x2000 - 0x2002000!"
+        ]
+    }
+}

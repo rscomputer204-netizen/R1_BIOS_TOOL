@@ -172,17 +172,18 @@ def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> di
 
     # Special Case: Lenovo ThinkPad update packages (.FL1 = Main BIOS, .FL2 = EC)
     if ext == ".fl1":
-        if primary_fam and (primary_fam in base_name.upper() or primary_fam in parent_dir.upper()):
+        p_str = f" ({parent_dir})" if parent_dir else ""
+        if primary_fam and (primary_fam in base_name.upper() or (parent_dir and primary_fam in parent_dir.upper())):
             score = 100
-            matched_id = f"{primary_fam} ({parent_dir})"
+            matched_id = f"{primary_fam}{p_str}"
             is_match = True
             v_orig = board_info.get("primary_version", "")
-            reason = f"Matches Motherboard BIOS Family: {primary_fam}{f' (Backup {v_orig} → Update {parent_dir})' if v_orig else ''}"
+            reason = f"Matches Motherboard BIOS Family: {primary_fam}{f' (Backup {v_orig} -> Update {parent_dir})' if v_orig and parent_dir else ''}"
         elif board_info.get("detected_brand") == "Lenovo":
             score = 90
-            matched_id = f"Lenovo BIOS ({parent_dir})"
+            matched_id = f"Lenovo BIOS{p_str}"
             is_match = True
-            reason = f"Lenovo Main System BIOS Image ({parent_dir})."
+            reason = f"Lenovo Main System BIOS Image{p_str}."
         else:
             score = 80
             matched_id = "Main BIOS (.FL1)"

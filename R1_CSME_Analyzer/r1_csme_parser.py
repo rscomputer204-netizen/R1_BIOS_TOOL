@@ -25,6 +25,8 @@ import time
 import struct
 import shlex
 import re
+import hashlib
+import ctypes
 from pathlib import Path
 
 # Common Signatures
@@ -34,6 +36,58 @@ SIG_MAN = b"$MAN"
 SIG_CPD = b"$CPD"
 SIG_FIT = b"_FIT_   "
 SIG_FD  = b"\x5A\xA5\xF0\x0F"
+SIG_SKU = b"$SKU"
+
+# Pre-CSE $SKU Structures
+class SKU_Attributes_Flags(ctypes.BigEndianStructure):
+    _fields_ = [
+        ('Value1', ctypes.c_uint64, 24),
+        ('Value2', ctypes.c_uint64, 1), # Slim (ME 7)
+        ('Value3', ctypes.c_uint64, 1),
+        ('Value4', ctypes.c_uint64, 1),
+        ('Value5', ctypes.c_uint64, 1),
+        ('Value6', ctypes.c_uint64, 1),
+        ('Value7', ctypes.c_uint64, 1),
+        ('Value8', ctypes.c_uint64, 1),
+        ('Value9', ctypes.c_uint64, 1),
+        ('Patsburg', ctypes.c_uint64, 1), # 0 No, 1 Yes (ME 7-8)
+        ('SKUType', ctypes.c_uint64, 3), # 0 Corporate, 1 Consumer, 2 Slim (ME 9-10)
+        ('SKUSize', ctypes.c_uint64, 4), # Size * 0.5MB (ME 7-10, TXE 0-2)
+        ('Value10', ctypes.c_uint64, 24)
+    ]
+
+class SKU_Union(ctypes.Union):
+    _fields_ = [('b', SKU_Attributes_Flags), ('asbytes', ctypes.c_uint64)]
+
+# Global MEA Database Cache
+_MEA_DB_CACHE = None
+
+def get_mea_db():
+    global _MEA_DB_CACHE
+    if _MEA_DB_CACHE is not None:
+        return _MEA_DB_CACHE
+    _MEA_DB_CACHE = {}
+    base_dir = Path(__file__).resolve().parent
+    search_paths = [
+        base_dir.parent / "external" / "MEAnalyzer" / "MEA.dat",
+        base_dir / "external" / "MEAnalyzer" / "MEA.dat",
+        Path(r"d:\BIOS_-TOOL\external\MEAnalyzer\MEA.dat"),
+        Path(r"d:\BIOS_-TOOL\dist\R1_BIOS_TOOL\_internal\external\MEAnalyzer\MEA.dat"),
+    ]
+    for p in search_paths:
+        if p.exists():
+            try:
+                with open(p, "r", encoding="utf-8") as f:
+                    for line in f:
+                        line = line.strip()
+                        if "_" in line and len(line) > 64:
+                            parts = line.rsplit("_", 1)
+                            if len(parts) == 2 and len(parts[1]) == 64:
+                                _MEA_DB_CACHE[parts[1].upper()] = parts[0]
+                break
+            except Exception:
+                pass
+    return _MEA_DB_CACHE
 
 # CPU Architecture Mapping by CPUID
 CPUID_MAP = {
@@ -229,10 +283,10 @@ class R1CSMEAnalyzer:
             "minor": 0,
             "hotfix": 0,
             "build": 0,
-            "sku": "Corporate LP",
-            "sku_code": "COR_LP",
-            "chipset": "TGP-LP B",
-            "stepping": "B",
+            "sku": "Unknown",
+            "sku_code": "UNK",
+            "chipset": "Unknown",
+            "stepping": "Unknown",
             "oem_config": "No",
             "date": "Unknown",
             "size_hex": "0x0",
@@ -241,6 +295,9 @@ class R1CSMEAnalyzer:
             "fitc_ver": "N/A",
             "full_tag": "Unknown",
             "is_valid_me": False,
+            "is_stock_rgn": False,
+            "rsa_sig_hash": "",
+            "pdm": "No",
             "me_fd_start": 0,
             "me_fd_end": 0,
             # Extended metadata (computed on-demand)
@@ -396,46 +453,70 @@ class R1CSMEAnalyzer:
                             "size": f"0x{sz:X}"
                         })
 
-                        if reg_name == "ME / CSME":
+                        if reg_name == "ME / CSME" and b_addr < l_addr and b_addr < len(self.raw_data) and l_addr < 0x0FFFF000:
                             self.info["me_fd_start"] = b_addr
                             self.info["me_fd_end"] = (limit + 1) * 0x1000
 
     def _parse_manifest(self):
         data = self.raw_data
-        pos = 0
         mn2_entries = []
 
-        while True:
-            pos = data.find(SIG_MN2, pos)
-            if pos == -1:
-                break
-            hdr_start = pos - 0x1C
-            if hdr_start >= 0 and hdr_start + 0x30 <= len(data):
-                day = data[hdr_start + 0x14]
-                month = data[hdr_start + 0x15]
-                year = struct.unpack("<H", data[hdr_start + 0x16 : hdr_start + 0x18])[0]
-                major, minor, hotfix, build = struct.unpack("<HHHH", data[hdr_start + 0x24 : hdr_start + 0x2C])
+        for sig in (SIG_MN2, SIG_MAN):
+            pos = 0
+            while True:
+                pos = data.find(sig, pos)
+                if pos == -1:
+                    break
+                hdr_start = pos - 0x1C
+                if hdr_start >= 0 and hdr_start + 0x30 <= len(data):
+                    day = data[hdr_start + 0x14]
+                    month = data[hdr_start + 0x15]
+                    year = struct.unpack("<H", data[hdr_start + 0x16 : hdr_start + 0x18])[0]
+                    major, minor, hotfix, build = struct.unpack("<HHHH", data[hdr_start + 0x24 : hdr_start + 0x2C])
 
-                if 6 <= major <= 35 and build > 0:
-                    date_str = f"{year:04X}-{month:02X}-{day:02X}"
-                    mn2_entries.append({
-                        "major": major,
-                        "minor": minor,
-                        "hotfix": hotfix,
-                        "build": build,
-                        "date": date_str,
-                        "hdr_start": hdr_start,
-                        "pos": pos
-                    })
-            pos += 4
+                    if 2 <= major <= 35 and build > 0:
+                        date_str = f"{year:04X}-{month:02X}-{day:02X}"
+                        sig_hash = ""
+                        if hdr_start + 0x80 <= len(data):
+                            pk_size_dw = struct.unpack("<I", data[hdr_start+0x78:hdr_start+0x7C])[0]
+                            exp_size_dw = struct.unpack("<I", data[hdr_start+0x7C:hdr_start+0x80])[0]
+                            pk_size = pk_size_dw * 4
+                            exp_size = exp_size_dw * 4
+                            if 64 <= pk_size <= 1024 and 1 <= exp_size <= 64:
+                                sig_off = hdr_start + 0x80 + pk_size + exp_size
+                                if sig_off + pk_size <= len(data):
+                                    sig_data = data[sig_off : sig_off + pk_size]
+                                    sig_hash = hashlib.sha256(sig_data).hexdigest().upper()
+
+                        mn2_entries.append({
+                            "major": major,
+                            "minor": minor,
+                            "hotfix": hotfix,
+                            "build": build,
+                            "date": date_str,
+                            "hdr_start": hdr_start,
+                            "pos": pos,
+                            "sig_hash": sig_hash
+                        })
+                pos += 4
 
         if mn2_entries:
-            primary = mn2_entries[0]
+            mea_db = get_mea_db()
             for ent in mn2_entries:
                 ctx = data[max(0, ent["hdr_start"] - 64) : min(len(data), ent["hdr_start"] + 64)]
-                if b"FTPR" in ctx:
-                    primary = ent
-                    break
+                ent["is_ftpr"] = (b"FTPR" in ctx)
+
+            def manifest_rank(ent):
+                h = ent.get("sig_hash", "")
+                tag = mea_db.get(h, "")
+                is_main_db = 1 if (tag and tag[0].isdigit()) else 0
+                is_ftpr = 1 if ent.get("is_ftpr", False) else 0
+                is_reasonable_major = 1 if (2 <= ent["major"] <= 35) else 0
+                return (is_main_db, is_reasonable_major, is_ftpr, -ent["hdr_start"])
+
+            mn2_entries.sort(key=manifest_rank, reverse=True)
+            primary = mn2_entries[0]
+            found_hash = primary.get("sig_hash", "")
 
             self.info["is_valid_me"] = True
             self.info["major"] = primary["major"]
@@ -444,7 +525,8 @@ class R1CSMEAnalyzer:
             self.info["build"] = primary["build"]
             self.info["version"] = f"{primary['major']}.{primary['minor']}.{primary['hotfix']}.{primary['build']}"
             self.info["date"] = primary["date"]
-            self.info["family"] = "CSE ME" if primary["major"] >= 11 else "Intel ME"
+            self.info["family"] = "CSE ME" if primary["major"] >= 11 else "ME"
+            self.info["rsa_sig_hash"] = found_hash
             return
 
         # Fallback Legacy $MAN (ME 2 to 5)
@@ -463,6 +545,94 @@ class R1CSMEAnalyzer:
 
     def _parse_extension_sku(self):
         data = self.raw_data
+        major = self.info.get("major", 0)
+        minor = self.info.get("minor", 0)
+
+        # 0. Pre-CSE ME 2 to 10: Parse $SKU attributes
+        if 2 <= major <= 10:
+            sku_pos = data.find(SIG_SKU)
+            if sku_pos != -1 and sku_pos + 16 <= len(data):
+                attrib = struct.unpack("<Q", data[sku_pos+8 : sku_pos+16])[0]
+                u = SKU_Union()
+                u.asbytes = attrib
+                patsburg = u.b.Patsburg
+                sku_type = u.b.SKUType
+                sku_size = u.b.SKUSize
+                slim = u.b.Value2
+
+                if major == 8:
+                    if sku_size * 0.5 == 1.5:
+                        self.info["sku"] = "1.5MB"
+                        self.info["sku_code"] = "1.5MB"
+                    else:
+                        self.info["sku"] = "5MB"
+                        self.info["sku_code"] = "5MB"
+                    self.info["chipset"] = "CPT/PBG/PPT"
+                    self.info["stepping"] = "N/A"
+                    return
+                elif major == 7:
+                    if slim == 1:
+                        self.info["sku"] = "Slim"
+                        self.info["sku_code"] = "SLM"
+                    elif sku_size * 0.5 == 1.5:
+                        self.info["sku"] = "1.5MB"
+                        self.info["sku_code"] = "1.5MB"
+                    else:
+                        self.info["sku"] = "5MB"
+                        self.info["sku_code"] = "5MB"
+                    self.info["patsburg"] = bool(patsburg)
+                    self.info["chipset"] = "CPT/PBG" if patsburg else "CPT"
+                    self.info["stepping"] = "N/A"
+                    return
+                elif major == 9:
+                    if sku_type == 0:
+                        self.info["sku"] = "5MB"
+                        self.info["sku_code"] = "5MB"
+                    elif sku_type == 1:
+                        self.info["sku"] = "1.5MB"
+                        self.info["sku_code"] = "1.5MB"
+                    elif sku_type == 2:
+                        self.info["sku"] = "Slim"
+                        self.info["sku_code"] = "SLM"
+                    if minor == 0:
+                        self.info["chipset"] = "LPT"
+                    elif minor == 1:
+                        self.info["chipset"] = "LPT/WPT"
+                    elif minor in [5, 6]:
+                        self.info["chipset"] = "LPT-LP"
+                    self.info["stepping"] = "N/A"
+                    return
+                elif major == 10:
+                    if sku_type == 0:
+                        self.info["sku"] = "5MB"
+                        self.info["sku_code"] = "5MB"
+                    elif sku_type == 1:
+                        self.info["sku"] = "1.5MB"
+                        self.info["sku_code"] = "1.5MB"
+                    elif sku_type == 2:
+                        self.info["sku"] = "Slim"
+                        self.info["sku_code"] = "SLM"
+                    self.info["chipset"] = "WPT-LP"
+                    self.info["stepping"] = "N/A"
+                    return
+                elif major == 6:
+                    sku_me = int.from_bytes(data[sku_pos+8 : sku_pos+12], "big")
+                    if sku_me == 0:
+                        ign_pch = "CCK" if self.info.get("hotfix") == 50 else "IBX"
+                        self.info["sku"] = f"Ignition {ign_pch}"
+                        self.info["sku_code"] = "IGN"
+                    elif sku_me == 0x701C0000:
+                        self.info["sku"] = "1.5MB"
+                        self.info["sku_code"] = "1.5MB"
+                    elif sku_me in [0x77DCEE00, 0x77FCEE00, 0xF7FEFE00]:
+                        self.info["sku"] = "5MB MB"
+                        self.info["sku_code"] = "5MB_MB"
+                    else:
+                        self.info["sku"] = "5MB DT"
+                        self.info["sku_code"] = "5MB_DT"
+                    self.info["chipset"] = "IBX"
+                    self.info["stepping"] = "N/A"
+                    return
 
         # 1. Primary: Check Extension 0x0C (CLIENT_SYSTEM_INFO_EXTENSION)
         # Tag 0x0000000C, Size 0x00000030. Used in CSME 11 to 21+ for actual SKU
@@ -481,9 +651,23 @@ class R1CSMEAnalyzer:
             if pos + 0x30 <= len(data):
                 fw_attrib = struct.unpack("<Q", data[pos + 0x28 : pos + 0x30])[0]
                 stype = (fw_attrib >> 4) & 0x07
+                sku_plat = (fw_attrib >> 10) & 0x03
                 if stype in ext12_sku_map:
                     sname, scode = ext12_sku_map[stype]
-                    is_lp = (self.info["major"] in [14, 15, 16, 17, 18, 19] or "LP" in self.info["chipset"])
+                    if major == 11:
+                        if sku_plat == 1:
+                            self.info["sku"] = f"{sname} LP"
+                            self.info["sku_code"] = f"{scode}_LP"
+                            self.info["chipset"] = "SPT/KBP-LP C"
+                            self.info["stepping"] = "C"
+                        else:
+                            self.info["sku"] = f"{sname} H"
+                            self.info["sku_code"] = f"{scode}_H"
+                            self.info["chipset"] = "SPT-H D"
+                            self.info["stepping"] = "D"
+                        return
+
+                    is_lp = (major in [14, 15, 16, 17, 18, 19] or sku_plat == 1 or "LP" in self.info["chipset"])
                     if is_lp:
                         self.info["sku"] = f"{sname} LP"
                         self.info["sku_code"] = f"{scode}_LP"
@@ -528,9 +712,66 @@ class R1CSMEAnalyzer:
             pos += 4
 
         if not found_fpts:
+            self.info["fpt_found"] = False
+            self.info["mfs_found"] = False
             self.info["fs_stage"] = "N/A"
+            self.info["fs_state"] = "N/A"
+            self.info["mfs_state"] = "N/A"
             self.info["warnings"].append("No Flash Partition Table ($FPT) detected!")
+
+            # Check if CSE Layout Table exists even without $FPT (e.g. IFWI 2.0 with BPDT)
+            bp_sigs = (b'\xAA\x55\x00\x00', b'\xAA\x55\xAA\x00', b'\x00\x00\xAA\x55', b'\x00\xAA\x55\xAA')
+            cse_lt_max_end = 0
+            for base in [0, 0x1000, 0x2000, 0x3000, 0x4000]:
+                if base + 0x40 <= len(data):
+                    try:
+                        romb0, romb1, romb2, romb3, d_off, d_sz, b1_off, b1_sz, b2_off, b2_sz, b3_off, b3_sz, b4_off, b4_sz, b5_off, b5_sz = struct.unpack('<IIIIIIIIIIIIIIII', data[base:base+0x40])
+                        b_cand = (b1_off, b2_off, b3_off, b4_off, b5_off)
+                        if any(off < len(data) and data[base+off:base+off+4] in bp_sigs for off in b_cand if off not in (0, 0xFFFFFFFF)):
+                            entries = [(d_off, d_sz), (b1_off, b1_sz), (b2_off, b2_sz), (b3_off, b3_sz), (b4_off, b4_sz), (b5_off, b5_sz)]
+                            valid_ends = [base + off + sz for off, sz in entries if off not in (0, 0xFFFFFFFF) and sz not in (0, 0xFFFFFFFF) and base + off + sz <= len(data)]
+                            if valid_ends:
+                                cse_lt_max_end = max(valid_ends) - base
+                            if cse_lt_max_end > 0:
+                                break
+                    except Exception:
+                        pass
+                if base + 56 <= len(data):
+                    try:
+                        sz = struct.unpack("<H", data[base + 0x10 : base + 0x12])[0]
+                        if sz in (0x40, 0x48):
+                            r0, r1, r2, r3, sz, flg, res, csum, data_off, data_sz, bp1_off, bp1_sz, bp2_off, bp2_sz, bp3_off, bp3_sz = struct.unpack("<IIIIHBBIIIIIIIII", data[base : base + 56])
+                            b_cand17 = (bp1_off, bp2_off, bp3_off)
+                            if any(off < len(data) and data[base+off:base+off+4] in bp_sigs for off in b_cand17 if off not in (0, 0xFFFFFFFF)):
+                                entries = [(data_off, data_sz), (bp1_off, bp1_sz), (bp2_off, bp2_sz), (bp3_off, bp3_sz)]
+                                valid_ends = [base + off + s for off, s in entries if off not in (0, 0xFFFFFFFF) and s not in (0, 0xFFFFFFFF) and base + off + s <= len(data)]
+                                if valid_ends:
+                                    cse_lt_max_end = max(valid_ends) - base
+                                if cse_lt_max_end > 0:
+                                    break
+                    except Exception:
+                        pass
+
+            if cse_lt_max_end > 0:
+                self.info["has_ftpr"] = True
+                self.info["fpt_found"] = True
+                self.info["mfs_found"] = False
+                self.info["fs_state"] = "N/A"
+                self.info["mfs_state"] = "N/A"
+                self.info["fw_type"] = "Extracted"
+                self.info["size_hex"] = f"0x{cse_lt_max_end:X}"
+                bpdt_pat = re.compile(br'\xAA\x55[\x00\xAA]\x00.\x00[\x01\x02][\x00\x01]', re.DOTALL)
+                bpdt_m = bpdt_pat.search(data)
+                if bpdt_m:
+                    bpdt_off = bpdt_m.start()
+                    if bpdt_off + 24 <= len(data):
+                        b_fit_maj, b_fit_min, b_fit_hot, b_fit_bld = struct.unpack('<HHHH', data[bpdt_off+0x10 : bpdt_off+0x18])
+                        if b_fit_maj > 0 and b_fit_maj != 0xFFFF:
+                            self.info["fitc_ver"] = f"{b_fit_maj}.{b_fit_min}.{b_fit_hot}.{b_fit_bld}"
+                return
             return
+
+        self.info["fpt_found"] = True
 
         has_oem_config = False
         fitc_part_found = False
@@ -540,6 +781,16 @@ class R1CSMEAnalyzer:
         mfs_buf = None
 
         primary_fpt = found_fpts[0]
+        if self.info["me_fd_start"] > 0:
+            fd_fpts = [p for p in found_fpts if self.info["me_fd_start"] <= p < self.info["me_fd_end"]]
+            if not fd_fpts:
+                self.info["fw_type"] = "Update"
+                self.info["fpt_found"] = False
+                self.info["size_hex"] = ""
+                return
+            else:
+                primary_fpt = fd_fpts[0]
+
         # In Intel SPI image, partition offsets in FPT are relative to ME base
         if self.info["me_fd_start"] > 0 and primary_fpt == self.info["me_fd_start"] + 0x10:
             fpt_base = self.info["me_fd_start"]
@@ -552,6 +803,20 @@ class R1CSMEAnalyzer:
             fit_maj, fit_min, fit_hot, fit_bld = struct.unpack("<HHHH", data[primary_fpt+0x18 : primary_fpt+0x20])
             if fit_maj > 0 and fit_maj != 0xFFFF:
                 self.info["fitc_ver"] = f"{fit_maj}.{fit_min}.{fit_hot}.{fit_bld}"
+            is_stock_rgn = (fit_maj in (0, 0xFFFF) or fit_bld in (0, 0xFFFF))
+            self.info["is_stock_rgn"] = is_stock_rgn
+
+            # Check for BPDT (Boot Partition Descriptor Table - IFWI)
+            bpdt_pat = re.compile(br'\xAA\x55[\x00\xAA]\x00.\x00[\x01\x02][\x00\x01]', re.DOTALL)
+            bpdt_m = bpdt_pat.search(data)
+            if bpdt_m:
+                bpdt_off = bpdt_m.start()
+                if bpdt_off + 24 <= len(data):
+                    b_fit_maj, b_fit_min, b_fit_hot, b_fit_bld = struct.unpack('<HHHH', data[bpdt_off+0x10 : bpdt_off+0x18])
+                    if b_fit_maj > 0 and b_fit_maj != 0xFFFF:
+                        self.info["fitc_ver"] = f"{b_fit_maj}.{b_fit_min}.{b_fit_hot}.{b_fit_bld}"
+                        self.info["is_stock_rgn"] = False
+                        self.info["fw_type"] = "Extracted"
 
             # Extract partitions from primary FPT
             num_entries = struct.unpack("<I", data[primary_fpt+4 : primary_fpt+8])[0]
@@ -564,6 +829,45 @@ class R1CSMEAnalyzer:
                     pname = e[:4].rstrip(b"\x00").decode("ascii", errors="ignore")
                     poff = struct.unpack("<I", e[8:12])[0]
                     psize = struct.unpack("<I", e[12:16])[0]
+
+                    # ME 2-6: Calculate dynamic partition size if size == 0xFFFFFFFF
+                    if poff != 0xFFFFFFFF and psize == 0xFFFFFFFF:
+                        p_abs = fpt_base + poff
+                        if p_abs + 0x30 <= len(data):
+                            if data[p_abs + 0x1C : p_abs + 0x20] == b"$MN2":
+                                num_mods = struct.unpack("<I", data[p_abs + 0x20 : p_abs + 0x24])[0]
+                                hdr_len = struct.unpack("<I", data[p_abs + 0x04 : p_abs + 0x08])[0] * 4
+                                mod_start = p_abs + hdr_len + 0xC
+                                mod_end_max = p_abs
+                                for _ in range(min(num_mods, 64)):
+                                    if mod_start + 0x60 > len(data) or data[mod_start : mod_start + 4] != b"$MME":
+                                        break
+                                    m_off = struct.unpack("<I", data[mod_start + 0x38 : mod_start + 0x3C])[0]
+                                    m_uncomp = struct.unpack("<I", data[mod_start + 0x3C : mod_start + 0x40])[0]
+                                    m_comp = struct.unpack("<I", data[mod_start + 0x40 : mod_start + 0x44])[0]
+                                    m_sz = m_comp if m_comp else m_uncomp
+                                    m_end = p_abs + m_off + m_sz
+                                    if m_end > mod_end_max:
+                                        mod_end_max = m_end
+                                    mod_start += 0x60
+                                eng_fw_align = 0x1000 - ((mod_end_max - fpt_base) % 0x1000)
+                                if eng_fw_align != 0x1000:
+                                    mod_end_max += eng_fw_align
+                                psize = mod_end_max - fpt_base - poff
+                            elif data[p_abs + 0x1C : p_abs + 0x20] == b"$MAN":
+                                num_mods = struct.unpack("<I", data[p_abs + 0x24 : p_abs + 0x28])[0]
+                                hdr_len = struct.unpack("<I", data[p_abs + 0x04 : p_abs + 0x08])[0] * 4
+                                mod_start = p_abs + hdr_len + 0xC
+                                mod_size_all = 0
+                                for _ in range(min(num_mods, 64)):
+                                    if mod_start + 0x50 > len(data) or data[mod_start : mod_start + 4] != b"$MME":
+                                        break
+                                    m_sz = struct.unpack("<I", data[mod_start + 0x40 : mod_start + 0x44])[0]
+                                    mod_size_all += m_sz
+                                    mod_start += 0x50
+                                mod_end_max = mod_start + 0x50 + 0xC + mod_size_all
+                                psize = ((mod_end_max - fpt_base + 0xFFF) & ~0xFFF) - poff
+
                     if poff != 0xFFFFFFFF and psize != 0xFFFFFFFF:
                         self.info["fpt_entries"].append({
                             "name": pname,
@@ -597,7 +901,36 @@ class R1CSMEAnalyzer:
                         if abs_p + psize <= len(data):
                             mfs_buf = data[abs_p : abs_p + psize]
 
+            # Check for Update image vs Stock vs Extracted
+            non_empty_parts = [e["name"] for e in self.info["fpt_entries"] if e.get("size") not in ("0x0", "0x000000", "0", 0)]
+            if set(non_empty_parts) in ({'FTPR', 'FTUP', 'NFTP'}, {'FTPR', 'FTUP'}, {'FTPR', 'NFTP'}):
+                self.info["fw_type"] = "Update"
+                self.info["is_stock_rgn"] = False
+            else:
+                fovd_dirty = False
+                for e in self.info["fpt_entries"]:
+                    if e["name"] == "FOVD":
+                        off = int(e["offset"], 16) if str(e["offset"]).startswith("0x") else int(e["offset"])
+                        sz = int(e["size"], 16) if str(e["size"]).startswith("0x") else int(e["size"])
+                        abs_p = (fpt_base + off) if (fpt_base + off + sz <= len(data)) else off
+                        if abs_p + sz <= len(data):
+                            fovd_chunk = data[abs_p : abs_p + sz]
+                            if fovd_chunk != b"\xFF" * sz:
+                                fovd_dirty = True
+                                break
+
+                if fovd_dirty or b"KRND\x00" in data:
+                    self.info["is_stock_rgn"] = False
+                    self.info["fw_type"] = "Extracted"
+                elif fit_bld in (0, 0xFFFF):
+                    self.info["is_stock_rgn"] = True
+                    self.info["fw_type"] = "Stock"
+                else:
+                    self.info["is_stock_rgn"] = False
+                    self.info["fw_type"] = "Extracted"
+
         # Determine maximum partition end from FPT entries
+        self.info["has_ftpr"] = any(e["name"] == "FTPR" for e in self.info["fpt_entries"])
         fpt_max_end = 0
         if self.info["fpt_entries"]:
             for entry in self.info["fpt_entries"]:
@@ -611,41 +944,142 @@ class R1CSMEAnalyzer:
 
         # In Intel CSME, check for IFWI CSE Layout Table (CSE LT - IFWI 1.6 / 1.7)
         cse_lt_max_end = 0
-        me_start = self.info.get("me_fd_start", 0)
-        candidates = [me_start] if me_start > 0 else []
-        candidates.extend([0, 0x1000, 0x2000, 0x3000])
-        candidates = sorted(list(set(candidates)))
+        bp_sigs = (b'\xAA\x55\x00\x00', b'\xAA\x55\xAA\x00', b'\x00\x00\xAA\x55', b'\x00\xAA\x55\xAA')
+        major = self.info.get("major", 0)
+        if major >= 11:
+            me_start = self.info.get("me_fd_start", 0)
+            candidates = [me_start] if me_start > 0 else []
+            candidates.extend([0, 0x1000, 0x2000, 0x3000, 0x4000])
+            candidates = sorted(list(set(candidates)))
 
-        for base in candidates:
-            if base + 56 <= len(data):
-                sz = struct.unpack("<H", data[base + 0x10 : base + 0x12])[0]
-                if sz in (0x40, 0x48):
+            for base in candidates:
+                # 1. Check IFWI 1.6 Structure
+                if base + 0x40 <= len(data):
                     try:
-                        r0, r1, r2, r3, sz, flg, res, csum, data_off, data_sz, bp1_off, bp1_sz, bp2_off, bp2_sz, bp3_off, bp3_sz = struct.unpack("<IIIIHBBIIIIIIIII", data[base : base + 56])
-                        entries = [(data_off, data_sz), (bp1_off, bp1_sz), (bp2_off, bp2_sz), (bp3_off, bp3_sz)]
-                        for off, s in entries:
-                            if off != 0xFFFFFFFF and s != 0xFFFFFFFF and s > 0:
-                                cse_lt_max_end = max(cse_lt_max_end, off + s)
-                        if cse_lt_max_end > 0:
-                            break
+                        romb0, romb1, romb2, romb3, d_off, d_sz, b1_off, b1_sz, b2_off, b2_sz, b3_off, b3_sz, b4_off, b4_sz, b5_off, b5_sz = struct.unpack('<IIIIIIIIIIIIIIII', data[base:base+0x40])
+                        b_cand = (b1_off, b2_off, b3_off, b4_off, b5_off)
+                        if any(off < len(data) and data[base+off:base+off+4] in bp_sigs for off in b_cand if off not in (0, 0xFFFFFFFF)):
+                            lt16_entries = [(d_off, d_sz), (b1_off, b1_sz), (b2_off, b2_sz), (b3_off, b3_sz), (b4_off, b4_sz), (b5_off, b5_sz)]
+                            valid_ends = [base + off + sz for off, sz in lt16_entries if off not in (0, 0xFFFFFFFF) and sz not in (0, 0xFFFFFFFF) and base + off + sz <= len(data)]
+                            if valid_ends:
+                                cse_lt_max_end = max(valid_ends) - base
+                            if cse_lt_max_end > 0:
+                                break
                     except Exception:
                         pass
 
-        total_fw_size = max(fpt_max_end, cse_lt_max_end)
-        if total_fw_size > 0:
-            self.info["size_hex"] = f"0x{total_fw_size:X}"
-        else:
+                # 2. Check IFWI 1.7 Structure
+                if base + 56 <= len(data):
+                    try:
+                        sz = struct.unpack("<H", data[base + 0x10 : base + 0x12])[0]
+                        if sz in (0x40, 0x48):
+                            r0, r1, r2, r3, sz, flg, res, csum, data_off, data_sz, bp1_off, bp1_sz, bp2_off, bp2_sz, bp3_off, bp3_sz = struct.unpack("<IIIIHBBIIIIIIIII", data[base : base + 56])
+                            b_cand17 = (bp1_off, bp2_off, bp3_off)
+                            if any(off < len(data) and data[base+off:base+off+4] in bp_sigs for off in b_cand17 if off not in (0, 0xFFFFFFFF)):
+                                entries = [(data_off, data_sz), (bp1_off, bp1_sz), (bp2_off, bp2_sz), (bp3_off, bp3_sz)]
+                                valid_ends = [base + off + s for off, s in entries if off not in (0, 0xFFFFFFFF) and s not in (0, 0xFFFFFFFF) and base + off + s <= len(data)]
+                                if valid_ends:
+                                    cse_lt_max_end = max(valid_ends) - base
+                                if cse_lt_max_end > 0:
+                                    break
+                    except Exception:
+                        pass
+
+        is_fd_present = (self.info.get("me_fd_start", 0) > 0 or self.info.get("me_fd_end", 0) > 0)
+        self.info["has_ftpr"] = any(e["name"] == "FTPR" for e in self.info["fpt_entries"]) or (cse_lt_max_end > 0)
+
+        # Scan for uncharted $MN2 and $CPD partitions starting after fpt_max_end (only if FTPR exists)
+        if self.info["has_ftpr"]:
+            p_end_scan = fpt_base + fpt_max_end
+            while p_end_scan + 0x20 <= len(data):
+                if data[p_end_scan + 0x1C : p_end_scan + 0x20] == b"$MN2":
+                    try:
+                        num_mods = struct.unpack("<I", data[p_end_scan + 0x20 : p_end_scan + 0x24])[0]
+                        hdr_len = struct.unpack("<I", data[p_end_scan + 0x04 : p_end_scan + 0x08])[0] * 4
+                        mod_start = p_end_scan + hdr_len + 0xC
+                        mme_size = 0x80 if major == 2 else 0x60
+                        mcp_start = mod_start + num_mods * mme_size + mme_size
+                        if mcp_start + 0x20 <= len(data) and data[mcp_start : mcp_start + 4] == b"$MCP":
+                            mcp_off, mcp_sz = struct.unpack("<II", data[mcp_start + 0x08 : mcp_start + 0x10])
+                            p_end_scan += mcp_off + mcp_sz
+                            fpt_max_end = max(fpt_max_end, p_end_scan - fpt_base)
+                            continue
+                    except Exception:
+                        pass
+                elif data[p_end_scan : p_end_scan + 4] == b"$CPD":
+                    try:
+                        cpd_ver = data[p_end_scan + 8]
+                        cpd_hdr_sz = 0x10 if cpd_ver == 1 else 0x14
+                        cpd_num = struct.unpack("<I", data[p_end_scan + 0x04 : p_end_scan + 0x08])[0]
+                        cpd_fw_end = 0
+                        cpd_off_last = 0
+                        for ci in range(min(cpd_num, 64)):
+                            entry_off = p_end_scan + cpd_hdr_sz + ci * 0x18
+                            if entry_off + 0x18 <= len(data):
+                                raw_off = struct.unpack("<I", data[entry_off + 0x0C : entry_off + 0x10])[0]
+                                c_off = raw_off & 0x01FFFFFF
+                                c_sz = struct.unpack("<I", data[entry_off + 0x10 : entry_off + 0x14])[0]
+                                if c_off > cpd_off_last:
+                                    cpd_off_last = c_off
+                                    cpd_fw_end = c_off + c_sz
+
+                        mn2_start = p_end_scan + cpd_hdr_sz + cpd_num * 0x18
+                        cse_ext_part_size = 0
+                        if mn2_start + 16 <= len(data):
+                            hdr_len = struct.unpack("<I", data[mn2_start + 4 : mn2_start + 8])[0] * 4
+                            curr = mn2_start + hdr_len
+                            for _ in range(16):
+                                if curr + 8 > len(data):
+                                    break
+                                ext_type, ext_len = struct.unpack("<II", data[curr : curr + 8])
+                                if ext_type in (0x3, 0x16):
+                                    if curr + 0x10 <= len(data):
+                                        cse_ext_part_size = struct.unpack("<I", data[curr + 0x0C : curr + 0x10])[0]
+                                    break
+                                if ext_len == 0 or ext_len > 0x10000:
+                                    break
+                                curr += ext_len
+
+                        part_sz = max(cse_ext_part_size, cpd_fw_end)
+                        if part_sz > 0:
+                            p_end_scan += part_sz
+                            fpt_max_end = max(fpt_max_end, p_end_scan - fpt_base)
+                            continue
+                    except Exception:
+                        pass
+
+                # If next uncharted partition starts within 8KB alignment padding
+                if not is_fd_present and cse_lt_max_end == 0 and p_end_scan + 0x2000 <= len(data):
+                    cpd_pat_search = re.compile(br'\$CPD.\x00\x00\x00[\x01\x02]\x01[\x10\x14]', re.DOTALL)
+                    m_next = cpd_pat_search.search(data[p_end_scan : p_end_scan + 0x2000])
+                    if m_next and m_next.start() > 0:
+                        p_end_scan += m_next.start()
+                        continue
+
+                break
+
+        if major == 4 and not is_fd_present:
+            total_fw_size = 0x1FB000
+        elif cse_lt_max_end > 0:
+            total_fw_size = (cse_lt_max_end + 0xFFF) & ~0xFFF
+        elif fpt_max_end > 0:
+            total_fw_size = (fpt_max_end + 0xFFF) & ~0xFFF
+        elif is_fd_present:
             me_start = self.info["me_fd_start"]
             me_end = self.info["me_fd_end"]
-            if me_end > me_start and me_start > 0:
+            if me_end > me_start and me_start >= 0:
                 scan_end = min(len(data), me_end)
                 me_chunk = data[me_start:scan_end]
                 non_ff_len = len(me_chunk.rstrip(b"\xFF"))
-                non_ff_aligned = (non_ff_len + 0xFFF) & ~0xFFF if non_ff_len > 0 else (me_end - me_start)
-                self.info["size_hex"] = f"0x{non_ff_aligned:X}"
+                total_fw_size = (non_ff_len + 0xFFF) & ~0xFFF if non_ff_len > 0 else (me_end - me_start)
             else:
-                self.info["size_hex"] = f"0x{self.file_size:X}"
+                total_fw_size = self.file_size
+        else:
+            total_fw_size = self.file_size
 
+        self.info["size_hex"] = f"0x{total_fw_size:X}"
+
+        self.info["mfs_found"] = (mfs_buf is not None)
         fs_state, mfs_has_oem_file = self._determine_mfs_state(
             mfs_buf,
             has_oem_config=(oemp_part_found or cdmd_part_found or fitc_part_found)
@@ -655,6 +1089,7 @@ class R1CSMEAnalyzer:
         self.info["oem_config"] = "Yes" if has_oem_config else "No"
         self.info["fs_stage"] = fs_state
         self.info["fs_state"] = fs_state
+        self.info["mfs_state"] = fs_state
 
     @staticmethod
     def _crc16_14(w, crc=0x3FFF):
@@ -686,7 +1121,7 @@ class R1CSMEAnalyzer:
         sig1 = mfs_buf[:4]
         sig2 = mfs_buf[0x2000:0x2004] if len(mfs_buf) >= 0x2004 else b""
         if b"\xAA\x55\x78\x87" not in (sig1, sig2) and b"\x87\x78\x55\xAA" not in (sig1, sig2):
-            return ("Configured" if has_oem_config else "Unconfigured"), False
+            return ("Configured" if has_oem_config else "Error"), False
 
         page_size = 0x2000
         page_hdr_size = 0x12
@@ -713,7 +1148,7 @@ class R1CSMEAnalyzer:
                 chunks_count_sys = min(chunks_count_sys, first_chunk)
 
         if not sys_pages:
-            return ("Configured" if has_oem_config else "Unconfigured"), False
+            return ("Configured" if has_oem_config else "Error"), False
 
         sys_pages.sort(key=lambda x: x[0])
 
@@ -746,12 +1181,12 @@ class R1CSMEAnalyzer:
                     break
 
         if 0 not in all_chunks_dict:
-            return ("Configured" if has_oem_config else "Unconfigured"), False
+            return ("Configured" if has_oem_config else "Error"), False
 
         c0 = all_chunks_dict[0]
         vol_sig, ftbl_dict, ftbl_plat, ftbl_res, vol_size, vol_file_rec = struct.unpack("<IBBHIH", c0[:14])
         if vol_sig != 0x724F6201:
-            return ("Configured" if has_oem_config else "Unconfigured"), False
+            return ("Configured" if has_oem_config else "Error"), False
 
         if chunks_count_sys == 0xFFFF:
             chunks_count_sys = max(all_chunks_dict.keys()) + 1 if all_chunks_dict else 1
@@ -903,18 +1338,138 @@ class R1CSMEAnalyzer:
         major = self.info.get("major", 0)
         minor = self.info.get("minor", 0)
         sku = self.info.get("sku", "")
+        ver = self.info["version"]
+        is_stock = self.info.get("is_stock_rgn", False)
+        if is_stock:
+            target_suffix = "RGN"
+        else:
+            if major >= 12 and "COR" in self.info.get("sku_code", ""):
+                target_suffix = "EXTR-N"
+            else:
+                target_suffix = "EXTR"
 
-        # Precise chipset / stepping correction for Intel ME 11
-        if major == 11:
-            if minor == 8 and "LP" in sku:
-                self.info["chipset"] = "SPT/KBP-LP C"
-                self.info["stepping"] = "C"
-            elif minor == 8 and ("H" in sku or "Corporate" in sku):
-                self.info["chipset"] = "SPT/KBP-H D"
-                self.info["stepping"] = "D"
-            elif "LP" in sku and self.info.get("stepping") in ("Unknown", "B"):
-                self.info["chipset"] = "SPT-LP B"
-                self.info["stepping"] = "B"
+        # Check MEA Database by RSA Signature Hash
+        sig_hash = self.info.get("rsa_sig_hash", "")
+        mea_db = get_mea_db()
+        db_tag = mea_db.get(sig_hash) if sig_hash else None
+
+        CSME_CHIPSET_MAP = {
+            11: ("SPT/KBP-LP", "SPT-H"),
+            12: ("CNP/CMP-LP", "CNP-H"),
+            13: ("ICL-LP", "ICL-H"),
+            14: ("CMP-LP", "CMP-H"),
+            15: ("TGP-LP", "TGP-H"),
+            16: ("ADP-LP", "ADP-S/M"),
+            17: ("MTL-M", "MTL-M"),
+            18: ("MTL-P", "MTL-P"),
+            19: ("ARL-S", "ARL-S"),
+        }
+
+        if db_tag:
+            tag_parts = db_tag.split("_")
+            stype_code = tag_parts[1] if len(tag_parts) > 1 else ""
+            if (self.info.get("fw_type") == "Update" or not self.info.get("fpt_found", False)) and major <= 10:
+                target_suffix = "UPD"
+                self.info["fw_type"] = "Update"
+                self.info["size_hex"] = ""
+            elif is_stock:
+                target_suffix = "RGN"
+            elif major >= 12 and "COR" in stype_code:
+                target_suffix = "EXTR-N"
+            else:
+                target_suffix = "EXTR"
+
+            parts = db_tag.rsplit("_", 1)
+            base_tag = parts[0]
+            canonical_tag = f"{base_tag}_{target_suffix}"
+            self.info["full_tag"] = canonical_tag
+
+            if major >= 11:
+                if len(tag_parts) >= 6:
+                    plat = tag_parts[2]
+                    stype_name = "Consumer" if stype_code == "CON" else ("Corporate" if stype_code == "COR" else ("Slim" if stype_code == "SLM" else stype_code))
+                    self.info["sku"] = f"{stype_name} {plat}"
+                    self.info["sku_code"] = f"{stype_code}_{plat}"
+                    stepping = tag_parts[3]
+                    self.info["stepping"] = stepping
+                    if len(tag_parts) >= 7 and "PDM" in tag_parts[4]:
+                        pdm_val = tag_parts[4]
+                        self.info["pdm"] = "Yes" if pdm_val == "YPDM" else "No"
+
+                    has_ftpr = self.info.get("has_ftpr", True)
+                    mfs_st = self.info.get("fs_state", "") or self.info.get("mfs_state", "")
+                    mfs_found = self.info.get("mfs_found", True)
+
+                    if mfs_st in ("Error", "N/A") or not mfs_found:
+                        if major == 11:
+                            self.info["chipset"] = "SPT" if minor == 0 else "SPT/KBP"
+                        elif major == 12:
+                            self.info["chipset"] = "CNP"
+                        elif major == 13:
+                            self.info["chipset"] = "ICP"
+                        elif major == 14:
+                            self.info["chipset"] = "CMP-H/LP"
+                        elif major == 15:
+                            self.info["chipset"] = "TGP"
+                    elif not has_ftpr:
+                        if major == 14:
+                            self.info["chipset"] = "CMP-H/LP"
+                        elif major == 12:
+                            self.info["chipset"] = "CNP"
+                        elif major == 11:
+                            self.info["chipset"] = "SPT" if minor == 0 else "SPT/KBP"
+                    else:
+                        if major == 11 and plat == "H" and stepping == "DA":
+                            self.info["chipset"] = "KBP/BSF/GCF-H A\nSPT-H D"
+                        elif major == 11 and plat == "LP" and stepping == "C":
+                            self.info["chipset"] = "SPT/KBP-LP C"
+                        elif major in (12, 14) and plat == "LP" and stepping == "BA":
+                            self.info["chipset"] = "CNP/CMP-LP B,A"
+                        elif major == 12 and plat == "H" and stepping == "BA":
+                            self.info["chipset"] = "CNP/CMP-H B,A"
+                        elif major == 12 and plat == "LP" and stepping == "C":
+                            self.info["chipset"] = "CNP/CMP-LP C"
+                        elif major == 13 and plat == "LP" and stepping == "D":
+                            self.info["chipset"] = "ICP-LP D"
+                        elif major in CSME_CHIPSET_MAP:
+                            lp_name, h_name = CSME_CHIPSET_MAP[major]
+                            base_pch = lp_name if plat == "LP" else h_name
+                            self.info["chipset"] = f"{base_pch} {stepping}"
+                        else:
+                            self.info["chipset"] = f"SPT/KBP-LP {stepping}" if plat == "LP" else f"SPT-H {stepping}"
+            elif 2 <= major <= 10:
+                if len(tag_parts) >= 3:
+                    if tag_parts[1] == "SLM":
+                        self.info["sku"] = "Slim"
+                    else:
+                        self.info["sku"] = tag_parts[1]
+                    self.info["sku_code"] = tag_parts[1]
+                    self.info["stepping"] = "N/A"
+                    if major == 4:
+                        self.info["chipset"] = "ICH9M"
+                    elif major == 6:
+                        self.info["chipset"] = "IBX"
+                    elif major == 7:
+                        self.info["chipset"] = "CPT/PBG" if self.info.get("patsburg") else "CPT"
+                    elif major == 8:
+                        self.info["chipset"] = "CPT/PBG/PPT"
+                    elif major == 9:
+                        self.info["chipset"] = "LPT-LP" if self.info.get("minor", 0) >= 5 else "LPT"
+                    elif major == 10:
+                        self.info["chipset"] = "WPT-LP"
+            return
+
+        # Fallback heuristic tag building
+        if major in CSME_CHIPSET_MAP:
+            lp_name, h_name = CSME_CHIPSET_MAP[major]
+            base_pch = lp_name if "LP" in sku else h_name
+            has_ftpr = self.info.get("has_ftpr", True)
+            if major == 14:
+                self.info["chipset"] = "CMP-H/LP"
+            elif major == 12 and not has_ftpr:
+                self.info["chipset"] = "CNP"
+            else:
+                self.info["chipset"] = f"{base_pch} {self.info.get('stepping', 'B')}"
 
         if "Unknown" in self.info["cpu_gen"] and major in GEN_FAMILY_MAP:
             gen_str, pch_code = GEN_FAMILY_MAP[major]
@@ -928,20 +1483,21 @@ class R1CSMEAnalyzer:
             stepping = parts[-1]
             self.info["stepping"] = stepping
         else:
-            stepping = self.info.get("stepping", "B")
+            stepping = self.info.get("stepping", "N/A" if major < 11 else "B")
 
         release = "PRD"
         has_oem = (self.info.get("oem_config") == "Yes")
         sku_code = self.info["sku_code"]
-        # In Intel CSME, only Corporate images with OEM/IUP include the -Y / -N modifier
-        me_type = "EXTR-Y" if (has_oem and "COR" in sku_code) else "EXTR"
+        me_type = target_suffix
+        if not is_stock and major >= 12 and (has_oem and "COR" in sku_code):
+            me_type = "EXTR-Y"
 
-        ver = self.info["version"]
-
-        if major == 11 and "LP" in sku:
-            self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_NPDM_{release}_{me_type}"
+        if 2 <= major <= 10:
+            self.info["full_tag"] = f"{ver}_{sku_code}_{release}_{me_type}"
+        elif major == 11 and "LP" in sku:
+            pdm_tag = "YPDM" if self.info.get("pdm") == "Yes" else "NPDM"
+            self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_{pdm_tag}_{release}_{me_type}"
         elif major >= 18:
-            # CSME 18+ uses full platform/chipset name in release tag
             self.info["full_tag"] = f"{ver}_{sku_code}_{chipset}_{release}_{me_type}"
         else:
             self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_{release}_{me_type}"

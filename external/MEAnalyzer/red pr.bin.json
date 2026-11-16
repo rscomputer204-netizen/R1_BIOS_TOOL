@@ -1,0 +1,24 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\HP PROBOOK 450 G0 FiJi MB-12238-1\\Full DMI CLEAN OK.bin\\red pr.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "8.1.20.1336",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "1.5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "2",
+                "Production Ready": "Yes",
+                "Date": "2012-10-19",
+                "Size": "0x17D000",
+                "Flash Image Tool": "8.1.20.1336",
+                "Chipset Support": "CPT/PBG/PPT",
+                "MEA Database Name": "8.1.20.1336_1.5MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "1047798B8A5DE9E3F0DE22A301FD7AC80E0862132FF0DFC23FDBE4E730B8228A"
+            }
+        ],
+        "Messages": []
+    }
+}

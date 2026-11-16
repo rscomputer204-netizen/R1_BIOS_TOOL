@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\14282-2m lrv1 mb\\CSME 11.0 Repository r55\\CSME 11.0 Repository r55\\11.0.3.1000_SLM_LP_C_NPDM_PRD_EXTR.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.3.1000",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Slim LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "12",
+                "Production Ready": "No",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2016-02-25",
+                "File System State": "Unconfigured",
+                "Size": "0x124000",
+                "Flash Image Tool": "11.0.0.1205",
+                "MEA Database Name": "11.0.3.1000_SLM_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "E448303A896BCDD0D5F42BAF46A70E97A99093449EB01DA23C3F751BC8DF3083"
+            }
+        ],
+        "Messages": []
+    }
+}

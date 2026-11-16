@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\840_G5_6050A2945601-MB-A01(A1)\\840 G5_6050A2945601-MB-A01 (A1)\\g5\\840 g5 32 mb Unlocked\\red badhon.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.65.3590",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "283",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2019-04-01",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.8.50.3460",
+                "MEA Database Name": "11.8.65.3590_CON_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "C80BC639FE5DD0B4C3843E677B85DF6F2CA7A70689F1B6FD68C74ED38295715C"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\840 G3\\read origion.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3425",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "275",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-10-25",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.0.18.3003",
+                "MEA Database Name": "11.8.50.3425_COR_LP_C_YPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "32A2A177D1B17A0702A5EED606C5B8A2FE20F62FDD189B1E12C245C0311E3698"
+            }
+        ],
+        "Messages": []
+    }
+}

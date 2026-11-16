@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\840_G5_6050A2945601-MB-A01(A1)\\840 G4 7 JEN\\ok by saiful clean me.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3425",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "275",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-10-25",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.8.55.3510",
+                "MEA Database Name": "11.8.50.3425_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "67DDFE1EB26CDEACC39797AA6C9A0D829073BC71D37019C05775D8940C1ABA33"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,92 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\LA-J092P,2\\LA-J092P\\www.chinafix.com\u8fc5\u7ef4\u7f51_8Mla-j092p.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "13.0.20.1312",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "ICP-LP D",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "1",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "No",
+                "Date": "2019-09-16",
+                "File System State": "Configured",
+                "Size": "0x3C1000",
+                "Flash Image Tool": "13.0.20.1312",
+                "MEA Database Name": "13.0.20.1312_CON_LP_D_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "9314DD961E10B0B38897C0C39EFBE984E92A5C1C3D9A792A813B805213BE89D2"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "130.1.30.1047",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "D",
+                "TCB Security Version Number": "0",
+                "ARB Security Version Number": "0",
+                "Version Control Number": "0",
+                "Production Ready": "Yes",
+                "Date": "2019-09-20",
+                "Size": "0x20000",
+                "Manifest Extension Utility": "13.0.0.1082",
+                "Chipset Support": "ICP",
+                "MEA Database Name": "ICP_130.1.30.1047_LP_D_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "CE815E5D7DF86E92AA966245A4AE74A276B457E5A967981AC56D89CDE6BFB28D"
+            }
+        ],
+        "Platform Controller Hub Configuration": [
+            {
+                "Family": "PCHC",
+                "Version": "13.0.0.1004",
+                "Release": "Production",
+                "Type": "Independent",
+                "TCB Security Version Number": "0",
+                "ARB Security Version Number": "0",
+                "Version Control Number": "0",
+                "Production Ready": "Yes",
+                "Date": "2019-05-25",
+                "Size": "0x1000",
+                "Manifest Extension Utility": "13.0.0.9000",
+                "Chipset Support": "ICP",
+                "MEA Database Name": "ICP_13.0.0.1004_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "C5A2C75E8B144D62175E1B20EB590E0567684DEE76B657C264A6D84EFEA6C732"
+            }
+        ],
+        "USB Type C Physical": [
+            {
+                "Family": "PHY",
+                "Version": "9.0.1.0003",
+                "Release": "Production",
+                "Type": "Independent",
+                "SKU": "N",
+                "TCB Security Version Number": "0",
+                "ARB Security Version Number": "0",
+                "Version Control Number": "0",
+                "Production Ready": "Yes",
+                "Date": "2019-05-14",
+                "Size": "0x8000",
+                "Manifest Extension Utility": "13.0.0.1061",
+                "Chipset Support": "ICP",
+                "MEA Database Name": "ICP_N_9.0.1.0003_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "A2B87597859AFB66D4314D9A06AD9A83741DBAAAEF3E2C3036F6055B3A107BEF"
+            }
+        ],
+        "Messages": [
+            "Error: Firmware is incomplete/corrupted, expected 0x1800000 not 0x800000!",
+            "Warning: Firmware size exceeds Engine/Graphics region, possible data loss!",
+            "Note: Adjusted buffer to Flash Descriptor 0x0 - 0x1800000!"
+        ]
+    }
+}

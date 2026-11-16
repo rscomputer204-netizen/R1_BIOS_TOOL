@@ -1,0 +1,24 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\X240 VIUX1 NM-A091\\okay x240s_x240 CLEAN.BIN\\PF01CXD3 2.40 ME_CLEAN.BIN": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "9.5.65.3000",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "14",
+                "Production Ready": "Yes",
+                "Date": "2018-06-13",
+                "Size": "0x4CA000",
+                "Flash Image Tool": "9.5.15.1730",
+                "Chipset Support": "LPT-LP",
+                "MEA Database Name": "9.5.65.3000_5MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "9DAACCB9844C94A8BD30CC6700D16A1AD5FB94DEBC08BA9B791D04F62CEDF16A"
+            }
+        ],
+        "Messages": []
+    }
+}

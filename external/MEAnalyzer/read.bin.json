@@ -1,0 +1,71 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED ok file\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED\\read.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "14.1.67.2046",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset Stepping": "B, A",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "12",
+                "Version Control Number": "40",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "No",
+                "Date": "2022-07-11",
+                "File System State": "Error",
+                "Size": "0x6E000",
+                "Flash Image Tool": "14.0.33.1125",
+                "Chipset Support": "CMP-H/LP",
+                "MEA Database Name": "14.1.67.2046_CON_LP_BA_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "9F82D1C8EF6E5B1124AA226B64E5E0CE672C72C53DECB8D1E7554BBBFEBC0BBF"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "140.1.01.1010",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "A",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "Yes",
+                "Date": "2020-03-18",
+                "Size": "0x14000",
+                "Chipset Support": "CMP",
+                "MEA Database Name": "CMP_140.1.01.1010_LP_A_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "BB4ADBE958280E0E9F1DDD216754DA8791FABE2BCEB26F0CF1837590FABE6AF6"
+            }
+        ],
+        "Platform Controller Hub Configuration": [
+            {
+                "Family": "PCHC",
+                "Version": "14.0.0.7002",
+                "Release": "Production, Engineering",
+                "Type": "Independent",
+                "TCB Security Version Number": "0",
+                "ARB Security Version Number": "0",
+                "Version Control Number": "0",
+                "Production Ready": "Yes",
+                "Date": "2020-06-12",
+                "Size": "0x1000",
+                "Chipset Support": "CMP",
+                "MEA Database Name": "CMP_14.0.0.7002_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "46C082F85D5227DCEB46347E1F0C3AED294BF05BC4EF72CA6F828E7121E1071C"
+            }
+        ],
+        "Messages": [
+            "Error: Firmware is incomplete/corrupted, expected 0x1000000 not 0xFFE000!",
+            "Error: Skipped MFS partition at 0x83FF0, unrecognizable format!",
+            "Warning: Firmware size exceeds Engine/Graphics region, possible data loss!"
+        ]
+    }
+}

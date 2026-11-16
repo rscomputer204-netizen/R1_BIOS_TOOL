@@ -1,0 +1,23 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\RAMPAGE MB 12241-1_ 450 g1\\ME 9.0 Repository r11\\ME 9.0 Repository r11\\9.0.22.1467_1.5MB_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "9.0.22.1467",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "1.5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "3",
+                "Production Ready": "Yes",
+                "Date": "2013-09-09",
+                "Size": "0x17D000",
+                "Chipset Support": "LPT",
+                "MEA Database Name": "9.0.22.1467_1.5MB_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "3C68A4AA4760E2F05EE6E3B1CB8AC81FA6E3DE589B671DCD38E274EA316802A5"
+            }
+        ],
+        "Messages": []
+    }
+}

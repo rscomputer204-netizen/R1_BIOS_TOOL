@@ -1,0 +1,30 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\ct470 nm-a931.rev. 2.0\\readvgggg.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.6.0.1136",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "120",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2016-10-10",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.6.0.1136",
+                "MEA Database Name": "11.6.0.1136_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "B31A8DC45DE6961B43E96B2CC95E8F932D7C31353676FB6D3B4C929EE2B6598E"
+            }
+        ],
+        "Messages": [
+            "Note: This CSE ME firmware is not in the database! You can help this\n      project by sharing it at https://win-raid.com forum. Thank you!"
+        ]
+    }
+}

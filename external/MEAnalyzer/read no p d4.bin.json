@@ -1,0 +1,48 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\LA-H101P REV1.0\\read no p d4.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.32.1421",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "5",
+                "Version Control Number": "16",
+                "Production Ready": "Yes",
+                "OEM Configuration": "No",
+                "FWUpdate Support": "No",
+                "Date": "2019-03-06",
+                "File System State": "Initialized",
+                "Size": "0x27C000",
+                "Flash Image Tool": "12.0.32.1420",
+                "MEA Database Name": "12.0.32.1421_CON_LP_C_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "5A7F7DCF5FBA4AAD2FDB9B542A3B46D6B73CC9D3A083789F71065C0C2D74761F"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1023",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2019-01-02",
+                "Size": "0x14000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1023_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "0E12FC4001710001953A1EEA318C68A38C811FA2F12DDD66CE5FB1B42C37282E"
+            }
+        ],
+        "Messages": []
+    }
+}

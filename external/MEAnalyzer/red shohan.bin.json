@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\HP 450 G3 DA0X63MB6H1 REV H WORKING BIOS 100%\\HP 450 G3 DA0X63MB6H1 REV H WORKING BIOS 100%\\red shohan.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.18.1002",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "19",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2016-09-09",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.0.10.1002",
+                "MEA Database Name": "11.0.18.1002_CON_LP_C_YPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "43382A2838E153F90CA8CF37F3C1B7FDBB99D2A4AB37181F46055327AFC6AD4C"
+            }
+        ],
+        "Messages": []
+    }
+}

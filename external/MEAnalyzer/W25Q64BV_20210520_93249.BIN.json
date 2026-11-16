@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\NM-B451 rev 1.0\\W25Q64BV_20210520_93249.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3460",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "278",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2018-02-19",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.8.50.3460",
+                "MEA Database Name": "11.8.50.3460_CON_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "096CA94F608B33FAFF816667BADD2DDC12A14FEF00811C6A81BCB97B66C21A55"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,27 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\14282-2m lrv1 mb\\CSME 11.0 Repository r55\\CSME 11.0 Repository r55\\11.0.0.1191_CON_LP_C_NPDM_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.0.1191",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "9",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2015-11-03",
+                "File System State": "Unconfigured",
+                "Size": "0x1F3000",
+                "MEA Database Name": "11.0.0.1191_CON_LP_C_NPDM_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "00C7DB8DB64F554238E9A11C3F179B9A8092D39C8F983C9DA392E29449586DC7"
+            }
+        ],
+        "Messages": []
+    }
+}

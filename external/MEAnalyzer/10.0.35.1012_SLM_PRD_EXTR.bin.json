@@ -1,0 +1,24 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\240 g4\\ME 10.0 Repository r27\\ME 10.0 Repository r27\\10.0.35.1012_SLM_PRD_EXTR.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "10.0.35.1012",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Slim",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "3",
+                "Production Ready": "Yes",
+                "Date": "2014-12-02",
+                "Size": "0xE0000",
+                "Flash Image Tool": "10.0.30.1054",
+                "Chipset Support": "WPT-LP",
+                "MEA Database Name": "10.0.35.1012_SLM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "3A41BE48B74D157FDCFDB075C6EEA372589DD2A89271A2AF825663870CEDB808"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\x1 carbon nm-b48 hdd read fife\\hhd read ok bin.rom": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3460",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "278",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2018-02-19",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.8.50.3460",
+                "MEA Database Name": "11.8.50.3460_COR_LP_C_YPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "04DEA44BB4BB990A2BD63BDF26E82B6BF07929115635A04C762A889EAB8BFCE8"
+            }
+        ],
+        "Messages": []
+    }
+}

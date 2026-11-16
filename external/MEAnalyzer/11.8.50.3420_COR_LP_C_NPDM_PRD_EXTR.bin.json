@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\17817-1\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3420_COR_LP_C_NPDM_PRD_EXTR.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3420",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "274",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-10-23",
+                "File System State": "Unconfigured",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.8.50.3420",
+                "MEA Database Name": "11.8.50.3420_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "C5E9E687850E13146B31014C3785495BCA1E026CD1A7A1BCA76675C9E7DA82C6"
+            }
+        ],
+        "Messages": []
+    }
+}

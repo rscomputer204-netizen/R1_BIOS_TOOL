@@ -1,0 +1,48 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\HP ZBook 15 G5 Mobile Workstation DA0XW2MBAG0 XW2A\\orginal read no power.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.94.2380",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate H",
+                "Chipset": "CNP/CMP-H B,A",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "14",
+                "Version Control Number": "62",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2023-05-18",
+                "File System State": "Initialized",
+                "Size": "0x7BD000",
+                "Flash Image Tool": "12.0.7.1122",
+                "MEA Database Name": "12.0.94.2380_COR_H_BA_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "F10D419184BD011EDB9A55501CE5E0F30CC192289FAA56FB89D74ECDE0D06A77"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.2.11.1025",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "H",
+                "Chipset Stepping": "B",
+                "TCB Security Version Number": "3",
+                "ARB Security Version Number": "3",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-02-06",
+                "Size": "0x14000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.2.11.1025_H_B_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "4823A5A678FF371B1C1B7EEFD8D395635736F86414BE6BD3F015BA2D42687703"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,25 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\1501b_01_01 rev sovp\\1501B_01_01 REV.SOVP Bios +EC\\1501B_01_01 REV.SOVP UX3 25Q64FWSIG.bin": {
+        "Trusted Execution Engine": [
+            {
+                "Family": "TXE",
+                "Version": "2.0.0.2077",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "1.375MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "3",
+                "Production Ready": "No",
+                "OEM Configuration": "No",
+                "Date": "2015-07-08",
+                "Size": "0x15F000",
+                "Flash Image Tool": "2.0.0.2077",
+                "Chipset Support": "BSW/CHT",
+                "MEA Database Name": "2.0.0.2077_1.375MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "2F177B30D74B54C87B156C29F90F863B8E9D6923F2C92E0DFE4D0CC0255637E3"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\1040 G3 DA0Y0FMBAJ1\\Orig+N83_0151+outimage\\read pass nokia 2.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.0.1202",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "11",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2015-12-29",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.0.0.1202",
+                "MEA Database Name": "11.0.0.1202_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "B6FAB2A90F718B8984535FBFB2CD6AD03B0CCF5591D9751CC9412A838E652C4F"
+            }
+        ],
+        "Messages": []
+    }
+}

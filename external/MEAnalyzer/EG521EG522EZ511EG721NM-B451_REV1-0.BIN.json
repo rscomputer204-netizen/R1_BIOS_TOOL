@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\NM-B451 rev 1.0\\EG521EG522EZ511EG721NM-B451_REV1-0-sacado maquina func-ok\\EG521EG522EZ511EG721NM-B451_REV1-0.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.55.3510",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "279",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2018-06-21",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.8.55.3510",
+                "MEA Database Name": "11.8.55.3510_CON_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "309E47F7962C3EE16A8738FBB5B52C4A595A2D4EF77B5145D4BD749D88EFA28E"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\nm-b081 rev 1.0\\T470s Original\\read it mex.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.6.29.3287",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "193",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-05-04",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.6.29.3287",
+                "MEA Database Name": "11.6.29.3287_CON_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "D72922CA12269D81C09DFFA1C460E822AB4215DB49105BE839A8E8DFC80DE763"
+            }
+        ],
+        "Messages": []
+    }
+}

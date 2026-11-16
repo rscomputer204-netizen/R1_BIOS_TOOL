@@ -1,0 +1,27 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\14282-2m lrv1 mb\\CSME 11.0 Repository r55\\CSME 11.0 Repository r55\\11.0.15.1003_COR_H_D_PRD_EXTR.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.15.1003",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate H",
+                "Chipset": "SPT-H D",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "16",
+                "Production Ready": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2016-06-06",
+                "File System State": "Unconfigured",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.0.10.1002",
+                "MEA Database Name": "11.0.15.1003_COR_H_D_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "60643ECC72E17C24F401B14C65DB3DC6A2C67421C9666C113A56D9C1F15B999B"
+            }
+        ],
+        "Messages": []
+    }
+}

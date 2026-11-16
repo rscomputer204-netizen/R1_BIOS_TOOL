@@ -1,0 +1,58 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\HP 840 G6 crescent-6050a3022501-mb-a01\\New folder\\Orig+R70_010600\\nasir\\g6.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.92.2145",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "14",
+                "Version Control Number": "61",
+                "Production Ready": "Yes",
+                "OEM Configuration": "Yes",
+                "FWUpdate Support": "Impossible",
+                "Date": "2022-05-29",
+                "File System State": "Unconfigured",
+                "Flash Image Tool": "12.0.45.1509",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "12.0.92.2145_COR_LP_C_PRD_EXTR-N",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "A20054F59F2D47045020457E5B35D5EC701891D621488DFAA64AAD0D598D5C97"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1030",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-03-18",
+                "Size": "0x11000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1030_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "ADE052EF9B2A982391C0A433551C8D2E36B0690B5B07289C34CB7855317414CD"
+            }
+        ],
+        "Messages": [
+            "Error: BPDT partition SMIP (0x04771C - 0x43771C) overlaps with Unknown (0x04771D - 0x56B71D)",
+            "Error: BPDT partition SMIP (0x04771C - 0x43771C) overlaps with RBEP (0x296000 - 0x2A0000)",
+            "Error: BPDT partition SMIP (0x04771C - 0x43771C) overlaps with FTPR (0x2B1000 - 0x3DD000)",
+            "Error: BPDT partition SMIP (0x04771C - 0x43771C) overlaps with PMCP (0x2A0000 - 0x2B1000)",
+            "Error: BPDT partition SMIP (0x04771C - 0x43771C) overlaps with OEMP (0x3DD000 - 0x3DE000)",
+            "Error: BPDT partition Unknown (0x04771D - 0x56B71D) overlaps with RBEP (0x296000 - 0x2A0000)",
+            "Error: BPDT partition Unknown (0x04771D - 0x56B71D) overlaps with FTPR (0x2B1000 - 0x3DD000)",
+            "Error: BPDT partition Unknown (0x04771D - 0x56B71D) overlaps with PMCP (0x2A0000 - 0x2B1000)",
+            "Error: BPDT partition Unknown (0x04771D - 0x56B71D) overlaps with OEMP (0x3DD000 - 0x3DE000)"
+        ]
+    }
+}

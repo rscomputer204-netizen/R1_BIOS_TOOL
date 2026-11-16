@@ -1,0 +1,29 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.78.3681_SLM_H_DA_PRD_EXTR.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.78.3681",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Slim H",
+                "Chipset": "KBP/BSF/GCF-H A\nSPT-H D",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "287",
+                "Production Ready": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2020-05-04",
+                "File System State": "Unconfigured",
+                "Size": "0x100000",
+                "Flash Image Tool": "11.8.77.3683",
+                "MEA Database Name": "11.8.78.3681_SLM_H_DA_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "5AAB6F1360C68D66A244C768A5779431CEE66CB01E33AFA8FBB59AAD96714F86"
+            }
+        ],
+        "Messages": [
+            "Error: Detected CSE Extension 0x03 with wrong Partition Hash at FTPR > FTPR.man!"
+        ]
+    }
+}

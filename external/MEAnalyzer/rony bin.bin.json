@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\840_G5_6050A2945601-MB-A01(A1)\\840 G5_6050A2945601-MB-A01 (A1)\\g5\\anware vai none touch do have clear enpoind clear file\\rony bin.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3460",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "278",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2018-02-19",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.8.50.3460",
+                "MEA Database Name": "11.8.50.3460_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "C323D5AEB27E6D876A7F2B33874859D1D72EB4F3B37EF1094D6956DF48CFAE00"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\6050a2930901-mb-a01(a1)\\red og an9.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.90.3987",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "320",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2021-06-03",
+                "File System State": "Initialized",
+                "Size": "0x643000",
+                "Flash Image Tool": "11.8.55.3510",
+                "MEA Database Name": "11.8.90.3987_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "A6DAC1B6B5BF2FAA0643DAECB0C4D97B78F77B19B534D434717A4B8E926A3DA5"
+            }
+        ],
+        "Messages": []
+    }
+}

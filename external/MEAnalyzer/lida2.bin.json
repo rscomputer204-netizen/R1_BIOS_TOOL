@@ -1,0 +1,30 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\HP ZBook 14u G5\\lida2.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.86.3877",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "301",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2021-01-14",
+                "File System State": "Initialized",
+                "Size": "0x643000",
+                "Flash Image Tool": "11.8.65.3590",
+                "MEA Database Name": "11.8.86.3877_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "936CC34814FEF1B81FD4CF3E699F91DFA1C68F347B5A82EAB175503773DCB4F7"
+            }
+        ],
+        "Messages": [
+            "Note: Adjusted buffer to Flash Descriptor 0x0 - 0x2000000!"
+        ]
+    }
+}

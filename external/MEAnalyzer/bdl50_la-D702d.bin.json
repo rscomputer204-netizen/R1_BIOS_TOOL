@@ -1,0 +1,25 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\la-d702p rev 1.0\\HP 250 G5 - BDL50 - LA-D702P\\HP 250 G5 - BDL50 - LA-D702P\\bdl50_la-D702d.bin": {
+        "Trusted Execution Engine": [
+            {
+                "Family": "TXE",
+                "Version": "2.0.2.2092",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "1.375MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "4",
+                "Production Ready": "No",
+                "OEM Configuration": "No",
+                "Date": "2015-10-06",
+                "Size": "0x15F000",
+                "Flash Image Tool": "2.0.2.2092",
+                "Chipset Support": "BSW/CHT",
+                "MEA Database Name": "2.0.2.2092_1.375MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "FCE6ADC1944EAFF01278FC9CAD81B9B9AD9D6621A25643528D99B790D7230164"
+            }
+        ],
+        "Messages": []
+    }
+}

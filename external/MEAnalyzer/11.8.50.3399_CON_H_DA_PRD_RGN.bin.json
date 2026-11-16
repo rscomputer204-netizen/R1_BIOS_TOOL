@@ -1,0 +1,26 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.50.3399_CON_H_DA_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.50.3399",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "Consumer H",
+                "Chipset": "KBP/BSF/GCF-H A\nSPT-H D",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "269",
+                "Production Ready": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-09-26",
+                "File System State": "Unconfigured",
+                "Size": "0x1F0000",
+                "MEA Database Name": "11.8.50.3399_CON_H_DA_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "DC5C3C2EA1B3D237CEEF6426713A52EDF6C39AC14CE856B1A67D9A01D76FA71D"
+            }
+        ],
+        "Messages": []
+    }
+}

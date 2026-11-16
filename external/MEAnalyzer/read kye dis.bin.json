@@ -1,0 +1,48 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\LA-G07FP HP 250 G7\\test ok_HP 250 G7 EPW50 LA-G07FP REV 1.0 Clean ME\\read kye dis.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.47.1524",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "6",
+                "Version Control Number": "19",
+                "Production Ready": "Yes",
+                "OEM Configuration": "No",
+                "FWUpdate Support": "No",
+                "Date": "2019-09-05",
+                "File System State": "Initialized",
+                "Size": "0x27C000",
+                "Flash Image Tool": "12.0.35.1427",
+                "MEA Database Name": "12.0.47.1524_CON_LP_C_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "662349F3C475E4418FCC6CEABF94408FAB22882F6ADE9FD71CE89254B384B9B8"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1025",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2019-08-08",
+                "Size": "0x14000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1025_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "4C7EE81AA441FCA78213F22CFEA6EB6AFCA9722C34353C4833B67E08A65EABDA"
+            }
+        ],
+        "Messages": []
+    }
+}

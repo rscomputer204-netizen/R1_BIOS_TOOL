@@ -1,0 +1,23 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\HP 15P I7 4GEN\\Intel ME 9.5 Firmware Repository Pack r20\\Intel ME 9.5 Firmware Repository Pack r20\\9.5.60.1952_1.5MB_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "9.5.60.1952",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "1.5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "10",
+                "Production Ready": "Yes",
+                "Date": "2016-10-27",
+                "Size": "0x17D000",
+                "Chipset Support": "LPT-LP",
+                "MEA Database Name": "9.5.60.1952_1.5MB_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "4B11DCED5D478806843E0366FD57319FD547148D7E7E2A98C79A7A20B4FC4C68"
+            }
+        ],
+        "Messages": []
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.55.3510_COR_H_DA_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.55.3510",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "Corporate H",
+                "Chipset": "KBP/BSF/GCF-H A\nSPT-H D",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "279",
+                "Production Ready": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2018-06-21",
+                "File System State": "Unconfigured",
+                "Size": "0x702000",
+                "MEA Database Name": "11.8.55.3510_COR_H_DA_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "3B46C1229E58AA65896BC4001C19630FF40060970B120B0904D0C70F921537B5"
+            }
+        ],
+        "Messages": []
+    }
+}

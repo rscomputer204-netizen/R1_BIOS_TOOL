@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\840_G5_6050A2945601-MB-A01(A1)\\840 G4 7 JEN\\New folder\\HP EliteBook 840 G4 6050A2854301-MB-A01\\HP EliteBook 840 G4 6050A2854301-MB-A01.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.6.12.3202",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "174",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-05-04",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.6.12.3202",
+                "MEA Database Name": "11.6.12.3202_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "1EECABAB00C25F5103E70551F219F1C4CCEAF3D1751779D9F45F18A7FA9AA674"
+            }
+        ],
+        "Messages": []
+    }
+}

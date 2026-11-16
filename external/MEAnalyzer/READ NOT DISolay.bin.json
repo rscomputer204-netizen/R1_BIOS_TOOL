@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\ct470 nm-a931.rev. 2.0\\READ NOT DISolay.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.6.29.3287",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "193",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-05-04",
+                "File System State": "Initialized",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.6.29.3287",
+                "MEA Database Name": "11.6.29.3287_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "EA2076A2FC3E0A894121EF63556264C461D453D96E16E59D86D9562F0BF9D546"
+            }
+        ],
+        "Messages": []
+    }
+}

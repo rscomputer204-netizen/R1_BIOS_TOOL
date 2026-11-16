@@ -1,0 +1,23 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\6050A2400201-MB-A02\\MX25L6405_20160323_185049\\MX25L6405_20160323_185049.BIN": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "7.1.52.1176",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "5MB",
+                "Patsburg Support": "Yes",
+                "Date": "2012-06-06",
+                "Size": "0x4FD000",
+                "Downgrade Blacklist 7.0": "<= 7.0.10.1203",
+                "Downgrade Blacklist 7.1": "<= 7.1.13.1088",
+                "Chipset Support": "CPT/PBG",
+                "MEA Database Name": "7.1.52.1176_5MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "C12C2EFD2BA55DC0174F914FBAD503EE7EE1E1D73BB20066AD761FCA8FF463E7"
+            }
+        ],
+        "Messages": []
+    }
+}

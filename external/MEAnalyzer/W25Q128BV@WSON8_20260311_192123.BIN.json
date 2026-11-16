@@ -1,0 +1,48 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\LA-G07FP HP 250 G7\\New folder\\W25Q128BV@WSON8_20260311_192123.BIN": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "12.0.94.2380",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "CNP/CMP-LP C",
+                "TCB Security Version Number": "1",
+                "ARB Security Version Number": "14",
+                "Version Control Number": "62",
+                "Production Ready": "Yes",
+                "OEM Configuration": "No",
+                "FWUpdate Support": "No",
+                "Date": "2023-05-18",
+                "File System State": "Initialized",
+                "Size": "0x27C000",
+                "Flash Image Tool": "12.0.68.1606",
+                "MEA Database Name": "12.0.94.2380_CON_LP_C_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "D7E6EA013562246F854F6FD5B49AA87E6E01AC4094FB6A799FCC29344AD60F91"
+            }
+        ],
+        "Power Management Controller": [
+            {
+                "Family": "PMC",
+                "Version": "300.1.20.1030",
+                "Release": "Production",
+                "Type": "Independent",
+                "Chipset SKU": "LP",
+                "Chipset Stepping": "C",
+                "TCB Security Version Number": "2",
+                "ARB Security Version Number": "2",
+                "Version Control Number": "0",
+                "Production Ready": "No",
+                "Date": "2020-03-18",
+                "Size": "0x14000",
+                "Chipset Support": "CNP",
+                "MEA Database Name": "CNP_300.1.20.1030_LP_C_PRD",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "ADE052EF9B2A982391C0A433551C8D2E36B0690B5B07289C34CB7855317414CD"
+            }
+        ],
+        "Messages": []
+    }
+}

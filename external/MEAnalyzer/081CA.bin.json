@@ -1,0 +1,25 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\zpt10 la-b151p rev 1.0\\081CA.bin": {
+        "Trusted Execution Engine": [
+            {
+                "Family": "TXE",
+                "Version": "1.1.4.1145",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "1.375MB M/D",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "13",
+                "Production Ready": "Yes",
+                "OEM Configuration": "No",
+                "Date": "2015-03-22",
+                "Size": "0x153000",
+                "Flash Image Tool": "1.1.4.1145",
+                "Chipset Support": "BYT",
+                "MEA Database Name": "1.1.4.1145_1.375MB_MD_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "23AC10F2D1271EA489D6966CDCFC90818EC529FF24D15476ADEC95B2F0AE35DE"
+            }
+        ],
+        "Messages": []
+    }
+}

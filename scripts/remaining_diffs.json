@@ -1,0 +1,794 @@
+[
+  {
+    "file": "01015fy00-388-g\\dump_main.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=",
+      "tag": "R1=Unknown vs MEA=7.1.52.1176_1.5MB_PRD_UPD"
+    }
+  },
+  {
+    "file": "01015fy00-388-g\\hp_compaq_presario_cq57-380er\\cq57.BIN",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=",
+      "tag": "R1=Unknown vs MEA=7.1.52.1176_1.5MB_PRD_UPD"
+    }
+  },
+  {
+    "file": "01015fy00-388-g\\hp_compaq_presario_cq57-380er\\dump_main.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=",
+      "tag": "R1=Unknown vs MEA=7.1.52.1176_1.5MB_PRD_UPD"
+    }
+  },
+  {
+    "file": "01015fy00-388-g\\read bin.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.10.1065_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "10th gen_DA0X8LMB8D0 REV D\\clean test ok under side ram.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2F5000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "10th gen_DA0X8LMB8D0 REV D\\ec outside of ram 25B127DSIG.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "10th gen_DA0X8LMB8D0 REV D\\mdm message show_DA0X8LMB8D0 REV D\\25B127DSIG.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "10th gen_DA0X8LMB8D0 REV D\\mdm message show_DA0X8LMB8D0 REV D\\25Q128JVSQ sy.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "25B127DSIG HP 430 G7 10 GEN\\25B127DSIG HP 430 G7 10 GEN (1).bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "25B127DSIG HP 430 G7 10 GEN\\25B127DSIG HP 430 G7 10 GEN (2).bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "440 G8 dax8qamb8d0 rev d\\dax8qamb8d0 rev d test ok\\red pass ec rom unlock",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x161000",
+      "tag": "R1=Unknown vs MEA=15.0.23.1706_COR_LP_B_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "440 G8 dax8qamb8d0 rev d\\red pass ec rom unlock",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x161000",
+      "tag": "R1=Unknown vs MEA=15.0.23.1706_COR_LP_B_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "440 G8 dax8qamb8d0 rev d\\red pass ec rom.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x161000",
+      "tag": "R1=Unknown vs MEA=15.0.23.1706_COR_LP_B_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "450 G6 DAX8JMB16E0 Rev E ok\\rr.bin",
+    "diffs": {
+      "sku": "R1=Consumer vs MEA=Consumer LP",
+      "chipset": "R1=Unknown vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x0 vs MEA=0x27D000",
+      "tag": "R1=Unknown vs MEA=12.0.85.1869_CON_LP_C_PRD_EXTR"
+    }
+  },
+  {
+    "file": "450 G6 DAX8JMB16E0 Rev E ok\\sp158009\\R71_013200.bin",
+    "diffs": {
+      "sku": "R1=Consumer vs MEA=Consumer LP",
+      "chipset": "R1=Unknown vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x0 vs MEA=0x278000",
+      "tag": "R1=Unknown vs MEA=12.0.96.2562_CON_LP_C_PRD_EXTR"
+    }
+  },
+  {
+    "file": "6050A2400201-MB-A02\\MX25L6405_20160323_185049\\MX25L6405_20160323_185049.BIN",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x4FD000",
+      "tag": "R1=Unknown vs MEA=7.1.52.1176_5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "6050A2400201-MB-A02\\read.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x4FD000",
+      "tag": "R1=Unknown vs MEA=7.1.30.1142_5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "6050A2637901-MB-A02\\HP_6050A2637901_Clear me.bin\\HP_6050A2637901_Clear me.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x5A6000",
+      "tag": "R1=Unknown vs MEA=10.0.32.1000_5MB_PRD_RGN"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\128 pass_unlocked\\128 pass_unlocked.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.36.1428_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\New folder\\HP EliteBook x360 830 G6 6050A3059101-MB-A01 A1 100% ok 16mb.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.81.1753_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\New folder\\read 9-6-22.bin",
+    "diffs": {
+      "sku": "R1=Corporate vs MEA= LP",
+      "chipset": "R1=Unknown vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x7B9000",
+      "tag": "R1=Unknown vs MEA=12.0.49.1534__LP_C_PRD_EXTR"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\Sound Okay and clean file\\New folder\\25Q128 830 G6 PASS\\25Q128 830 G6 PASS.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.49.1534_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\Sound Okay and clean file\\New folder\\HP EliteBook x360 830 G6 6050A3059101-MB-A01 A1 100_ ok 16mb.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.81.1753_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\Sound Okay and clean file\\ec read.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x149000",
+      "tag": "R1=Unknown vs MEA=12.0.40.1433_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\ok 100\\read ec ok bin.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.81.1753_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050A3059101-MB-A01 (A1)\\ok 100\\read raju.bin",
+    "diffs": {
+      "chipset": "R1=CNP/CMP-LP C vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x27A000",
+      "fitc": "R1=N/A vs MEA=12.0.64.1551"
+    }
+  },
+  {
+    "file": "6050a2930901-mb-a01(a1)\\EC16MB\\read meraj.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x0 vs MEA=0x77A000",
+      "fitc": "R1=12.0.64.1551 vs MEA=12.0.49.1536",
+      "tag": "R1=Unknown vs MEA=12.0.64.1551_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050a2930901-mb-a01(a1)\\EC16MB\\read mij.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x0 vs MEA=0x77A000",
+      "fitc": "R1=12.0.64.1551 vs MEA=12.0.49.1536",
+      "tag": "R1=Unknown vs MEA=12.0.64.1551_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050a2930901-mb-a01(a1)\\read meraj34 message",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP C",
+      "size": "R1=0x0 vs MEA=0x77A000",
+      "fitc": "R1=12.0.64.1551 vs MEA=12.0.49.1536",
+      "tag": "R1=Unknown vs MEA=12.0.64.1551_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050a3022401-mb-a01(a1)\\128 pass_unlocked\\128 pass_unlocked.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.36.1428_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6050a3022401-mb-a01(a1)\\HP_ELITEBOOK_830_G6_CATALONI_6050A3022401_MB_A01A1_U366_&_U367_WORKING\\HP ELITEBOOK 830 G6 CATALONI-6050A3022401-MB-A01(A1) U366 & U367 WORKING BIOS 100%\\u366 W25Q128BV@WSON8_20210330_143149.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.64.1551_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "6930p\\read bin.bin",
+    "diffs": {
+      "sku": "R1=Unknown vs MEA=AMT",
+      "chipset": "R1=Unknown vs MEA=ICH9M",
+      "size": "R1=0x0 vs MEA=0x1FB000",
+      "tag": "R1=Unknown vs MEA=4.1.3.1038_AMT_PRD_EXTR"
+    }
+  },
+  {
+    "file": "840 g1\\25Q128_Clear me.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x702000",
+      "tag": "R1=Unknown vs MEA=9.5.15.1730_5MB_PRD_RGN"
+    }
+  },
+  {
+    "file": "840 g1\\HP EliteBook 840 G1 6050A2560201-MB-A02_Clear me.BIN\\HP EliteBook 840 G1 6050A2560201-MB-A02_Clear me.BIN",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x702000",
+      "tag": "R1=Unknown vs MEA=9.5.45.1922_5MB_PRD_RGN"
+    }
+  },
+  {
+    "file": "840_G5_6050A2945601-MB-A01(A1)\\840 G4 7 JEN\\g4 auto start.bin",
+    "diffs": {
+      "chipset": "R1=SPT/KBP-LP C vs MEA=SPT/KBP",
+      "size": "R1=0x0 vs MEA=0x603000",
+      "tag": "R1=Unknown vs MEA=11.6.12.3202_COR_LP_C_NPDM_PRD_EXTR"
+    }
+  },
+  {
+    "file": "840_G5_6050A2945601-MB-A01(A1)\\840 G4 7 JEN\\let dis.bin",
+    "diffs": {
+      "chipset": "R1=SPT/KBP-LP C vs MEA=SPT/KBP",
+      "size": "R1=0x0 vs MEA=0x603000",
+      "tag": "R1=Unknown vs MEA=11.8.50.3470_COR_LP_C_NPDM_PRD_EXTR"
+    }
+  },
+  {
+    "file": "840_G5_6050A2945601-MB-A01(A1)\\840 G5_6050A2945601-MB-A01 (A1)\\g5\\anware vai none touch do have clear enpoind clear file\\hex code hp model number scharch\\passwordedW25Q128JV@SOIC8_unlocked.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2F5000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "850 g3\\read bin.bin",
+    "diffs": {
+      "chipset": "R1=SPT/KBP-LP C vs MEA=SPT/KBP",
+      "size": "R1=0x0 vs MEA=0x603000",
+      "tag": "R1=Unknown vs MEA=11.8.50.3425_COR_LP_C_YPDM_PRD_EXTR"
+    }
+  },
+  {
+    "file": "DA0N61MB6G0 rev g\\F65_BID0166C_(Intel Processors)\\F65_BID0166C_Main.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.3.1053_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "DA0X8CMB6E_REV_E\\read.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x1BF000",
+      "tag": "R1=Unknown vs MEA=11.8.93.4323_CON_LP_C_NPDM_PRD_EXTR"
+    }
+  },
+  {
+    "file": "EMPIRE_6050A3074401_MB_A02 Dragon Firefily 8th gen\\BIOS_EMPIRE_6050A3074401_MB_A02_16MB_&_32MB_WORKING_BIOS_100_\\BIOS EMPIRE 6050A3074401-MB-A02 16MB & 32MB WORKING BIOS 100%\\16MB_R93_.rom",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.90.2072_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "EMPIRE_6050A3074401_MB_A02 Dragon Firefily 8th gen\\Original Read pass_W25Q128BV@WSON8_20260119_155705.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.97.2608_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "HP ZBook 15 G5 Mobile Workstation DA0XW2MBAG0 XW2A\\orginal read no power.bin",
+    "diffs": {
+      "sku": "R1=Corporate vs MEA=Corporate H",
+      "chipset": "R1=CNP-H B vs MEA=CNP/CMP-H B,A",
+      "size": "R1=0x0 vs MEA=0x7BD000",
+      "tag": "R1=Unknown vs MEA=12.0.94.2380_COR_H_BA_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "HP Zbook 15 G4\\Zbook 15 G4 LA-E161P JBIOS1 P70_0128 Clear ME\\Zbook 15 G4 LA-E161P JBIOS1 P70_0128 Clear ME.bin",
+    "diffs": {
+      "chipset": "R1=SPT-H D vs MEA=KBP/BSF/GCF-H A\nSPT-H D",
+      "size": "R1=0x0 vs MEA=0x603000",
+      "tag": "R1=Unknown vs MEA=11.8.55.3510_COR_H_DA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "LA-J092P,2\\LA-J092P\\red ori.bin",
+    "diffs": {
+      "sku": "R1=Corporate vs MEA=Consumer LP",
+      "chipset": "R1=Unknown vs MEA=ICP-LP D",
+      "size": "R1=0x0 vs MEA=0x3C1000",
+      "tag": "R1=Unknown vs MEA=13.0.60.2156_CON_LP_D_PRD_EXTR"
+    }
+  },
+  {
+    "file": "LA-J092P,2\\LA-J092P\\www.chinafix.com\u8fc5\u7ef4\u7f51_8Mla-j092p.BIN",
+    "diffs": {
+      "sku": "R1=Corporate vs MEA=Consumer LP",
+      "chipset": "R1=Unknown vs MEA=ICP-LP D",
+      "size": "R1=0x0 vs MEA=0x3C1000",
+      "tag": "R1=Unknown vs MEA=13.0.20.1312_CON_LP_D_PRD_EXTR"
+    }
+  },
+  {
+    "file": "Quanta R13 Rev E (DA0R13MB6E1)\\hp_pavilion_g6_1259er\\main.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.3.1053_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "Quanta R13 Rev E (DA0R13MB6E1)\\hp_pavilion_g6_1259er\\read no dis.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.3.1053_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "Quanta R13 Rev E (DA0R13MB6E1)\\hp_pavilion_g6_1259er\\read rested bin.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.3.1053_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "chicago_hr_hpc mv_mb_v1\\HP CQ43-308TX i3 HM65 CHICAGO_HR_HPC MV_MB_V1\\HP CQ43-308TX i3 HM65 CHICAGO_HR_HPC MV_MB_V1 .BIN",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.10.1065_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "chicago_hr_hpc mv_mb_v1\\W25Q32V@SOIC8_20260214_174434.BIN",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.10.1065_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "da0u83mb6e0 rev e\\me.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=9.5.15.1730_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "dax8mmb18d0 rev d\\OK 01\\OK 01.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "dax8mmb18d0 rev d\\OK 02 ec\\OK 02 ec.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "dax8mmb18d0 rev d\\read bin.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2F5000",
+      "tag": "R1=Unknown vs MEA=14.1.67.2046_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "dv6 DA0LX6MB6H1 REV.H\\ok clean main.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0xE5000",
+      "tag": "R1=Unknown vs MEA=6.1.1.1045_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\Dhaka Lab Build_HP ELITEBOOK 840 G6 CRESCENT-6050A3022501-MB-A01\\U366 no enpind.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.45.1509_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\Dhaka Lab Build_HP ELITEBOOK 840 G6 CRESCENT-6050A3022501-MB-A01\\U366.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.45.1509_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\Dhaka Lab Build_HP ELITEBOOK 840 G6 CRESCENT-6050A3022501-MB-A01\\build dhaka lab no endpoind\\U366 no enpind.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.45.1509_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\Dhaka Lab Build_HP ELITEBOOK 840 G6 CRESCENT-6050A3022501-MB-A01\\read rased ec pass.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.45.1509_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\Dhaka Lab Build_HP ELITEBOOK 840 G6 CRESCENT-6050A3022501-MB-A01\\read rased ec pass_unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.45.1509_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\HP 840 G6 crescent-6050a3022501-mb-a01\\New folder\\Orig+R70_010600\\nasir\\ec read.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.92.2145_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\HP 840 G6 crescent-6050a3022501-mb-a01\\New folder\\Orig+R70_010600\\nasir\\g6.bin",
+    "diffs": {
+      "chipset": "R1=CNP/CMP-LP C vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=",
+      "fitc": "R1=N/A vs MEA=12.0.45.1509"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\HP 840 G6 crescent-6050a3022501-mb-a01\\New folder\\read bin.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.81.1753_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\New folder\\20221115_134402_SVOD3 Unlocked\\20221115_134402_SVOD3 Unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.64.1551_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\New for\\G6 128 OK unlocks 16MB.BIN\\G6 128 OK unlocks 16MB.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.49.1534_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\Unlocked\\IS25LP128@SOIC8#.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.39.1431_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\ec pass.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.92.2145_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\read ec bin.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x148000",
+      "tag": "R1=Unknown vs MEA=12.0.92.2145_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 840 g6 Crescent-6050A3022501-MB-A01 (A1)\\read orginal bin.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP",
+      "size": "R1=0x0 vs MEA=0x7BA000",
+      "tag": "R1=Unknown vs MEA=12.0.93.2331_COR_LP_C_PRD_EXTR-N"
+    }
+  },
+  {
+    "file": "hp 8460p 6050a2398701-mb-a02\\Hp Elitebook 8460P UMA 6050A2398701-A02_Clear mes\\Hp Elitebook 8460P UMA 6050A2398701-A02_Clear mes.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.30.1142_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp 8460p 6050a2398701-mb-a02\\hp elitebook 8460p i5 6050a2398701-mb-a02\\hp elitebook 8460p i5 6050a2398701-mb-a02\\hp elittebook 8460p.BIN",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.30.1142_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp 8460p 6050a2398701-mb-a02\\hp elitebook 8460p i5 6050a2398701-mb-a02\\hp elitebook 8460p i5 6050a2398701-mb-a02\\outimage bin.rom",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.3.1053_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp 8460p 6050a2398701-mb-a02\\hp elitebook 8460p i5 6050a2398701-mb-a02\\hp elitebook 8460p i5 6050a2398701-mb-a02\\read main.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x17D000",
+      "tag": "R1=Unknown vs MEA=7.1.3.1053_1.5MB_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\25B127DSIG HP 430 G7 10 GEN (2) cl.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\25B127DSIG HP 430 G7 10 GEN (2) cl.rom",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\25B127DSIG HP 430 G7 10 GEN (2).bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\Bios next to the wifi card_CLEAN_unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\CLEAN_FILE EC BIOS 440 G7 10TH GEN.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\CLEAN_FILE SYSTEM BIOS 440 G7 10TH GEN.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\hp probook 440 G5 DA0X8MMB6D0 REV D ok\\34 Mass.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\hp probook 440 G5 DA0X8MMB6D0 REV D ok\\65666.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.1.72.2287_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\hp probook 440 G5 DA0X8MMB6D0 REV D ok\\CLEAN_FILE EC BIOS 440 G7 10TH GEN.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\hp probook 440 G5 DA0X8MMB6D0 REV D ok\\CLEAN_FILE SYSTEM BIOS 440 G7 10TH GEN.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 440 G5 DA0X8MMB6D0 REV D\\me.bin",
+    "diffs": {
+      "chipset": "R1=Unknown vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\HP-PRO450G7-EC Unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.1.67.2046_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\Late 20 sec.rom",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2F5000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\manufacture.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2F5000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 G7 10th gen DA0X8MMB6D0 REV D\\okay fixed 3 sec security control inpoint remove.rom",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\PCH_25Q128JVSQ Unlocked\\PCH_25Q128JVSQ Unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\Bios next to the ram slote.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\Bios next to the wifi card.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\EC_25B127DSIG Unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED ok file\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED\\Bios next to the ram slote.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.33.1125_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED ok file\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED\\orginal read problem.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.72.2287_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED ok file\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED\\read.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.1.67.2046_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\EC_25B127DSIG Unlocked\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED ok file\\hp probook 450 g7 dax8mmb18d0 rev d file 10th gen_FIXED\\read_unlocked.bin",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.1.67.2046_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\okay file 10th gen\\OK 01.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2EF000",
+      "tag": "R1=Unknown vs MEA=14.1.53.1649_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\zhan66 pro 15 g3\\ZHAN66 PRO 15 G3 next to the memory slot.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CMP-H/LP",
+      "size": "R1=0x0 vs MEA=0x6E000",
+      "tag": "R1=Unknown vs MEA=14.0.11.1205_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook 450 g7 dax8mmb18d0 rev d\\zhan66 pro 15 g3\\ZHAN66 PRO_15 G3 next to the wireless network card slot.BIN",
+    "diffs": {
+      "chipset": "R1=CNP-LP B vs MEA=CNP/CMP-LP B,A",
+      "size": "R1=0x0 vs MEA=0x2DB000",
+      "tag": "R1=Unknown vs MEA=14.1.65.1990_CON_LP_BA_PRD_EXTR"
+    }
+  },
+  {
+    "file": "hp probook x360 440 g1\\Q98_011801.bin",
+    "diffs": {
+      "size": "R1=0x0 vs MEA=0x1FF000",
+      "tag": "R1=Unknown vs MEA=11.8.90.3987_CON_LP_C_NPDM_PRD_EXTR"
+    }
+  }
+]

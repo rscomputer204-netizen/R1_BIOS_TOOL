@@ -1,0 +1,23 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\240 g4\\ME 10.0 Repository r27\\ME 10.0 Repository r27\\10.0.46.1002_5MB_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "10.0.46.1002",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "3",
+                "Production Ready": "Yes",
+                "Date": "2015-07-14",
+                "Size": "0x5A6000",
+                "Chipset Support": "WPT-LP",
+                "MEA Database Name": "10.0.46.1002_5MB_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "7D6FEF7B9CDC6900244E46D1EBC4BCB375D0227198E8C2931DE515469EDE9BA6"
+            }
+        ],
+        "Messages": []
+    }
+}

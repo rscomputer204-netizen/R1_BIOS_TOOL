@@ -1,0 +1,26 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\LENOVO\\14282-2m lrv1 mb\\CSME 11.0 Repository r55\\CSME 11.0 Repository r55\\11.0.17.1002_CON_H_D_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.0.17.1002",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "Consumer H",
+                "Chipset": "SPT-H D",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "17",
+                "Production Ready": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2016-07-24",
+                "File System State": "Unconfigured",
+                "Size": "0x1F0000",
+                "MEA Database Name": "11.0.17.1002_CON_H_D_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "10393EA9EA314A43AEEF3C17CE403DC0C4875F60DA0FA358C2E5662A2BB2D39A"
+            }
+        ],
+        "Messages": []
+    }
+}

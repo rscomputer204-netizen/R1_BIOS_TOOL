@@ -1,0 +1,27 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.75.3641_COR_H_DA_PRD_EXTR.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.75.3641",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate H",
+                "Chipset": "KBP/BSF/GCF-H A\nSPT-H D",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "285",
+                "Production Ready": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2019-12-26",
+                "File System State": "Unconfigured",
+                "Size": "0x603000",
+                "Flash Image Tool": "11.8.75.3641",
+                "MEA Database Name": "11.8.75.3641_COR_H_DA_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "0C0422BA34FD86ACF8F5E419CB9926441E46EE83E01EAF71993DA96B2F540629"
+            }
+        ],
+        "Messages": []
+    }
+}

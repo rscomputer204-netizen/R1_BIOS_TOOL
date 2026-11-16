@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\la-d704\\read power.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.7.0.3290",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Consumer LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "193",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2017-05-24",
+                "File System State": "Initialized",
+                "Size": "0x1BF000",
+                "Flash Image Tool": "11.6.25.1229",
+                "MEA Database Name": "11.7.0.3290_CON_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "71E8160187DDBDD9DBACC89ADF94644611E87FC262525BDA2EC852E78C7D5151"
+            }
+        ],
+        "Messages": []
+    }
+}

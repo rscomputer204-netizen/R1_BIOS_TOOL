@@ -1,0 +1,24 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\FOLIA 9470M OK\\FOLIO 9470M.bin": {
+        "Management Engine": [
+            {
+                "Family": "ME",
+                "Version": "8.1.30.1350",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "5MB",
+                "TCB Security Version Number": "1",
+                "Version Control Number": "2",
+                "Production Ready": "Yes",
+                "Date": "2013-01-17",
+                "Size": "0x4A4000",
+                "Flash Image Tool": "8.1.30.1350",
+                "Chipset Support": "CPT/PBG/PPT",
+                "MEA Database Name": "8.1.30.1350_5MB_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "91E87A85DC64B633D3E58F0D04547EAB0603653EAFED0ADA59629007CE457098"
+            }
+        ],
+        "Messages": []
+    }
+}

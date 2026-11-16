@@ -1,0 +1,28 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\840_G5_6050A2945601-MB-A01(A1)\\840 G5_6050A2945601-MB-A01 (A1)\\g5\\dmi information its okay file\\840 g5 32 mb Unlocked\\aj caps light.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.65.3590",
+                "Release": "Production",
+                "Type": "Extracted",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "283",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "No",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2019-04-01",
+                "File System State": "Initialized",
+                "Size": "0x643000",
+                "Flash Image Tool": "11.8.55.3510",
+                "MEA Database Name": "11.8.65.3590_COR_LP_C_NPDM_PRD_EXTR",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "C6E354871CFE0901CE255B711D128ACB14F299AF9C3CBB8702AF7C58CF0D59E9"
+            }
+        ],
+        "Messages": []
+    }
+}

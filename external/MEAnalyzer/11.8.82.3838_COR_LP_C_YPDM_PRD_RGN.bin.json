@@ -1,0 +1,27 @@
+{
+    "D:\\SDD DATA\\all bios\\Bios\\HP\\Probook 450 G5\\HP PROBOOK 450 G5 DAOX8CMB6E0 REV E\\CSME 11.8 Repository r34\\CSME 11.8 Repository r34\\11.8.82.3838_COR_LP_C_YPDM_PRD_RGN.bin": {
+        "Management Engine": [
+            {
+                "Family": "CSE ME",
+                "Version": "11.8.82.3838",
+                "Release": "Production",
+                "Type": "Stock",
+                "SKU": "Corporate LP",
+                "Chipset": "SPT/KBP-LP C",
+                "TCB Security Version Number": "3",
+                "Version Control Number": "290",
+                "Production Ready": "Yes",
+                "Power Down Mitigation": "Yes",
+                "Workstation Support": "No",
+                "OEM Configuration": "No",
+                "Date": "2020-12-03",
+                "File System State": "Unconfigured",
+                "Size": "0x702000",
+                "MEA Database Name": "11.8.82.3838_COR_LP_C_YPDM_PRD_RGN",
+                "MEA Support Status": "Yes",
+                "RSA Signature Hash": "FF5145EEDED311461D790DC64F72732B1412F6C77192E1972E8259B51B356932"
+            }
+        ],
+        "Messages": []
+    }
+}
