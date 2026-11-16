@@ -76,7 +76,7 @@ def is_newer_version(remote_ver, current_ver):
 
 
 class UpdateCheckWorker(QThread):
-    """Checks GitHub for version.json in background thread."""
+    """Checks GitHub for version.json in background thread with instant real-time API."""
     check_finished = pyqtSignal(bool, dict, str)
 
     def __init__(self, update_url=None):
@@ -84,6 +84,25 @@ class UpdateCheckWorker(QThread):
         self.update_url = update_url or DEFAULT_UPDATE_URL
 
     def run(self):
+        # 1. Primary: Try GitHub API for instant, real-time un-cached version (0s CDN lag)
+        try:
+            api_url = "https://api.github.com/repos/rscomputer204-netizen/R1_BIOS_TOOL/contents/version.json"
+            api_headers = {
+                "Accept": "application/vnd.github.v3+json",
+                "User-Agent": "R1-BIOS-Tool-Updater"
+            }
+            api_res = requests.get(api_url, headers=api_headers, timeout=6)
+            if api_res.status_code == 200:
+                import base64
+                content_raw = api_res.json().get("content", "")
+                if content_raw:
+                    data = json.loads(base64.b64decode(content_raw).decode("utf-8"))
+                    self.check_finished.emit(True, data, "")
+                    return
+        except Exception:
+            pass
+
+        # 2. Secondary: Fallback to raw.githubusercontent.com
         try:
             nocache_url = f"{self.update_url}?t={int(time.time())}"
             headers = {
