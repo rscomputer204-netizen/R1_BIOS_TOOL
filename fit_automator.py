@@ -18,96 +18,130 @@ def print_terminal_log(callback, message, level="INFO"):
 
 def find_fit_candidates(version_str, external_dir="external", chipset_hint=None):
     """
-    Advanced scanner for Flash Image Tools. 
-    Identifies major, minor, and revision (rX) numbers to rank tools by freshness
-    and chipset compatibility.
+    Advanced scanner and matcher for 117+ Flash Image Tools.
+    Uses metadata-driven architecture (fit_registry.json & fit_info.json) to rank tools
+    by version accuracy, build freshness, and chipset compatibility.
     """
-    parts = version_str.split('.')
-    major_v = parts[0]
-    minor_v = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
+    import json
     
     base_dir = Path(get_app_root()) / external_dir / "FLASH System Tools"
     if not base_dir.exists():
-        return []
-        
-    adp_pref = ["v16.0 r2", "v16.0 r8", "v16.0", "v16.1"] if minor_v == 0 else (["v16.50", "v16.1"] if minor_v >= 50 else ["v16.1", "v16.0 r2", "v16.0 r8"])
+        alt_dir = Path(get_app_root()) / "ALL_FIT_TOOLS_UNZIPPED"
+        if alt_dir.exists():
+            base_dir = alt_dir
+        else:
+            return []
 
-    REVISION_PREFERENCES = {
-        "Tiger": ["v15.0"],
-        "TGL": ["v15.0"],
-        "TGP": ["v15.0"],
-        "ADP": adp_pref,
-        "Alder": adp_pref,
-        "Raptor": ["v16.50", "v16.1"],
-        "Comet": ["v14.0.20", "v14.0.11"],
-        "Ice": ["v13.30", "v13.0"],
-        "Coffee": ["v12"],
-        "Kaby": ["v11"]
-    }
-    
-    candidates = []
-    for item in base_dir.iterdir():
-        if not item.is_dir():
-            continue
-            
-        name_lower = item.name.lower()
-        
-        # Match Major Version (e.g. v16)
-        if re.search(rf'[^\d]v{major_v}([^\d]|$)', " " + name_lower):
-            # Base score
-            score = 10
-            
-            # 1. Extract Version & Revision for ranking (e.g. v14.0.20 r15 -> (14, 0, 20, 15))
-            ver_match = re.search(r'v(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[^\d]*r(\d+))?', name_lower)
-            if ver_match:
+    # 1. Try loading pre-built registry first for 0ms ultra-fast response
+    tools_list = []
+    reg_candidates = [
+        base_dir / "fit_registry.json",
+        Path(get_app_root()) / "fit_registry.json"
+    ]
+    reg_loaded = False
+    for reg_path in reg_candidates:
+        if reg_path.exists():
+            try:
+                with open(reg_path, "r", encoding="utf-8") as f:
+                    tools_list = json.load(f)
+                    reg_loaded = True
+                    break
+            except Exception:
+                pass
+
+    if not reg_loaded:
+        # Dynamic scan from fit_info.json in each folder
+        for item in base_dir.iterdir():
+            if not item.is_dir():
+                continue
+            info_file = item / "fit_info.json"
+            if info_file.exists():
                 try:
-                    v_maj = int(ver_match.group(1))
-                    v_min = int(ver_match.group(2)) if ver_match.group(2) else 0
-                    v_pat = int(ver_match.group(3)) if ver_match.group(3) else 0
-                    v_rev = int(ver_match.group(4)) if ver_match.group(4) else 0
-                    
-                    # Boost score based on version freshness
-                    # Formula: Major*10000 + Minor*1000 + Patch*100 + Revision
-                    score += (v_maj * 10000) + (v_min * 1000) + (v_pat * 100) + v_rev
-                    # Exact minor version match gets high priority
-                    if v_min == minor_v:
-                        score += 300000
-                except: pass
+                    with open(info_file, "r", encoding="utf-8") as inf_f:
+                        info_data = json.load(inf_f)
+                        info_data["rel_dir"] = item.name
+                        info_data["rel_exe"] = os.path.join(item.name, info_data.get("executable", "fit.exe"))
+                        tools_list.append(info_data)
+                except:
+                    pass
 
-            # 2. Chipset Preference Match (High Priority)
-            if chipset_hint:
-                for hint_key, pref_list in REVISION_PREFERENCES.items():
-                    if hint_key.lower() in chipset_hint.lower():
-                        print(f"DEBUG: Chipset Hint Match! {hint_key} in {chipset_hint}")
-                        for idx, pref in enumerate(pref_list):
-                            if pref.lower() in name_lower:
-                                print(f"DEBUG: Preference Match! {pref} in {name_lower}")
-                                score += (2000000 - (idx * 200000)) # Increased gap to override version freshness
-                                break
+    # 2. Parse query version: e.g. 16.1.42.2872
+    m_ver = re.search(r'(\d+(?:\.\d+)*)', version_str)
+    q_parts = [int(x) for x in m_ver.group(1).split('.')] if m_ver else []
+    q_major = q_parts[0] if len(q_parts) > 0 else 0
+    q_minor = q_parts[1] if len(q_parts) > 1 else 0
+    q_patch = q_parts[2] if len(q_parts) > 2 else 0
+    q_build = q_parts[3] if len(q_parts) > 3 else 0
 
-            # 3. Handle TXE/CSTXE special case
-            if "txe" in name_lower or "cstxe" in name_lower:
-                score += 50
-                
-            # 4. Find the executable
-            found_exe = None
-            for root, _, files in os.walk(item):
-                for file in files:
-                    if file.lower() in ['fit.exe', 'fitc.exe', 'mfit.exe']:
-                        if any(k in root.lower() for k in ['win32', 'windows', 'win']):
-                            found_exe = os.path.join(root, file)
-                            break
-                if found_exe: break
-            
-            if found_exe:
-                candidates.append((score, found_exe))
-    
-    # Sort candidates by score descending
+    # Determine if target is TXE / CSTXE
+    is_txe_target = False
+    if chipset_hint and any(k in chipset_hint.lower() for k in ["txe", "cstxe", "gemini", "apollo", "braswell", "bay trail"]):
+        is_txe_target = True
+    elif "txe" in version_str.lower() or "cstxe" in version_str.lower():
+        is_txe_target = True
+
+    candidates = []
+    for t in tools_list:
+        t_major = t.get("major", 0)
+        t_minor = t.get("minor", 0)
+        t_patch = t.get("patch", 0)
+        t_build = t.get("build", 0)
+        t_rev = t.get("revision", 0)
+        t_is_txe = t.get("is_txe", False)
+        t_rel_exe = t.get("rel_exe", "")
+
+        # Resolve absolute exe path
+        exe_path = base_dir / t_rel_exe
+        if not exe_path.exists():
+            folder_path = base_dir / t.get("folder", "")
+            if folder_path.exists():
+                for cand_exe in ["mfit.exe", "fit.exe", "fitc.exe", "ftoolc.exe"]:
+                    check_p = folder_path / cand_exe
+                    if check_p.exists():
+                        exe_path = check_p
+                        break
+        if not exe_path.exists():
+            continue
+
+        # Filter TXE vs non-TXE
+        if is_txe_target != t_is_txe:
+            continue
+
+        # Major version match is mandatory for CSME/ME architecture compatibility
+        if t_major != q_major:
+            continue
+
+        score = 1000000
+
+        # Exact Minor match
+        if t_minor == q_minor:
+            score += 500000
+            # Patch match
+            if t_patch == q_patch:
+                score += 200000
+                # Exact build match
+                if t_build == q_build:
+                    score += 100000
+            else:
+                score += max(0, 100000 - abs(t_patch - q_patch) * 500)
+        else:
+            diff = abs(t_minor - q_minor)
+            score -= min(300000, diff * 15000)
+
+        # Revision bonus for fresher tool
+        score += t_rev * 100
+
+        # Chipset preference bonus
+        if chipset_hint:
+            t_gen = t.get("generation", "").lower()
+            t_title = t.get("title", "").lower()
+            hint_words = [w for w in re.split(r'[\s,\-_]+', chipset_hint.lower()) if len(w) > 2]
+            if any(w in t_gen or w in t_title for w in hint_words):
+                score += 250000
+
+        candidates.append((score, str(exe_path)))
+
     candidates.sort(key=lambda x: x[0], reverse=True)
-    
-    # Debug log the ranked list
-    for s, p in candidates: print(f"DEBUG: Ranked {p} with score {s}")
-    
     return candidates
 
 def find_fit_executable(version_str, external_dir="external", chipset_hint=None):
@@ -423,7 +457,8 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
 
     # Step 3: Retry Loop
     for attempt, (score, fit_exe) in enumerate(candidates, 1):
-        print_terminal_log(terminal_callback, f"[INFO] Attempt {attempt}: Trying {Path(fit_exe).parent.parent.name} (Score: {score})...")
+        tool_folder_name = Path(fit_exe).parent.name
+        print_terminal_log(terminal_callback, f"[INFO] Attempt {attempt} of {len(candidates)}: Trying {tool_folder_name} (Score: {score})...")
         
         workspace = Path(workspace_dir)
         workspace.mkdir(exist_ok=True, parents=True)
@@ -493,15 +528,17 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
                     except Exception as ex:
                         print_terminal_log(terminal_callback, f"[WARN] Failed to rewrite xml paths: {ex}", "WARN")
                 
-                # Point 2 & 5: Deep Validation
+                # Deep Validation
                 if validate_decompiled_structure(decomp_target, terminal_callback):
-                    print_terminal_log(terminal_callback, f"[SUCCESS] FIT Decompile successful via {Path(fit_exe).name}")
+                    print_terminal_log(terminal_callback, f"[SUCCESS] FIT Decompile successful via {tool_folder_name} (Attempt {attempt} of {len(candidates)})")
                     return str(decomp_target)
                 else:
-                    print_terminal_log(terminal_callback, "[WARNING] Validation failed for this tool. Trying next...", "WARNING")
+                    print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt} validation failed with {tool_folder_name}. Trying next tool in queue...", "WARNING")
+            else:
+                print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt} failed to generate config with {tool_folder_name}. Trying next tool in queue...", "WARNING")
             
         except Exception as e:
-            print_terminal_log(terminal_callback, f"[ERROR] Execution failed: {str(e)}", "ERROR")
+            print_terminal_log(terminal_callback, f"[ERROR] Execution failed for {tool_folder_name}: {str(e)}", "ERROR")
             continue
 
     print_terminal_log(terminal_callback, "[INFO] Intel FIT decompilation is bypassed (Modern Multi-Partition CSME 16/18 with buffer-overflow protection).", "INFO")
@@ -524,8 +561,8 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
             return False
 
     for attempt, (score, fit_exe) in enumerate(candidates, 1):
-        tool_name = Path(fit_exe).parents[2].name
-        print_terminal_log(terminal_callback, f"[INFO] Rebuild Attempt {attempt}: Trying {tool_name} (Score: {score})...")
+        tool_name = Path(fit_exe).parent.name
+        print_terminal_log(terminal_callback, f"[INFO] Rebuild Attempt {attempt} of {len(candidates)}: Trying {tool_name} (Score: {score})...")
         
         # Use short path for the executable to avoid issues with spaces and special characters
         fit_exe_safe = get_short_path(os.path.abspath(fit_exe))

@@ -12,6 +12,33 @@ BIOS_EXTENSIONS = {
     ".fl1", ".fl2", ".fl3"
 }
 
+import stat
+
+
+def robust_rmtree(path):
+    """Safely and thoroughly remove directory tree on Windows handling permissions and long paths."""
+    if not os.path.exists(path):
+        return
+    p_abs = os.path.abspath(path)
+    if os.name == 'nt' and not p_abs.startswith('\\\\?\\'):
+        p_abs = '\\\\?\\' + p_abs
+
+    def on_err(func, p, exc_info):
+        try:
+            os.chmod(p, stat.S_IWRITE)
+            func(p)
+        except Exception:
+            pass
+
+    try:
+        shutil.rmtree(p_abs, onerror=on_err)
+    except Exception:
+        try:
+            subprocess.run(f'cmd /c rd /s /q "{path}"', shell=True, capture_output=True)
+        except Exception:
+            pass
+
+
 def extract_bios_package(exe_path, log_callback=print):
     if not os.path.exists(exe_path):
         raise FileNotFoundError(f"Source file not found: {exe_path}")
@@ -21,10 +48,7 @@ def extract_bios_package(exe_path, log_callback=print):
     dest_dir = os.path.join(base_dir, f"{base_name}_Extracted")
 
     if os.path.exists(dest_dir):
-        try:
-            shutil.rmtree(dest_dir)
-        except Exception:
-            dest_dir = f"{dest_dir}_{int(time.time())}"
+        robust_rmtree(dest_dir)
 
     os.makedirs(dest_dir, exist_ok=True)
 

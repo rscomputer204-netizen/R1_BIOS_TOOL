@@ -1,0 +1,14 @@
+{
+  "folder": "097. FIT v14.0.32.1122",
+  "title": "FIT v14.0.32.1122",
+  "version": "14.0.32.1122",
+  "major": 14,
+  "minor": 0,
+  "patch": 32,
+  "build": 1122,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 10th Gen Core Desktop/Mobile (Comet Lake) (CSME v14)",
+  "is_txe": false
+}

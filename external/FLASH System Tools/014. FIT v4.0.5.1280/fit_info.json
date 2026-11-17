@@ -1,0 +1,14 @@
+{
+  "folder": "014. FIT v4.0.5.1280",
+  "title": "FIT v4.0.5.1280",
+  "version": "4.0.5.1280",
+  "major": 4,
+  "minor": 0,
+  "patch": 5,
+  "build": 1280,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel Core 2 Duo / Centrino (ICH8-ICH9) (ME v4)",
+  "is_txe": false
+}

@@ -1,0 +1,14 @@
+{
+  "folder": "088. CSME System Tools v13.30 r3",
+  "title": "CSME System Tools v13.30 r3",
+  "version": "13.30",
+  "major": 13,
+  "minor": 30,
+  "patch": 0,
+  "build": 0,
+  "revision": 3,
+  "type": "CSME FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 10th Gen Core Mobile (Ice Lake) (CSME v13)",
+  "is_txe": false
+}

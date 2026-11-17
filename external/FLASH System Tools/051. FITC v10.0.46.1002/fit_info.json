@@ -1,0 +1,14 @@
+{
+  "folder": "051. FITC v10.0.46.1002",
+  "title": "FITC v10.0.46.1002",
+  "version": "10.0.46.1002",
+  "major": 10,
+  "minor": 0,
+  "patch": 46,
+  "build": 1002,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fit.exe",
+  "generation": "Intel 5th Gen Core (Broadwell / Wildcat Point) (ME v10)",
+  "is_txe": false
+}

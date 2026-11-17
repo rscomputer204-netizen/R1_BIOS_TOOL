@@ -1,0 +1,21 @@
+Flash Image Tool: 9.0.22.1467
+Flash Programming Tool(DOS): 9.0.22.1467
+Flash Programming Tool(EFI): 9.0.22.1467
+Flash Programming Tool(Windows): 9.0.22.1467
+Flash Programming Tool(Windows64): 9.0.22.1467
+FWUpdate(Local-DOS): 9.0.22.1467
+FWUpdate(Local-EFI): 9.0.22.1467
+FWUpdate(Local-Win): 9.0.22.1467
+FWUpdate(Local-Win64): 9.0.22.1467
+MEInfo(DOS): 9.0.22.1467
+MEInfo(EFI): 9.0.22.1467
+MEInfo(Windows): 9.0.22.1467
+MEInfo(Windows64): 9.0.22.1467
+MEManuf(DOS): 9.0.22.1467
+MEManuf(EFI): 9.0.22.1467
+MEManuf(Windows): 9.0.22.1467
+MEManuf(Windows64): 9.0.22.1467
+UpdParam(DOS): 9.0.22.1467
+CCT(DOS): 9.0.22.1467
+CCT(EFI): 9.0.22.1467
+CCT(Windows): 9.0.22.1467

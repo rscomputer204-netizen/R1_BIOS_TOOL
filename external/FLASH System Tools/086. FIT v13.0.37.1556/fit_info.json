@@ -1,0 +1,14 @@
+{
+  "folder": "086. FIT v13.0.37.1556",
+  "title": "FIT v13.0.37.1556",
+  "version": "13.0.37.1556",
+  "major": 13,
+  "minor": 0,
+  "patch": 37,
+  "build": 1556,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 10th Gen Core Mobile (Ice Lake) (CSME v13)",
+  "is_txe": false
+}

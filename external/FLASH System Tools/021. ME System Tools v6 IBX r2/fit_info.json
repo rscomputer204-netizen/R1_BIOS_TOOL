@@ -1,0 +1,14 @@
+{
+  "folder": "021. ME System Tools v6 IBX r2",
+  "title": "ME System Tools v6 IBX r2",
+  "version": "6",
+  "major": 6,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 2,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel 1st Gen Core (Nehalem / Westmere / Ibex Peak) (ME v6)",
+  "is_txe": false
+}

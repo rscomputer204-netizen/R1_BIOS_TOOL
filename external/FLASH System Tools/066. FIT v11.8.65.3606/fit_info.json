@@ -1,0 +1,14 @@
+{
+  "folder": "066. FIT v11.8.65.3606",
+  "title": "FIT v11.8.65.3606",
+  "version": "11.8.65.3606",
+  "major": 11,
+  "minor": 8,
+  "patch": 65,
+  "build": 3606,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 6th/7th/8th Gen Core (Skylake / Kaby Lake / Coffee Lake) (CSME v11)",
+  "is_txe": false
+}

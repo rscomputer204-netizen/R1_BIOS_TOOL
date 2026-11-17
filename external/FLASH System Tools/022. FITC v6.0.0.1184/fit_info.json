@@ -1,0 +1,14 @@
+{
+  "folder": "022. FITC v6.0.0.1184",
+  "title": "FITC v6.0.0.1184",
+  "version": "6.0.0.1184",
+  "major": 6,
+  "minor": 0,
+  "patch": 0,
+  "build": 1184,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fitc.exe",
+  "generation": "Intel 1st Gen Core (Nehalem / Westmere / Ibex Peak) (ME v6)",
+  "is_txe": false
+}

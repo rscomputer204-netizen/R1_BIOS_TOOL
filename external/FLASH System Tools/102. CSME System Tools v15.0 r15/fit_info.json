@@ -1,0 +1,14 @@
+{
+  "folder": "102. CSME System Tools v15.0 r15",
+  "title": "CSME System Tools v15.0 r15",
+  "version": "15.0",
+  "major": 15,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 15,
+  "type": "CSME FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 11th Gen Core (Tiger Lake / Rocket Lake) (CSME v15)",
+  "is_txe": false
+}

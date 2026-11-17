@@ -1,0 +1,14 @@
+{
+  "folder": "112. MFIT v18.0.10.2285",
+  "title": "MFIT v18.0.10.2285",
+  "version": "18.0.10.2285",
+  "major": 18,
+  "minor": 0,
+  "patch": 10,
+  "build": 2285,
+  "revision": 0,
+  "type": "MFIT",
+  "executable": "mfit.exe",
+  "generation": "Intel Arrow Lake / Lunar Lake (CSME v18)",
+  "is_txe": false
+}

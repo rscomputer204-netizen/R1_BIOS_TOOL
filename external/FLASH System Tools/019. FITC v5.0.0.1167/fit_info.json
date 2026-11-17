@@ -1,0 +1,14 @@
+{
+  "folder": "019. FITC v5.0.0.1167",
+  "title": "FITC v5.0.0.1167",
+  "version": "5.0.0.1167",
+  "major": 5,
+  "minor": 0,
+  "patch": 0,
+  "build": 1167,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fitc.exe",
+  "generation": "Intel Core 2 Duo / Centrino 2 (Cantiga / ICH9-ICH10) (ME v5)",
+  "is_txe": false
+}

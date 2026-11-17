@@ -1,0 +1,14 @@
+{
+  "folder": "020. ME System Tools v6 CCK r1",
+  "title": "ME System Tools v6 CCK r1",
+  "version": "6",
+  "major": 6,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 1,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel 1st Gen Core (Nehalem / Westmere / Ibex Peak) (ME v6)",
+  "is_txe": false
+}

@@ -1,0 +1,14 @@
+{
+  "folder": "111. MFIT v16.50.0.1120",
+  "title": "MFIT v16.50.0.1120",
+  "version": "16.50.0.1120",
+  "major": 16,
+  "minor": 50,
+  "patch": 0,
+  "build": 1120,
+  "revision": 0,
+  "type": "MFIT",
+  "executable": "mfit.exe",
+  "generation": "Intel 12th/13th/14th Gen (Alder Lake / Raptor Lake / Meteor Lake) (CSME v16)",
+  "is_txe": false
+}

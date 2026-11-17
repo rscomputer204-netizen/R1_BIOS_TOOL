@@ -1,0 +1,14 @@
+{
+  "folder": "003. FITC v1.7.3.1105",
+  "title": "FITC v1.7.3.1105",
+  "version": "1.7.3.1105",
+  "major": 1,
+  "minor": 7,
+  "patch": 3,
+  "build": 1105,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "ftoolc.exe",
+  "generation": "Intel Core / Pentium M (ICH6/ICH7) (ME v1)",
+  "is_txe": false
+}

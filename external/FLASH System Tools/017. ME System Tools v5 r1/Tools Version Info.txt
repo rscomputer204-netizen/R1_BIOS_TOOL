@@ -1,0 +1,10 @@
+Flash Image Tool: 5.1.0.1167
+Flash Programming Tool(DOS): 5.1.0.1167
+Flash Programming Tool(Windows): 5.1.0.1167
+FWUpdate(Local-DOS): 5.2.50.1042
+FWUpdate(Local-Win): 5.2.50.1042
+MEInfo(DOS): 5.0.0.1167
+MEInfo(Windows): 5.0.0.1167
+MEManuf(DOS): 5.0.0.1167
+MEManuf(Windows): 5.0.0.1167
+ITPMDiag(Windows): 5.0.0.1167

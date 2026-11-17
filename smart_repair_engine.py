@@ -1057,32 +1057,50 @@ def _run_smart_repair_internal(bios_path, mea_meta, log_cb, progress_cb=None, de
     success = False
 
     try:
-        # ── STAGE 1: FIT Rebuild (legacy < v15) ──────────────────────────────────
-        if major < 15:
-            log_cb("[INFO] Attempting FIT Rebuild...")
+        from PySide6.QtCore import QSettings
+        settings = QSettings("R1AILAB", "BIOS_TOOL")
+        engine_mode = settings.value("repair_engine_mode", "analog")
+
+        if engine_mode == "hybrid":
+            # ── HYBRID SYSTEM: Direct Surgical Injection Mode (Bypasses FIT) ───────
+            log_cb("[ACTION] Engine Mode: HYBRID SYSTEM (Direct Surgical Injection Mode)")
+            if major >= 15:
+                success = run_surgical_modern_repair(
+                    bios_path, repair_set, mea_meta["version"], out_path, log_cb,
+                    platform_hint=mea_meta.get("chipset"), custom_fit_exe=custom_fit_exe
+                )
+            if not success and major >= 12:
+                log_cb("[ACTION] Running Surgical Configured Injection...")
+                success = run_surgical_configured_repair(
+                    bios_path, repair_set, mea_meta["version"], out_path, log_cb,
+                    platform_hint=mea_meta.get("chipset"), custom_fit_exe=custom_fit_exe
+                )
+            if not success:
+                log_cb("[ACTION] Running Advanced Manual Hex Injection...")
+                success = manual_hex_repair(bios_path, repair_set, out_path, log_cb)
+
+        else:
+            # ── ANALOG SYSTEM: Intel FIT Native Engine with Hybrid Fallback ─────────
+            log_cb("[ACTION] Engine Mode: ANALOG SYSTEM (Intel FIT Native Engine with Hybrid Fallback)")
+            log_cb("[INFO] Attempting Intel FIT Rebuild across compatible candidate tools...")
             success = run_full_fit_rebuild(bios_path, repair_set, ver_str, out_path, log_cb, custom_fit_exe=custom_fit_exe)
 
-        # ── STAGE 2: Surgical Modern Repair (v15+) ───────────────────────────────
-        # NOTE: This stage may raise PipelineHaltError on critical failures.
-        # If it does, the except block below will catch it and stop the pipeline.
-        if not success and major >= 15:
-            success = run_surgical_modern_repair(
-                bios_path, repair_set, mea_meta["version"], out_path, log_cb,
-                platform_hint=mea_meta.get("chipset"), custom_fit_exe=custom_fit_exe
-            )
-
-        # ── STAGE 3: Surgical Configured Fallback (Modern CSME v12+ only) ───────
-        if not success and major >= 12:
-            log_cb("[WARN] Rebuild failed. Attempting Surgical Configured Fallback...")
-            success = run_surgical_configured_repair(
-                bios_path, repair_set, mea_meta["version"], out_path, log_cb,
-                platform_hint=mea_meta.get("chipset"), custom_fit_exe=custom_fit_exe
-            )
-
-        # ── STAGE 4: Manual Hex Injection (Universal Fallback) ──────────────────
-        if not success:
-            log_cb("[WARN] Falling back to Advanced Manual Hex Injection...")
-            success = manual_hex_repair(bios_path, repair_set, out_path, log_cb)
+            if not success:
+                log_cb("[WARN] Intel FIT engine could not rebuild. Automatically falling back to HYBRID System...", "WARN")
+                if major >= 15:
+                    success = run_surgical_modern_repair(
+                        bios_path, repair_set, mea_meta["version"], out_path, log_cb,
+                        platform_hint=mea_meta.get("chipset"), custom_fit_exe=custom_fit_exe
+                    )
+                if not success and major >= 12:
+                    log_cb("[WARN] Modern rebuild failed. Attempting Surgical Configured Fallback...")
+                    success = run_surgical_configured_repair(
+                        bios_path, repair_set, mea_meta["version"], out_path, log_cb,
+                        platform_hint=mea_meta.get("chipset"), custom_fit_exe=custom_fit_exe
+                    )
+                if not success:
+                    log_cb("[WARN] Falling back to Advanced Manual Hex Injection...")
+                    success = manual_hex_repair(bios_path, repair_set, out_path, log_cb)
 
     except PipelineHaltError:
         # Re-raise so the outer run_smart_repair retry loop can handle it

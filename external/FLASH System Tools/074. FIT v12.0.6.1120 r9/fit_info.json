@@ -1,0 +1,14 @@
+{
+  "folder": "074. FIT v12.0.6.1120 r9",
+  "title": "FIT v12.0.6.1120 r9",
+  "version": "12.0.6.1120",
+  "major": 12,
+  "minor": 0,
+  "patch": 6,
+  "build": 1120,
+  "revision": 9,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 8th/9th Gen Core (Coffee Lake Refresh / Cannon Lake) (CSME v12)",
+  "is_txe": false
+}

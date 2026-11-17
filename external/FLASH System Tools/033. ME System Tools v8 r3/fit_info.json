@@ -1,0 +1,14 @@
+{
+  "folder": "033. ME System Tools v8 r3",
+  "title": "ME System Tools v8 r3",
+  "version": "8",
+  "major": 8,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 3,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel 3rd Gen Core (Ivy Bridge / Panther Point) (ME v8)",
+  "is_txe": false
+}

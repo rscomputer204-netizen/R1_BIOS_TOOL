@@ -1,0 +1,14 @@
+{
+  "folder": "115. CSTXE System Tools v2 r3",
+  "title": "CSTXE System Tools v2 r3",
+  "version": "2",
+  "major": 2,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 3,
+  "type": "CSTXE",
+  "executable": "fitc.exe",
+  "generation": "Intel Braswell / Cherry Trail (CSTXE v2)",
+  "is_txe": true
+}

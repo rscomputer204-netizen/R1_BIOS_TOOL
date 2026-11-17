@@ -1,0 +1,14 @@
+{
+  "folder": "117. CSTXE System Tools v4 r6",
+  "title": "CSTXE System Tools v4 r6",
+  "version": "4",
+  "major": 4,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 6,
+  "type": "CSTXE",
+  "executable": "fit.exe",
+  "generation": "Intel Gemini Lake (CSTXE v4)",
+  "is_txe": true
+}

@@ -1,0 +1,14 @@
+{
+  "folder": "017. ME System Tools v5 r1",
+  "title": "ME System Tools v5 r1",
+  "version": "5",
+  "major": 5,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 1,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel Core 2 Duo / Centrino 2 (Cantiga / ICH9-ICH10) (ME v5)",
+  "is_txe": false
+}

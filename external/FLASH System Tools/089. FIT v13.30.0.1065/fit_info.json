@@ -1,0 +1,14 @@
+{
+  "folder": "089. FIT v13.30.0.1065",
+  "title": "FIT v13.30.0.1065",
+  "version": "13.30.0.1065",
+  "major": 13,
+  "minor": 30,
+  "patch": 0,
+  "build": 1065,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 10th Gen Core Mobile (Ice Lake) (CSME v13)",
+  "is_txe": false
+}

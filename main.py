@@ -705,14 +705,46 @@ class HexWidgetEventFilter(QObject):
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Settings")
-        self.setFixedSize(370, 170)
+        self.setWindowTitle("Settings - Engine & Display")
+        self.setFixedSize(450, 340)
         self.setStyleSheet("""
             QDialog {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #252a2e, stop:1 #1c2024);
-                border: 1px solid #2d363f;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a222d, stop:1 #111720);
+                border: 1px solid #243548;
                 color: #e2e8f0;
                 font-family: 'Segoe UI', sans-serif;
+            }
+            QGroupBox {
+                border: 1px solid #203348;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 14px;
+                font-weight: bold;
+                color: #00d2ff;
+                font-size: 12px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                subcontrol-position: top left;
+                padding: 0 6px;
+                left: 10px;
+            }
+            QRadioButton {
+                color: #e2e8f0;
+                font-size: 12px;
+                font-weight: 600;
+                spacing: 8px;
+            }
+            QRadioButton::indicator {
+                width: 16px;
+                height: 16px;
+                border: 1px solid #2a415e;
+                border-radius: 8px;
+                background: #0d1622;
+            }
+            QRadioButton::indicator:checked {
+                background: #00d2ff;
+                border: 3px solid #0d1622;
             }
         """)
         
@@ -720,32 +752,61 @@ class SettingsDialog(QDialog):
         layout.setContentsMargins(18, 16, 18, 14)
         layout.setSpacing(12)
         
+        from PySide6.QtCore import QSettings
+        self.settings = QSettings("R1AILAB", "BIOS_TOOL")
+        
+        # --- Engine Mode Group ---
+        engine_group = QGroupBox("Firmware Repair Engine Mode")
+        eg_layout = QVBoxLayout(engine_group)
+        eg_layout.setSpacing(6)
+        
+        self.rb_analog = QRadioButton("Analog System (Intel FIT with Hybrid Fallback)")
+        self.rb_analog.setToolTip("Attempts official Intel FIT/MFIT first across 117 tools. If FIT fails, automatically falls back to Hybrid Surgical Injection.")
+        
+        lbl_analog_desc = QLabel("  Uses Intel FIT tool first. If it fails, auto-falls back to Hybrid.")
+        lbl_analog_desc.setStyleSheet("color: #7b94b0; font-size: 11px; margin-bottom: 2px;")
+        
+        self.rb_hybrid = QRadioButton("Hybrid System (Direct Surgical Injection Mode)")
+        self.rb_hybrid.setToolTip("Always operates directly via Surgical In-Place / Offset Injection without invoking Intel FIT.")
+        
+        lbl_hybrid_desc = QLabel("  Always operates directly via Surgical In-Place / Offset Injection.")
+        lbl_hybrid_desc.setStyleSheet("color: #7b94b0; font-size: 11px;")
+        
+        saved_mode = self.settings.value("repair_engine_mode", "analog")
+        if saved_mode == "hybrid":
+            self.rb_hybrid.setChecked(True)
+        else:
+            self.rb_analog.setChecked(True)
+            
+        eg_layout.addWidget(self.rb_analog)
+        eg_layout.addWidget(lbl_analog_desc)
+        eg_layout.addWidget(self.rb_hybrid)
+        eg_layout.addWidget(lbl_hybrid_desc)
+        layout.addWidget(engine_group)
+        
+        # --- Display & Scanner Settings ---
         self.cb_detach_hex = QCheckBox("Show Hex Viewer (Floating)")
         self.cb_detach_hex.setStyleSheet("""
             QCheckBox { color: #e2e8f0; font-size: 12px; font-weight: 600; }
             QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #283038; border-radius: 4px; background: #14171a; }
-            QCheckBox::indicator:checked { background: #2ac4db; border-color: #0ef6fd; }
+            QCheckBox::indicator:checked { background: #00d2ff; border-color: #0ef6fd; }
         """)
-        
-        from PySide6.QtCore import QSettings
-        self.settings = QSettings("R1AILAB", "BIOS_TOOL")
         self.cb_detach_hex.setChecked(self.settings.value("detached_hex_viewer", False, type=bool))
-        
         layout.addWidget(self.cb_detach_hex)
         
         self.btn_report_settings = QPushButton("⚙ Configure Scanning Report")
         self.btn_report_settings.setStyleSheet("""
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #252a2e, stop:1 #1c2024);
-                color: #4cd3e3;
-                border: 1px solid #2ac4db;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a2738, stop:1 #111a26);
+                color: #00d2ff;
+                border: 1px solid #1f3d5f;
                 border-radius: 6px;
                 padding: 6px 12px;
                 font-weight: bold;
                 font-size: 11px;
             }
             QPushButton:hover {
-                background: #2ac4db;
+                background: #00d2ff;
                 color: #0b151a;
             }
         """)
@@ -757,16 +818,16 @@ class SettingsDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
         buttons.setStyleSheet("""
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #3c444a, stop:1 #2d3338);
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #25364b, stop:1 #172433);
                 color: #c8d6e0;
-                border: 1px solid #4a545c;
+                border: 1px solid #334d6b;
                 border-radius: 6px;
-                padding: 5px 16px;
+                padding: 6px 18px;
                 font-weight: 600;
                 font-size: 11px;
             }
             QPushButton:hover {
-                background: #47525a;
+                background: #334d6b;
                 color: #ffffff;
             }
         """)
@@ -778,6 +839,8 @@ class SettingsDialog(QDialog):
         from PySide6.QtCore import QSettings
         settings = QSettings("R1AILAB", "BIOS_TOOL")
         settings.setValue("detached_hex_viewer", self.cb_detach_hex.isChecked())
+        mode = "hybrid" if self.rb_hybrid.isChecked() else "analog"
+        settings.setValue("repair_engine_mode", mode)
         super().accept()
 
     def open_report_settings(self):
@@ -4228,6 +4291,7 @@ class BiosServiceTool(QMainWindow):
     status_text_signal = Signal(str)
     dmi_update_signal = Signal(str, str, str, str, str)  # brand, model, platform, mac, serial
     rg_exe_files_ready = Signal(object)  # Passes extracted file list to main thread
+    all_rg_matches_ready = Signal(object)  # Passes multi-region match dict to main thread for dialog
     trigger_rg_save_dialog = Signal(str)  # Triggers save dialog from background thread with pre-filled name
     brand_tools_signal = Signal(str)  # Dispatches brand tools update to main GUI thread
 
@@ -4450,6 +4514,7 @@ class BiosServiceTool(QMainWindow):
         self.dmi_update_signal.connect(self._on_dmi_update)
         self.brand_tools_signal.connect(self._update_brand_tools)
         self.rg_exe_files_ready.connect(self._show_rg_exe_selection_dialog)
+        self.all_rg_matches_ready.connect(self._show_all_rg_matches_dialog)
         self.trigger_rg_save_dialog.connect(self._open_rg_save_dialog)
 
         # Shortcuts
@@ -6953,15 +7018,130 @@ class BiosServiceTool(QMainWindow):
             "QMenu::item:selected { background-color: #0369a1; }"
         )
 
-        ready_action = QAction("📂 BIOS RG Ready", self)
-        ready_action.triggered.connect(self.run_bios_rg_ready)
+        ready_action = QAction("ALL RG CLEAN", self)
+        ready_action.triggered.connect(self.run_all_rg_clean)
         menu.addAction(ready_action)
 
-        exe_action = QAction("📦 BIOS RG .EXE", self)
+        exe_action = QAction("BIOS RG .EXE", self)
         exe_action.triggered.connect(self.run_bios_rg_exe)
         menu.addAction(exe_action)
 
         menu.exec(self.btn_dmi_migrate.mapToGlobal(self.btn_dmi_migrate.rect().bottomLeft()))
+
+    def run_all_rg_clean(self):
+        """Full Multi-Region Factory Clean from an Official BIOS Update Package."""
+        if not self.current_bios_file or not os.path.exists(self.current_bios_file):
+            self.log_to_terminal("[WARNING] Please load a backup BIOS dump first.")
+            return
+
+        from extractor_dialog import ExtractorDropDialog
+        from rg_engine.extractor import extract_bios_package, list_extracted_files
+        from all_rg_clean_engine import match_official_components
+        from all_rg_clean_dialog import AllRgCleanDialog
+
+        init_dir = getattr(self, "last_directory", "")
+        if hasattr(self, "current_bios_file") and self.current_bios_file:
+            curr = str(self.current_bios_file)
+            bios_dir = os.path.dirname(curr)
+            if os.path.isdir(bios_dir):
+                init_dir = bios_dir
+
+        dialog = ExtractorDropDialog(
+            title="ALL RG CLEAN - OFFICIAL PACKAGE",
+            subtitle="Drop an Official BIOS Update Package (.exe)",
+            accepted_exts=[".exe"],
+            initial_dir=init_dir,
+            parent=self
+        )
+
+        if dialog.exec() != QDialog.Accepted or not dialog.selected_file:
+            self.log_to_terminal("[INFO] ALL RG CLEAN cancelled.")
+            return
+
+        exe_path = dialog.selected_file
+        self.last_directory = os.path.dirname(exe_path)
+        self.is_task_running = True
+        self._handle_loading_state(True, "Extracting Package...")
+        self.progress_signal.emit(10)
+        self.log_to_terminal(f"[ACTION] Extracting Official Package: {os.path.basename(exe_path)}")
+
+        def _extract_and_match():
+            try:
+                # Step 1: Extract (Exact same extraction pipeline as BIOS RG .EXE)
+                dest_dir = extract_bios_package(exe_path, log_callback=self.log_to_terminal)
+                self.progress_signal.emit(30)
+
+                self.log_to_terminal("Reading Extracted Files...")
+                extracted_files = list_extracted_files(dest_dir, log_callback=self.log_to_terminal)
+                if not extracted_files:
+                    self.log_to_terminal("[ERROR] No files were extracted. Unsupported package.")
+                    QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1000))
+                    return
+
+                self.progress_signal.emit(40)
+                self.log_to_terminal("Analyzing and Matching Regions...")
+                matches = match_official_components(self.current_bios_file, extracted_files, log_cb=self.log_to_terminal)
+                if not matches:
+                    self.log_to_terminal("[ERROR] No matching regions found between backup dump and official update.")
+                    QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1000))
+                    return
+
+                # Send matches to main thread safely via Qt Signal to open dialog
+                self.all_rg_matches_ready.emit(matches)
+
+            except Exception as e:
+                self.log_to_terminal(f"[ERROR] Exception during ALL RG CLEAN extraction: {str(e)}")
+                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
+
+        threading.Thread(target=_extract_and_match, daemon=True).start()
+
+    @Slot(object)
+    def _show_all_rg_matches_dialog(self, matches):
+        from all_rg_clean_dialog import AllRgCleanDialog
+        self.initiate_loader_stop(0)
+        dlg = AllRgCleanDialog(matches, parent=self)
+        if dlg.exec() == QDialog.Accepted and dlg.confirmed:
+            selected_matches = dlg.get_selected_matches()
+            if selected_matches:
+                self._execute_all_rg_clean_thread(selected_matches)
+            else:
+                self.log_to_terminal("[WARNING] No regions selected for cleaning.")
+        else:
+            self.log_to_terminal("[INFO] User cancelled ALL RG CLEAN.")
+
+    def _execute_all_rg_clean_thread(self, matches):
+        self._handle_loading_state(True, "Applying ALL RG CLEAN...")
+        self.progress_signal.emit(60)
+
+        def _worker():
+            try:
+                from all_rg_clean_engine import perform_all_rg_clean
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
+                out_name = f"ALL_RG_CLEAN_{timestamp}_{orig_base}.bin"
+                out_dir = os.path.join(str(get_app_root()), "REPAIRED_BIOS")
+                os.makedirs(out_dir, exist_ok=True)
+                out_path = os.path.join(out_dir, out_name)
+
+                res = perform_all_rg_clean(self.current_bios_file, matches, out_path, log_cb=self.log_to_terminal)
+                if res and res.get("success"):
+                    self.progress_signal.emit(100)
+                    self.current_bios_file = out_path
+                    with open(out_path, "rb") as f:
+                        data = f.read()
+                        self.hex_data_signal.emit(data)
+
+                    self.log_to_terminal(f"\n[SUCCESS] ALL RG CLEAN FINISHED SUCCESSFULLY!")
+                    self.log_to_terminal(f"Saved: {out_path}\n")
+                    self.trigger_rg_save_dialog.emit(out_name)
+                else:
+                    self.log_to_terminal("[ERROR] ALL RG CLEAN execution encountered an error.")
+            except Exception as e:
+                self.log_to_terminal(f"[ERROR] Failed to execute ALL RG CLEAN: {e}")
+            finally:
+                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1500))
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def run_bios_rg_ready(self):
         """Original BIOS RG Fix logic using a pre-extracted file."""
@@ -8296,6 +8476,21 @@ class BiosServiceTool(QMainWindow):
                     self.log_to_terminal("-" * 30)
                     self.log_to_terminal("[SUCCESS] ALL ANALYSES COMPLETE")
                     self.log_to_terminal("-" * 30)
+
+                    try:
+                        from mea_parser import parse_mea_output
+                        mea_hist = getattr(self, 'mea_history', '')
+                        if mea_hist:
+                            mea_meta = parse_mea_output(mea_hist)
+                            ver_str = mea_meta.get("version") or mea_meta.get("Version")
+                            if ver_str:
+                                from fit_automator import find_fit_candidates
+                                cands = find_fit_candidates(ver_str, chipset_hint=mea_meta.get("chipset"))
+                                if cands:
+                                    best_tool = Path(cands[0][1]).parent.name
+                                    self.log_to_terminal(f"[INFO] Engine Match: {best_tool} (Ready for Analog FIT Clean/Rebuild)")
+                    except Exception:
+                        pass
                     
                     QMetaObject.invokeMethod(self.btn_save, "setEnabled", Qt.ConnectionType.QueuedConnection, Q_ARG(bool, True))
                     QMetaObject.invokeMethod(self.btn_smart_me_fix, "setEnabled", Qt.ConnectionType.QueuedConnection, Q_ARG(bool, True))

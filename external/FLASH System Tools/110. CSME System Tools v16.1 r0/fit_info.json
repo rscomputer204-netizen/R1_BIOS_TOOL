@@ -1,0 +1,14 @@
+{
+  "folder": "110. CSME System Tools v16.1 r0",
+  "title": "CSME System Tools v16.1 r0",
+  "version": "16.1",
+  "major": 16,
+  "minor": 1,
+  "patch": 0,
+  "build": 0,
+  "revision": 0,
+  "type": "CSME FIT",
+  "executable": "mfit.exe",
+  "generation": "Intel 12th/13th/14th Gen (Alder Lake / Raptor Lake / Meteor Lake) (CSME v16)",
+  "is_txe": false
+}

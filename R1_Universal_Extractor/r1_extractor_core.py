@@ -56,6 +56,14 @@ except ImportError:
     HAS_BIOSUTILITIES = False
 
 
+def _safe_path(p: str) -> str:
+    if not p: return p
+    p_abs = os.path.abspath(p)
+    if os.name == 'nt' and not p_abs.startswith('\\\\?\\'):
+        return '\\\\?\\' + p_abs
+    return p_abs
+
+
 class R1ExtractorCore:
     """Multi-tiered universal extractor for BIOS updates, installers, and firmware images."""
 
@@ -196,13 +204,13 @@ class R1ExtractorCore:
         log(f"[TOTAL FILES] {total_files} file(s) found in output directory")
         if classified["main_bios"]:
             for b in classified["main_bios"]:
-                log(f"  [*] Main BIOS Candidate: {os.path.basename(b)} ({os.path.getsize(b):,} bytes)")
+                log(f"  [*] Main BIOS Candidate: {os.path.basename(b)} ({os.path.getsize(_safe_path(b)):,} bytes)")
         if classified["ec_firmware"]:
             for ec in classified["ec_firmware"]:
-                log(f"  [EC] EC/KBC Candidate: {os.path.basename(ec)} ({os.path.getsize(ec):,} bytes)")
+                log(f"  [EC] EC/KBC Candidate: {os.path.basename(ec)} ({os.path.getsize(_safe_path(ec)):,} bytes)")
         if classified["me_regions"]:
             for me in classified["me_regions"]:
-                log(f"  [ME] ME/CSME Candidate: {os.path.basename(me)} ({os.path.getsize(me):,} bytes)")
+                log(f"  [ME] ME/CSME Candidate: {os.path.basename(me)} ({os.path.getsize(_safe_path(me)):,} bytes)")
         log("-" * 60)
 
         return {
@@ -231,10 +239,21 @@ class R1ExtractorCore:
         ]
 
         class LogCaptureStream(io.TextIOBase):
+            def __init__(self, target_log):
+                super().__init__()
+                self.target_log = target_log
+                self._in_write = False
+
             def write(self, s):
-                st = s.strip()
-                if st:
-                    log(f"  [VENDOR] {st}")
+                if self._in_write:
+                    return len(s)
+                self._in_write = True
+                try:
+                    st = s.strip()
+                    if st and self.target_log:
+                        self.target_log(f"  [VENDOR] {st}")
+                finally:
+                    self._in_write = False
                 return len(s)
 
         for util_cls in utilities:
@@ -246,7 +265,7 @@ class R1ExtractorCore:
                 fmt_title = getattr(util, 'TITLE', util_cls.__name__)
                 log(f"[TIER 1] Matched vendor format: {fmt_title}")
 
-                with contextlib.redirect_stdout(LogCaptureStream()):
+                with contextlib.redirect_stdout(LogCaptureStream(log)):
                     success = util.parse_format()
 
                 if success:
@@ -745,7 +764,7 @@ class R1ExtractorCore:
                 name_lower = f.lower()
                 
                 try:
-                    fsize = os.path.getsize(full_path)
+                    fsize = os.path.getsize(_safe_path(full_path))
                 except OSError:
                     continue
 

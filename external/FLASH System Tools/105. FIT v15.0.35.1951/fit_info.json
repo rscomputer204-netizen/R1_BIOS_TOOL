@@ -1,0 +1,14 @@
+{
+  "folder": "105. FIT v15.0.35.1951",
+  "title": "FIT v15.0.35.1951",
+  "version": "15.0.35.1951",
+  "major": 15,
+  "minor": 0,
+  "patch": 35,
+  "build": 1951,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 11th Gen Core (Tiger Lake / Rocket Lake) (CSME v15)",
+  "is_txe": false
+}

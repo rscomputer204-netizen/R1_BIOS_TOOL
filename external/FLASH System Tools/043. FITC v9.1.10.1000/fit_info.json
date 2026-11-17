@@ -1,0 +1,14 @@
+{
+  "folder": "043. FITC v9.1.10.1000",
+  "title": "FITC v9.1.10.1000",
+  "version": "9.1.10.1000",
+  "major": 9,
+  "minor": 1,
+  "patch": 10,
+  "build": 1000,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fitc.exe",
+  "generation": "Intel 4th Gen Core (Haswell / Shark Bay / Lynx Point) (ME v9)",
+  "is_txe": false
+}

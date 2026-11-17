@@ -1,0 +1,14 @@
+{
+  "folder": "037. ME System Tools v9.0 r1",
+  "title": "ME System Tools v9.0 r1",
+  "version": "9.0",
+  "major": 9,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 1,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel 4th Gen Core (Haswell / Shark Bay / Lynx Point) (ME v9)",
+  "is_txe": false
+}

@@ -1,0 +1,14 @@
+{
+  "folder": "032. FITC v7.1.60.1191 r2",
+  "title": "FITC v7.1.60.1191 r2",
+  "version": "7.1.60.1191",
+  "major": 7,
+  "minor": 1,
+  "patch": 60,
+  "build": 1191,
+  "revision": 2,
+  "type": "FITC",
+  "executable": "fit.exe",
+  "generation": "Intel 2nd Gen Core (Sandy Bridge / Cougar Point) (ME v7)",
+  "is_txe": false
+}

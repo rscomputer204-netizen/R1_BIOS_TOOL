@@ -1,0 +1,14 @@
+{
+  "folder": "114. CSTXE System Tools v1 r4",
+  "title": "CSTXE System Tools v1 r4",
+  "version": "1",
+  "major": 1,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 4,
+  "type": "CSTXE",
+  "executable": "fitc.exe",
+  "generation": "Intel Bay Trail (CSTXE v1)",
+  "is_txe": true
+}

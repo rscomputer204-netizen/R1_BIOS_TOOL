@@ -1,0 +1,14 @@
+{
+  "folder": "070. CSME System Tools v12 r13",
+  "title": "CSME System Tools v12 r13",
+  "version": "12",
+  "major": 12,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 13,
+  "type": "CSME FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 8th/9th Gen Core (Coffee Lake Refresh / Cannon Lake) (CSME v12)",
+  "is_txe": false
+}

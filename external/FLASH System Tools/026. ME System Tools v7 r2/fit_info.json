@@ -1,0 +1,14 @@
+{
+  "folder": "026. ME System Tools v7 r2",
+  "title": "ME System Tools v7 r2",
+  "version": "7",
+  "major": 7,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 2,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel 2nd Gen Core (Sandy Bridge / Cougar Point) (ME v7)",
+  "is_txe": false
+}

@@ -1,0 +1,14 @@
+{
+  "folder": "116. CSTXE System Tools v3 r12",
+  "title": "CSTXE System Tools v3 r12",
+  "version": "3",
+  "major": 3,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 12,
+  "type": "CSTXE",
+  "executable": "fit.exe",
+  "generation": "Intel Apollo Lake (CSTXE v3)",
+  "is_txe": true
+}

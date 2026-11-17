@@ -1,0 +1,14 @@
+{
+  "folder": "048. FITC v90.1.10.1000",
+  "title": "FITC v90.1.10.1000",
+  "version": "90.1.10.1000",
+  "major": 90,
+  "minor": 1,
+  "patch": 10,
+  "build": 1000,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fit.exe",
+  "generation": "Intel ME/CSME v90",
+  "is_txe": false
+}

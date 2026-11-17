@@ -1,0 +1,14 @@
+{
+  "folder": "049. ME System Tools v10.0 r7",
+  "title": "ME System Tools v10.0 r7",
+  "version": "10.0",
+  "major": 10,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 7,
+  "type": "ME FIT",
+  "executable": "fitc.exe",
+  "generation": "Intel 5th Gen Core (Broadwell / Wildcat Point) (ME v10)",
+  "is_txe": false
+}

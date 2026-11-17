@@ -1,0 +1,14 @@
+{
+  "folder": "028. FITC v7.1.13.1088",
+  "title": "FITC v7.1.13.1088",
+  "version": "7.1.13.1088",
+  "major": 7,
+  "minor": 1,
+  "patch": 13,
+  "build": 1088,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fitc.exe",
+  "generation": "Intel 2nd Gen Core (Sandy Bridge / Cougar Point) (ME v7)",
+  "is_txe": false
+}

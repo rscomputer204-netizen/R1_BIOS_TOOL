@@ -1,0 +1,14 @@
+{
+  "folder": "054. CSME System Tools v11 r46",
+  "title": "CSME System Tools v11 r46",
+  "version": "11",
+  "major": 11,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 46,
+  "type": "CSME FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 6th/7th/8th Gen Core (Skylake / Kaby Lake / Coffee Lake) (CSME v11)",
+  "is_txe": false
+}

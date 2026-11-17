@@ -1,0 +1,14 @@
+{
+  "folder": "046. FITC v9.5.15.1730",
+  "title": "FITC v9.5.15.1730",
+  "version": "9.5.15.1730",
+  "major": 9,
+  "minor": 5,
+  "patch": 15,
+  "build": 1730,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fit.exe",
+  "generation": "Intel 4th Gen Core (Haswell / Shark Bay / Lynx Point) (ME v9)",
+  "is_txe": false
+}

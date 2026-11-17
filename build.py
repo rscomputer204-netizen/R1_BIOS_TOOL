@@ -85,6 +85,12 @@ EXTERNAL_RUNTIME_DIRS = [
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 
+def safe_win_path(p):
+    abs_p = os.path.abspath(p)
+    if sys.platform == "win32" and not abs_p.startswith("\\\\?\\"):
+        return "\\\\?\\" + abs_p
+    return abs_p
+
 def _on_rm_error(func, path, exc_info):
     """Error handler for shutil.rmtree: strips read-only flag and retries."""
     try:
@@ -96,7 +102,8 @@ def _on_rm_error(func, path, exc_info):
 def force_rmtree(path):
     """Remove a directory tree, clearing read-only flags on all files first.
     Uses both 'attrib -r /s /d' (Windows) and chmod to handle all edge cases."""
-    if not os.path.exists(path):
+    safe_path = safe_win_path(path)
+    if not os.path.exists(safe_path):
         return
     # Step 1: Use Windows attrib command to strip read-only from all files/dirs
     try:
@@ -107,7 +114,7 @@ def force_rmtree(path):
     except Exception:
         pass
     # Step 2: Also use Python chmod to handle remaining cases
-    for root, dirs, files in os.walk(path):
+    for root, dirs, files in os.walk(safe_path):
         for f in files:
             try:
                 os.chmod(os.path.join(root, f), stat.S_IWRITE | stat.S_IREAD)
@@ -119,17 +126,17 @@ def force_rmtree(path):
             except Exception:
                 pass
     try:
-        os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+        os.chmod(safe_path, stat.S_IWRITE | stat.S_IREAD)
     except Exception:
         pass
     # Step 3: rmtree with error handler that strips read-only and retries
-    shutil.rmtree(path, onerror=_on_rm_error)
-    if os.path.exists(path):
+    shutil.rmtree(safe_path, onerror=_on_rm_error)
+    if os.path.exists(safe_path):
         time.sleep(1.0)
-        shutil.rmtree(path, onerror=_on_rm_error)
-    if os.path.exists(path):
+        shutil.rmtree(safe_path, onerror=_on_rm_error)
+    if os.path.exists(safe_path):
         time.sleep(1.5)
-        shutil.rmtree(path, ignore_errors=True)
+        shutil.rmtree(safe_path, ignore_errors=True)
 
 
 def run(cmd: list, cwd=None):
@@ -381,9 +388,12 @@ for ext_dir in EXTERNAL_RUNTIME_DIRS:
         if os.path.isdir(src_path):
             if os.path.exists(dest_path):
                 force_rmtree(dest_path)
-            # Ignore unnecessary files/folders during copy to reduce bundle size
-            ignore_func = shutil.ignore_patterns('__CHECK__', '__pycache__', '.git', '*.pyc', '.vscode')
-            shutil.copytree(src_path, dest_path, ignore=ignore_func)
+            # Ignore unnecessary files/folders during copy to reduce bundle size and avoid path length issues
+            ignore_func = shutil.ignore_patterns(
+                '__CHECK__', '__pycache__', '.git', '*.pyc', '.vscode',
+                '*.log', '*.map', '*.tmp', '*backup*', '*test*'
+            )
+            shutil.copytree(safe_win_path(src_path), safe_win_path(dest_path), ignore=ignore_func)
             print(f"  [OK] Copied {ext_dir}/ to {dest_path}/ (Ignored junk files)")
         else:
             shutil.copy2(src_path, dest_path)

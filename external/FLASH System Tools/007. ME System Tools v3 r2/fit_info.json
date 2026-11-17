@@ -1,0 +1,14 @@
+{
+  "folder": "007. ME System Tools v3 r2",
+  "title": "ME System Tools v3 r2",
+  "version": "3",
+  "major": 3,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "revision": 2,
+  "type": "ME FIT",
+  "executable": "ftoolc.exe",
+  "generation": "Intel Core 2 Duo (ICH8/ICH9) (ME v3)",
+  "is_txe": false
+}

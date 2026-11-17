@@ -1,0 +1,14 @@
+{
+  "folder": "005. FIT v2.0.5.3112",
+  "title": "FIT v2.0.5.3112",
+  "version": "2.0.5.3112",
+  "major": 2,
+  "minor": 0,
+  "patch": 5,
+  "build": 3112,
+  "revision": 0,
+  "type": "FIT",
+  "executable": "fit.exe",
+  "generation": "Intel Core 2 Duo (ICH7/ICH8) (ME v2)",
+  "is_txe": false
+}

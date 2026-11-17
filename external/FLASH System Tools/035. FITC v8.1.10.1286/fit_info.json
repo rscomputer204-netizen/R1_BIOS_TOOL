@@ -1,0 +1,14 @@
+{
+  "folder": "035. FITC v8.1.10.1286",
+  "title": "FITC v8.1.10.1286",
+  "version": "8.1.10.1286",
+  "major": 8,
+  "minor": 1,
+  "patch": 10,
+  "build": 1286,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fitc.exe",
+  "generation": "Intel 3rd Gen Core (Ivy Bridge / Panther Point) (ME v8)",
+  "is_txe": false
+}

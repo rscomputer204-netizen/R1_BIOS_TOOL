@@ -1,0 +1,14 @@
+{
+  "folder": "016. FITC v4.1.0.1031",
+  "title": "FITC v4.1.0.1031",
+  "version": "4.1.0.1031",
+  "major": 4,
+  "minor": 1,
+  "patch": 0,
+  "build": 1031,
+  "revision": 0,
+  "type": "FITC",
+  "executable": "fitc.exe",
+  "generation": "Intel Core 2 Duo / Centrino (ICH8-ICH9) (ME v4)",
+  "is_txe": false
+}

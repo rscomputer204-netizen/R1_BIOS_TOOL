@@ -1,0 +1,14 @@
+{
+  "folder": "094. CSME System Tools v14.0.11- r1",
+  "title": "CSME System Tools v14.0.11- r1",
+  "version": "14.0.11",
+  "major": 14,
+  "minor": 0,
+  "patch": 11,
+  "build": 0,
+  "revision": 1,
+  "type": "CSME FIT",
+  "executable": "fit.exe",
+  "generation": "Intel 10th Gen Core Desktop/Mobile (Comet Lake) (CSME v14)",
+  "is_txe": false
+}
