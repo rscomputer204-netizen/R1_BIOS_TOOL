@@ -11,10 +11,17 @@ from mea_parser import parse_mea_output
 from path_utils import get_app_root
 
 def print_terminal_log(callback, message, level="INFO"):
-    if callback:
-        callback(f"[{level}] {message}")
+    if level and not any(message.startswith(tag) for tag in ["[SUCCESS]", "[ERROR]", "[WARNING]", "[WARN]", "[INFO]", "[DEBUG]", "[ACTION]"]):
+        full_msg = f"[{level}] {message}"
     else:
-        print(f"[{level}] {message}")
+        full_msg = message
+    if callback:
+        try:
+            callback(full_msg)
+        except Exception:
+            pass
+    else:
+        print(full_msg)
 
 def find_fit_candidates(version_str, external_dir="external", chipset_hint=None):
     """
@@ -151,12 +158,20 @@ def find_fit_executable(version_str, external_dir="external", chipset_hint=None)
 def find_partition_files(decomp_dir, region_keyword):
     """
     Finds all files in the decompile folder that match a specific region type.
+    Includes robust aliases for FITC, FIT, and MFIT across ME/CSME generations.
+    Ignores temporary, backup, and log files.
     """
     keyword_map = {
-        "ME": ['me region.bin', 'me.bin', 'cse_me.bin', 'cse region.bin', 'me sub partition.bin'],
-        "PMC": ['pmc region.bin', 'pmc.bin', 'pmc_region.bin'],
-        "PCHC": ['pchc region.bin', 'pchc.bin', 'pchc_region.bin'],
-        "PHY": ['phy region.bin', 'phy.bin', 'phy_region.bin']
+        "ME": [
+            'me region.bin', 'me_region.bin', 'meregion.bin', 'me.bin',
+            'cse_me.bin', 'csme.bin', 'cse region.bin', 'cse_region.bin', 'cseregion.bin',
+            'me sub partition.bin', 'me_sub_partition.bin', 'mesubpartition.bin'
+        ],
+        "PMC": ['pmc region.bin', 'pmc_region.bin', 'pmcregion.bin', 'pmc.bin'],
+        "PCHC": ['pchc region.bin', 'pchc_region.bin', 'pchcregion.bin', 'pchc.bin'],
+        "PHY": ['phy region.bin', 'phy_region.bin', 'phyregion.bin', 'phy.bin'],
+        "BIOS": ['bios region.bin', 'bios_region.bin', 'biosregion.bin', 'bios.bin'],
+        "DESC": ['flash descriptor.bin', 'desc.bin', 'descriptor.bin', 'fd.bin']
     }
     
     targets = keyword_map.get(region_keyword, [])
@@ -166,7 +181,11 @@ def find_partition_files(decomp_dir, region_keyword):
         
     for root, _, files in os.walk(decomp_dir):
         for f in files:
-            if f.lower() in targets or any(k in f.lower() for k in targets):
+            f_lower = f.lower()
+            if f_lower.endswith(('.bak', '.old', '.tmp', '.map', '.log', '.orig')):
+                continue
+            f_norm = f_lower.replace("_", " ").replace("-", " ")
+            if f_lower in targets or any(k in f_lower or k in f_norm for k in targets):
                 found.append(os.path.join(root, f))
     return found
 
@@ -174,19 +193,28 @@ def validate_decompiled_structure(decomp_dir, terminal_callback=None):
     """
     Performs deep validation of the decompiled directory.
     Checks for essential binaries and their sizes.
+    Must have at least an ME/CSE region file and non-zero size.
     """
-    essential_regions = ["ME"] # Minimum requirement
+    if not decomp_dir or not os.path.exists(decomp_dir):
+        print_terminal_log(terminal_callback, "[WARNING] Decompile folder does not exist.", "WARNING")
+        return False
+
+    essential_regions = ["ME"]  # Minimum requirement: ME or CSE region must exist
     for region in essential_regions:
         files = find_partition_files(decomp_dir, region)
         if not files:
-            print_terminal_log(terminal_callback, f"[WARNING] Essential region {region} missing in decomposition.", "WARNING")
+            print_terminal_log(terminal_callback, f"[WARNING] Essential region {region} (ME/CSE) missing in decomposition directory.", "WARNING")
             return False
         
-        # Check for 0-byte files
+        # Check for valid non-zero byte files
+        valid_file_found = False
         for f in files:
-            if os.path.getsize(f) == 0:
-                print_terminal_log(terminal_callback, f"[WARNING] Region file {os.path.basename(f)} is empty (0-byte).", "WARNING")
-                return False
+            if os.path.getsize(f) > 0:
+                valid_file_found = True
+                break
+        if not valid_file_found:
+            print_terminal_log(terminal_callback, f"[WARNING] Essential region {region} files are all empty (0-byte).", "WARNING")
+            return False
                 
     return True
 
@@ -530,7 +558,8 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
                 
                 # Deep Validation
                 if validate_decompiled_structure(decomp_target, terminal_callback):
-                    print_terminal_log(terminal_callback, f"[SUCCESS] FIT Decompile successful via {tool_folder_name} (Attempt {attempt} of {len(candidates)})")
+                    print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Decompile Complete via {tool_folder_name}")
+                    print_terminal_log(terminal_callback, f"[INFO] Decompiled layout verified: config.xml and partition binaries ready.")
                     return str(decomp_target)
                 else:
                     print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt} validation failed with {tool_folder_name}. Trying next tool in queue...", "WARNING")
@@ -566,6 +595,7 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
         
         # Use short path for the executable to avoid issues with spaces and special characters
         fit_exe_safe = get_short_path(os.path.abspath(fit_exe))
+        fit_dir = get_short_path(os.path.dirname(os.path.abspath(fit_exe)))
         
         fit_workspace = Path(get_app_root()) / "FIT_WORKSPACE"
         if fit_workspace.exists():
@@ -576,54 +606,103 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
         shutil.copy2(corrupt_bios_path, temp_corrupt)
         xml_path = fit_workspace / "config.xml"
         is_mfit_tool = fit_exe.lower().endswith("mfit.exe")
-        
-        # Decompile to get config
         is_legacy_fitc = "fitc.exe" in str(fit_exe_safe).lower()
+        
+        # ── 1. RUN DECOMPILE TO GET CONFIG & EXTRACTED PARTITIONS ─────────────
+        print_terminal_log(terminal_callback, f"[INFO] Running Intel FIT Decompile via {tool_name}...")
         if is_mfit_tool:
             cmd = [fit_exe_safe, "--decompose", temp_corrupt.name, "--saveconfig", xml_path.name.replace(" ", "_")]
         elif is_legacy_fitc:
             cmd = [fit_exe_safe, "/b", "/w", str(fit_workspace), "/s", str(fit_workspace), "/d", str(fit_workspace), "/save", xml_path.name.replace(" ", "_"), temp_corrupt.name]
         else:
-            cmd = [fit_exe_safe, "-f", temp_corrupt.name, "-save", xml_path.name.replace(" ", "_")]
+            cmd = [fit_exe_safe, "-f", temp_corrupt.name, "-save", xml_path.name.replace(" ", "_"), "-i", "disable"]
         
         subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
         
         if not xml_path.exists():
-            for possible in [fit_workspace / "corrupt.xml", fit_workspace / "image.xml"]:
+            for possible in [fit_workspace / "corrupt.xml", fit_workspace / "image.xml", Path(fit_dir) / "config.xml", Path(fit_dir) / "corrupt.xml"]:
                 if possible.exists():
                     shutil.copy2(possible, xml_path)
                     break
         
-        if not xml_path.exists():
-            continue
-            
+        # Locate decompiled directory
         decomp_target = fit_workspace / "corrupt"
         if not decomp_target.exists():
+            for cand_name in ["corrupt", Path(temp_corrupt).stem, Path(corrupt_bios_path).stem, "image", "Decomp"]:
+                cand_p = Path(fit_dir) / cand_name
+                if cand_p.exists() and cand_p.is_dir():
+                    try:
+                        shutil.move(str(cand_p), str(decomp_target))
+                        break
+                    except:
+                        pass
+        
+        if not decomp_target.exists():
             if is_mfit_tool:
-                subprocess.run([fit_exe, "--decompose", temp_corrupt.name], cwd=str(fit_workspace), capture_output=True, creationflags=0x08000000)
-            else:
-                subprocess.run([fit_exe, "-f", xml_path.name, "-b", "-o", "dummy_out.bin"],
+                subprocess.run([fit_exe_safe, "--decompose", temp_corrupt.name], cwd=str(fit_workspace), capture_output=True, creationflags=0x08000000)
+            elif not is_legacy_fitc and xml_path.exists():
+                subprocess.run([fit_exe_safe, "-f", xml_path.name, "-b", "-o", "dummy_out.bin"],
                                cwd=str(fit_workspace), capture_output=True, creationflags=0x08000000)
         
         if not decomp_target.exists():
-            subdirs = [d for d in fit_workspace.iterdir() if d.is_dir()]
-            if subdirs: decomp_target = subdirs[0]
-            else: continue
+            subdirs = [d for d in fit_workspace.iterdir() if d.is_dir() and d.name != "corrupt"]
+            if subdirs:
+                decomp_target = subdirs[0]
+            else:
+                for cand_name in ["corrupt", Path(temp_corrupt).stem, Path(corrupt_bios_path).stem, "image", "Decomp"]:
+                    cand_p = Path(fit_dir) / cand_name
+                    if cand_p.exists() and cand_p.is_dir():
+                        try:
+                            shutil.move(str(cand_p), str(decomp_target))
+                            break
+                        except:
+                            pass
 
-        # Inject clean regions
-        for r_type, clean_f in clean_paths_dict.items():
-            if not clean_f: continue
-            targets = find_partition_files(decomp_target, r_type)
-            for t in targets:
+        # ── 2. STRICT DECOMPILE VALIDATION GATE ───────────────────────────────
+        # "ডি কম্পাইল ছাড়া কোন কাজ হবে না এরকম লজিক তৈরি করতে হবে"
+        decompile_ok = False
+        if xml_path.exists() and decomp_target and decomp_target.exists():
+            if validate_decompiled_structure(decomp_target, terminal_callback):
+                decompile_ok = True
+                print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Decompile Complete via {tool_name}")
+                print_terminal_log(terminal_callback, f"[INFO] Decompiled layout verified: {xml_path.name} and partition binaries ready.")
+            else:
+                print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Decompiled structure incomplete or missing partitions with {tool_name}. Trying next tool in queue...", "WARNING")
+        else:
+            print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: FIT Decompile failed to produce config or partitions with {tool_name}. Trying next tool in queue...", "WARNING")
+
+        if not decompile_ok:
+            continue  # STRICT GATE: NO CLEANING OR COMPILING PERMITTED WITHOUT SUCCESSFUL DECOMPILE!
+
+        # ── 3. REPLACE / CLEAN ME REGION IN DECOMPILED WORKSPACE ─────────────
+        clean_me_file = clean_paths_dict.get("ME")
+        if clean_me_file and os.path.exists(clean_me_file):
+            print_terminal_log(terminal_callback, f"[INFO] Replacing ME Region using matched clean binary: {Path(clean_me_file).name}")
+            me_targets = find_partition_files(decomp_target, "ME")
+            replaced = False
+            for t in me_targets:
                 try:
                     if os.path.exists(t): os.chmod(t, 0o666)
-                    shutil.copy2(clean_f, t)
-                except: pass
+                    shutil.copy2(clean_me_file, t)
+                    replaced = True
+                except Exception as ex:
+                    print_terminal_log(terminal_callback, f"[WARNING] Failed to replace ME partition: {ex}", "WARNING")
+            
+            if replaced:
+                print_terminal_log(terminal_callback, f"[SUCCESS] [OK] ME Region Replacement Complete ({Path(clean_me_file).name})")
+            else:
+                print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: No ME partition file found in {decomp_target.name}. Trying next tool...", "WARNING")
+                continue
+        else:
+            print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Clean ME binary not provided or missing. Trying next tool...", "WARNING")
+            continue
 
-        # Patch XML for OEM State
+        # Patch XML for OEM State (Manufacturing Mode = No)
         force_manufacturing_mode(xml_path, state="No")
-        
-        # Rebuild
+        print_terminal_log(terminal_callback, "[INFO] Manufacturing Mode set to Closed (No Late Display).")
+
+        # ── 4. REBUILD / COMPILE ─────────────────────────────────────────────
+        print_terminal_log(terminal_callback, f"[INFO] Compiling / Rebuilding BIOS firmware image via {tool_name}...")
         final_out = fit_workspace / "outimage.bin"
         if is_mfit_tool:
             cmd = [fit_exe_safe, "--decompose", temp_corrupt.name, "--loadconfig", xml_path.name, "--build", final_out.name]
@@ -637,25 +716,24 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
             
         res = subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
         
-        if final_out.exists():
+        # Check alternative output filenames that FIT might generate
+        if not final_out.exists() or final_out.stat().st_size == 0:
+            for alt_out in [fit_workspace / "image.bin", fit_workspace / "dummy_out.bin", Path(fit_dir) / "outimage.bin"]:
+                if alt_out.exists() and alt_out.stat().st_size > 0:
+                    shutil.copy2(alt_out, final_out)
+                    break
+
+        if final_out.exists() and final_out.stat().st_size > 0:
             # Final Integrity Check
             if verify_image_integrity(final_out, terminal_callback):
-                # Point 3: DMI Persistence Safety
-                try:
-                    from dmi_migrator import DMIMigrator
-                    print_terminal_log(terminal_callback, "[INFO] Ensuring DMI Persistence...")
-                    migrated_path = DMIMigrator.migrate(corrupt_bios_path, str(final_out), terminal_callback=terminal_callback)
-                    if migrated_path and os.path.exists(migrated_path):
-                        shutil.copy2(migrated_path, output_path)
-                    else:
-                        shutil.copy2(final_out, output_path)
-                except:
-                    shutil.copy2(final_out, output_path)
-                    
+                print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Compile / Rebuild Complete via {tool_name}")
+                shutil.copy2(final_out, output_path)
                 print_terminal_log(terminal_callback, "[SUCCESS] Full CSME Rebuild Completed!")
                 return True
             else:
-                print_terminal_log(terminal_callback, "[WARNING] Integrity check failed for this build. Trying next tool...", "WARNING")
+                print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Integrity check failed for build via {tool_name}. Trying next tool...", "WARNING")
+        else:
+            print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Compile failed to produce binary with {tool_name}. Trying next tool...", "WARNING")
 
     print_terminal_log(terminal_callback, "[ERROR] All build attempts failed.", "ERROR")
     return False

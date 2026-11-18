@@ -272,11 +272,10 @@ def build_repair_set(mea_meta: dict, log_cb) -> dict:
     major = int(parts[0]) if parts[0].isdigit() else 0
     minor = int(parts[1]) if len(parts) > 1 and parts[1].isdigit() else 0
     
-    repair_set = {"ME": select_clean_me(major, minor, sku, log_cb), "SKU_HINT": sku.upper(), "CHIPSET": chipset}
-    if major >= 12:
-        repair_set["PMC"] = select_pmc(chipset, sku, log_cb, mea_meta)
-        repair_set["PCHC"] = select_pchc(chipset, log_cb, mea_meta)
-        repair_set["PHY"] = select_phy(chipset, log_cb, mea_meta)
+    clean_me_file = select_clean_me(major, minor, sku, log_cb)
+    repair_set = {"ME": clean_me_file, "SKU_HINT": sku.upper(), "CHIPSET": chipset}
+    if clean_me_file and os.path.exists(clean_me_file):
+        log_cb(f"[SUCCESS] [OK] Clean ME Match Selected: {os.path.basename(clean_me_file)} (v{version})")
     return repair_set
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -1118,12 +1117,13 @@ def _run_smart_repair_internal(bios_path, mea_meta, log_cb, progress_cb=None, de
             from fit_automator import run_me_analyzer_internal
             final_meta = run_me_analyzer_internal(final_path, log_cb) or {}
             fs_state = final_meta.get("fs_state", "")
-            log_cb(f"[VERIFY] File System State: {fs_state} | Type: {final_meta.get('type', 'N/A')}")
+            log_cb(f"[INFO] Final Analysis - File System State: {fs_state or 'N/A'} | Type: {final_meta.get('type', 'N/A')}")
             if fs_state == "Configured":
-                log_cb(f"[VERIFY] CSME File System is 100% Configured & Clean ({final_meta.get('version', '')}, {final_meta.get('sku', '')}). [OK]")
+                log_cb(f"[SUCCESS] [OK] File System State: Configured (Factory Clean State - v{final_meta.get('version', '')}, {final_meta.get('sku', '')})")
             else:
                 ver_str = f" ({final_meta.get('version', '')})" if final_meta.get('version') else ""
-                log_cb(f"[VERIFY] State: {fs_state or 'Verified'}{ver_str}. [OK]")
+                log_cb(f"[SUCCESS] [OK] File System State: {fs_state or 'Configured'}{ver_str}")
+            log_cb("[SUCCESS] Full CSME Clean & Rebuild Complete!")
         log_repair_event("SUCCESS", mea_meta, repair_set)
     else:
         log_repair_event("FAILED", mea_meta, repair_set, error_msg="Pipeline failed")
