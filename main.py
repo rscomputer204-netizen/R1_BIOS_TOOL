@@ -4150,6 +4150,514 @@ class InternetStatusWidget(QLabel):
             )
 
 
+class CircularAvatarLabel(QLabel):
+    """
+    Circular Avatar Widget with Anti-aliased Clipping and Neon Glow Border.
+    Supports user custom images and fallback to default R1 AI LAB logo.
+    """
+    clicked = Signal()
+    right_clicked = Signal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(58, 58)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip("Click or Right-Click to Edit Profile")
+        self._pixmap = QPixmap()
+        self._hovered = False
+
+    def set_avatar(self, pixmap: QPixmap):
+        self._pixmap = pixmap
+        self.update()
+
+    def get_avatar(self) -> QPixmap:
+        return self._pixmap
+
+    def enterEvent(self, event):
+        self._hovered = True
+        self.update()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        self._hovered = False
+        self.update()
+        super().leaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.clicked.emit()
+        elif event.button() == Qt.MouseButton.RightButton:
+            self.right_clicked.emit()
+        super().mousePressEvent(event)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        rect = QRectF(2, 2, self.width() - 4, self.height() - 4)
+
+        # Draw dark circle background
+        painter.setBrush(QColor("#101418"))
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.drawEllipse(rect)
+
+        # Draw clipped avatar image
+        if not self._pixmap.isNull():
+            path = QPainterPath()
+            path.addEllipse(rect)
+            painter.setClipPath(path)
+
+            scaled = self._pixmap.scaled(
+                int(rect.width()), int(rect.height()),
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            sx = int(rect.x() + (rect.width() - scaled.width()) / 2)
+            sy = int(rect.y() + (rect.height() - scaled.height()) / 2)
+            painter.drawPixmap(sx, sy, scaled)
+            painter.setClipping(False)
+
+        # Draw sleek border ring (neon cyan glow on hover)
+        ring_color = QColor("#0ef6fd") if self._hovered else QColor("#00c8e0")
+        pen = QPen(ring_color, 2)
+        painter.setPen(pen)
+        painter.setBrush(Qt.BrushStyle.NoBrush)
+        painter.drawEllipse(rect)
+        painter.end()
+
+
+class ProfileEditDialog(QDialog):
+    """
+    Unified dialog to manage both User Profile (Avatar Logo & Organization Name)
+    and Software License (Status, Expiry, HWID, Product Key, Activation & Reset).
+    Both functions are consolidated into this single management window.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Profile & License Management")
+        self.setModal(True)
+        self.setFixedWidth(460)
+        
+        from PySide6.QtCore import QSettings
+        self.settings = QSettings("R1AILAB", "BIOS_TOOL")
+        self.current_avatar_path = self.settings.value("user_profile_avatar_path", "")
+        self.selected_avatar_path = self.current_avatar_path
+        self.avatar_is_reset = False
+        
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #141920;
+                border: 1px solid #283038;
+                border-radius: 10px;
+            }
+            QLabel {
+                color: #e2e8f0;
+                font-family: 'Segoe UI', sans-serif;
+            }
+            QLineEdit {
+                background-color: #1c222a;
+                color: #ffffff;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px 10px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+            }
+            QLineEdit:focus {
+                border: 1px solid #00e5ff;
+            }
+            QLineEdit:read-only {
+                background-color: #161b21;
+                color: #8899a6;
+                border: 1px solid #232c37;
+            }
+            QPushButton {
+                background-color: #1e2631;
+                color: #e2e8f0;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 6px 14px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #2b3543;
+                border-color: #475569;
+            }
+            QPushButton#btnSave {
+                background-color: #00c8e0;
+                color: #0a1118;
+                font-weight: bold;
+                border: none;
+            }
+            QPushButton#btnSave:hover {
+                background-color: #0ef6fd;
+            }
+            QPushButton#btnActivate {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #8fe3ea, stop:0.4 #3598a6, stop:1 #247d8a);
+                color: #0d171c;
+                border: 1px solid #0ef6fd;
+                font-weight: bold;
+            }
+            QPushButton#btnActivate:hover {
+                background: #0ef6fd;
+                color: #000000;
+            }
+            QPushButton#btnClear {
+                background-color: #2b1719;
+                color: #f87171;
+                border: 1px solid #4a2123;
+            }
+            QPushButton#btnClear:hover {
+                background-color: #7f1d1d;
+                color: #ffffff;
+            }
+        """)
+        
+        self._init_ui()
+
+    def _init_ui(self):
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(18, 16, 18, 16)
+        main_layout.setSpacing(12)
+        
+        # 1. Header
+        header_layout = QVBoxLayout()
+        header_layout.setSpacing(2)
+        lbl_title = QLabel("PROFILE & LICENSE MANAGEMENT")
+        lbl_title.setStyleSheet("font-size: 13px; font-weight: bold; color: #4cd3e3; letter-spacing: 1px;")
+        header_layout.addWidget(lbl_title)
+        
+        lbl_sub = QLabel("Manage technician identity, branding logo, and software license activation.")
+        lbl_sub.setStyleSheet("font-size: 10px; color: #64748b;")
+        header_layout.addWidget(lbl_sub)
+        main_layout.addLayout(header_layout)
+        
+        # 2. PROFILE SECTION
+        prof_box = QGroupBox("PROFILE & BRANDING")
+        prof_box.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid #232d38;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+                font-size: 11px;
+                color: #38bdf8;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 4px;
+            }
+        """)
+        prof_layout = QHBoxLayout(prof_box)
+        prof_layout.setContentsMargins(12, 12, 12, 12)
+        prof_layout.setSpacing(14)
+        
+        # Left: Avatar + Buttons
+        avatar_col = QVBoxLayout()
+        avatar_col.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        avatar_col.setSpacing(6)
+        
+        self.preview_avatar = CircularAvatarLabel(self)
+        self.preview_avatar.setFixedSize(56, 56)
+        self.preview_avatar.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.preview_avatar.clicked.connect(self._browse_image)
+        avatar_col.addWidget(self.preview_avatar, alignment=Qt.AlignmentFlag.AlignCenter)
+        
+        avatar_btns = QHBoxLayout()
+        avatar_btns.setSpacing(4)
+        self.btn_browse = QPushButton("Change")
+        self.btn_browse.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_browse.setStyleSheet("padding: 2px 8px; font-size: 10px; color: #38bdf8;")
+        self.btn_browse.clicked.connect(self._browse_image)
+        avatar_btns.addWidget(self.btn_browse)
+        
+        self.btn_reset = QPushButton("Reset")
+        self.btn_reset.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_reset.setStyleSheet("padding: 2px 6px; font-size: 10px; color: #94a3b8; background: transparent; border: none;")
+        self.btn_reset.clicked.connect(self._reset_image)
+        avatar_btns.addWidget(self.btn_reset)
+        avatar_col.addLayout(avatar_btns)
+        prof_layout.addLayout(avatar_col)
+        
+        # Right: Name & Status
+        name_col = QVBoxLayout()
+        name_col.setSpacing(4)
+        name_col.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+        
+        lbl_name_tag = QLabel("Organization / Technician Name:")
+        lbl_name_tag.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: 600;")
+        name_col.addWidget(lbl_name_tag)
+        
+        self.txt_name = QLineEdit()
+        name_col.addWidget(self.txt_name)
+        
+        self.lbl_name_hint = QLabel("")
+        name_col.addWidget(self.lbl_name_hint)
+        prof_layout.addLayout(name_col)
+        
+        main_layout.addWidget(prof_box)
+        
+        # 3. LICENSE SECTION
+        lic_box = QGroupBox("LICENSE & ACTIVATION")
+        lic_box.setStyleSheet("""
+            QGroupBox {
+                border: 1px solid #232d38;
+                border-radius: 8px;
+                margin-top: 10px;
+                padding-top: 10px;
+                font-weight: bold;
+                font-size: 11px;
+                color: #38bdf8;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 4px;
+            }
+        """)
+        lic_layout = QVBoxLayout(lic_box)
+        lic_layout.setContentsMargins(12, 12, 12, 12)
+        lic_layout.setSpacing(8)
+        
+        # License Status & Holder Info
+        lic_status_row = QHBoxLayout()
+        self.lbl_license_status = QLabel("Status: Checking...")
+        self.lbl_license_status.setStyleSheet("font-size: 12px; font-weight: bold;")
+        lic_status_row.addWidget(self.lbl_license_status)
+        lic_status_row.addStretch()
+        lic_layout.addLayout(lic_status_row)
+        
+        self.lbl_license_details = QLabel("")
+        self.lbl_license_details.setStyleSheet("color: #8899a6; font-size: 10px;")
+        lic_layout.addWidget(self.lbl_license_details)
+        
+        # Hardware ID Row
+        hwid_row = QHBoxLayout()
+        hwid_row.setSpacing(6)
+        
+        import license_manager
+        my_hwid = license_manager.get_hardware_id()
+        self.txt_hwid = QLineEdit(my_hwid)
+        self.txt_hwid.setReadOnly(True)
+        self.txt_hwid.setStyleSheet("background-color: #111418; border: 1px solid #283038; border-radius: 5px; padding: 4px 8px; color: #4cd3e3; font-family: Consolas, monospace; font-size: 11px; font-weight: bold;")
+        hwid_row.addWidget(self.txt_hwid)
+        
+        self.btn_copy_hwid = QPushButton("Copy HWID")
+        self.btn_copy_hwid.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_copy_hwid.setStyleSheet("padding: 4px 10px; font-size: 10px;")
+        self.btn_copy_hwid.clicked.connect(self.copy_hwid)
+        hwid_row.addWidget(self.btn_copy_hwid)
+        lic_layout.addLayout(hwid_row)
+        
+        # Product Key Input Row
+        lbl_key_tag = QLabel("Enter 25-Character Product Key:")
+        lbl_key_tag.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; margin-top: 2px;")
+        lic_layout.addWidget(lbl_key_tag)
+        
+        self.txt_key = QLineEdit()
+        self.txt_key.setPlaceholderText("KQGX3-B6NBY-CT79F-G473H-G6PHD")
+        self.txt_key.setStyleSheet("font-family: Consolas, monospace; font-size: 12px; font-weight: bold; letter-spacing: 0.5px;")
+        self.txt_key.textChanged.connect(self._auto_format_key)
+        lic_layout.addWidget(self.txt_key)
+        
+        # License Action Buttons (Activate & Clear)
+        lic_btn_row = QHBoxLayout()
+        lic_btn_row.setSpacing(8)
+        
+        self.btn_activate = QPushButton("ACTIVATE KEY")
+        self.btn_activate.setObjectName("btnActivate")
+        self.btn_activate.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_activate.clicked.connect(self.do_activate)
+        lic_btn_row.addWidget(self.btn_activate)
+        
+        self.btn_clear_license = QPushButton("Clear License")
+        self.btn_clear_license.setObjectName("btnClear")
+        self.btn_clear_license.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_clear_license.clicked.connect(self.do_clear_license)
+        lic_btn_row.addWidget(self.btn_clear_license)
+        
+        lic_layout.addLayout(lic_btn_row)
+        main_layout.addWidget(lic_box)
+        
+        # 4. BOTTOM ACTION BUTTONS (Save & Close)
+        main_layout.addSpacing(2)
+        bottom_row = QHBoxLayout()
+        bottom_row.setSpacing(10)
+        
+        self.btn_close = QPushButton("Close")
+        self.btn_close.clicked.connect(self.reject)
+        bottom_row.addWidget(self.btn_close)
+        
+        bottom_row.addStretch()
+        
+        self.btn_save = QPushButton("Save Profile")
+        self.btn_save.setObjectName("btnSave")
+        self.btn_save.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.btn_save.clicked.connect(self._save_changes)
+        bottom_row.addWidget(self.btn_save)
+        
+        main_layout.addLayout(bottom_row)
+        
+        # Load avatar and refresh status
+        self._load_current_avatar()
+        self.refresh_status()
+
+    def _auto_format_key(self, text):
+        if getattr(self, '_formatting', False):
+            return
+        self._formatting = True
+        try:
+            if text.startswith("R1BT-"):
+                return
+            clean = "".join(c for c in text.upper() if c.isalnum())
+            if len(clean) > 25:
+                clean = clean[:25]
+            formatted = "-".join(clean[i:i+5] for i in range(0, len(clean), 5))
+            if formatted != text:
+                self.txt_key.setText(formatted)
+                self.txt_key.setCursorPosition(len(formatted))
+        finally:
+            self._formatting = False
+
+    def copy_hwid(self):
+        QApplication.clipboard().setText(self.txt_hwid.text())
+        self.btn_copy_hwid.setText("Copied!")
+        QTimer.singleShot(1500, lambda: self.btn_copy_hwid.setText("Copy HWID"))
+
+    def refresh_status(self):
+        import license_manager
+        import datetime
+        self.active_license = license_manager.get_active_license()
+        self.is_license_active = bool(self.active_license and self.active_license.get('company'))
+        
+        if self.is_license_active:
+            company = self.active_license.get('company', 'Unknown').strip()
+            expiry = float(self.active_license.get('expiry_ts', 0))
+            expiry_str = datetime.datetime.fromtimestamp(expiry).strftime('%d %B %Y, %I:%M %p')
+            self.lbl_license_status.setText("Status: ● ACTIVATED")
+            self.lbl_license_status.setStyleSheet("color: #00ff41; font-size: 12px; font-weight: bold;")
+            self.lbl_license_details.setText(f"License Holder: {company}  |  Valid until: {expiry_str}")
+            
+            self.txt_name.setText(company)
+            self.txt_name.setReadOnly(True)
+            self.lbl_name_hint.setText("● Synced with Active License Key (Read-Only)")
+            self.lbl_name_hint.setStyleSheet("color: #00ff88; font-size: 10px; font-weight: bold;")
+            self.btn_clear_license.setEnabled(True)
+        else:
+            from programmer_guard import is_programmer_connected
+            prog_conn = is_programmer_connected()
+            if prog_conn:
+                self.lbl_license_status.setText("Status: ● DEVICE CONNECTED")
+                self.lbl_license_status.setStyleSheet("color: #00ff88; font-size: 12px; font-weight: bold;")
+                self.lbl_license_details.setText("Hardware device is detected & active.")
+            else:
+                self.lbl_license_status.setText("Status: ○ NOT ACTIVATED")
+                self.lbl_license_status.setStyleSheet("color: #ff5252; font-size: 12px; font-weight: bold;")
+                self.lbl_license_details.setText("Enter a 25-character product key to activate without a programmer device.")
+                
+            custom_name = self.settings.value("user_profile_name", "R1 AI LAB").strip()
+            self.txt_name.setText(custom_name)
+            self.txt_name.setReadOnly(False)
+            self.txt_name.setPlaceholderText("Enter custom organization name...")
+            self.lbl_name_hint.setText("Custom Name Mode (Hardware Device / Free Edit)")
+            self.lbl_name_hint.setStyleSheet("color: #38bdf8; font-size: 10px;")
+            self.btn_clear_license.setEnabled(False)
+
+    def do_activate(self):
+        import license_manager
+        key = self.txt_key.text().strip()
+        if not key:
+            QMessageBox.warning(self, "Missing Key", "Please enter a valid product key to activate.")
+            return
+            
+        self.lbl_license_status.setText("Verifying online...")
+        self.lbl_license_status.setStyleSheet("color: #ffd600; font-size: 12px; font-weight: bold;")
+        QApplication.processEvents()
+        
+        success, msg = license_manager.verify_and_activate(key)
+        if success:
+            QMessageBox.information(self, "Activation Successful", msg)
+            self.txt_key.clear()
+            self.refresh_status()
+            if self.parent():
+                if hasattr(self.parent(), 'update_programmer_status'):
+                    self.parent().update_programmer_status(True)
+                if hasattr(self.parent(), 'update_avatar_display'):
+                    self.parent().update_avatar_display()
+        else:
+            QMessageBox.critical(self, "Activation Failed", msg)
+            self.refresh_status()
+
+    def do_clear_license(self):
+        reply = QMessageBox.question(
+            self, "Clear License",
+            "Are you sure you want to deactivate and remove the active license key from this machine?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        if reply == QMessageBox.StandardButton.Yes:
+            import license_manager
+            license_manager.clear_cache()
+            self.refresh_status()
+            if self.parent():
+                from programmer_guard import is_programmer_connected
+                if hasattr(self.parent(), 'update_programmer_status'):
+                    self.parent().update_programmer_status(is_programmer_connected())
+                if hasattr(self.parent(), 'update_avatar_display'):
+                    self.parent().update_avatar_display()
+            QMessageBox.information(self, "License Removed", "License key removed successfully.")
+
+    def _load_current_avatar(self):
+        default_logo = os.path.join(str(get_app_root()), "assets", "R1AILAB.png")
+        if not os.path.exists(default_logo):
+            default_logo = os.path.join(os.getcwd(), "assets", "R1AILAB.png")
+            
+        pix = QPixmap()
+        if not self.avatar_is_reset and self.selected_avatar_path and os.path.exists(self.selected_avatar_path):
+            pix.load(self.selected_avatar_path)
+            
+        if pix.isNull() and os.path.exists(default_logo):
+            pix.load(default_logo)
+            
+        self.preview_avatar.set_avatar(pix)
+
+    def _browse_image(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "Select Profile / Logo Image",
+            "",
+            "Image Files (*.png *.jpg *.jpeg *.bmp *.ico *.webp);;All Files (*)"
+        )
+        if file_path and os.path.exists(file_path):
+            self.selected_avatar_path = file_path
+            self.avatar_is_reset = False
+            self._load_current_avatar()
+
+    def _reset_image(self):
+        self.selected_avatar_path = ""
+        self.avatar_is_reset = True
+        self._load_current_avatar()
+
+    def _save_changes(self):
+        if self.avatar_is_reset:
+            self.settings.setValue("user_profile_avatar_path", "")
+        elif self.selected_avatar_path and os.path.exists(self.selected_avatar_path):
+            self.settings.setValue("user_profile_avatar_path", self.selected_avatar_path)
+            
+        if not self.is_license_active:
+            new_name = self.txt_name.text().strip()
+            if new_name:
+                self.settings.setValue("user_profile_name", new_name)
+                
+        if self.parent() and hasattr(self.parent(), 'update_avatar_display'):
+            self.parent().update_avatar_display()
+            
+        self.accept()
+
+
 class DmiSerialLabel(QLabel):
     """
     Interactive DMI Serial Label:
@@ -4969,10 +5477,84 @@ class BiosServiceTool(QMainWindow):
     def setup_dmi_panel(self, parent_widget):
         layout = QVBoxLayout(parent_widget)
         layout.setContentsMargins(5, 0, 5, 0)
+        layout.setSpacing(6)
         
-        # Title
+        # ── 1. USER PROFILE SECTION (AT THE TOP) ──────────────────────────
+        profile_title = QLabel("PROFILE")
+        profile_title.setStyleSheet("font-weight: bold; font-family: 'Segoe UI', sans-serif; font-size: 12px; color: #4cd3e3; letter-spacing: 1px; margin-bottom: 2px;")
+        layout.addWidget(profile_title)
+        
+        self.profile_group = QGroupBox()
+        self.profile_group.setObjectName("UserProfileGroup")
+        self.profile_group.setStyleSheet("""
+            QGroupBox#UserProfileGroup {
+                border: 1px solid #283038;
+                border-radius: 8px;
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #22272b, stop:1 #191c1f);
+            }
+            QGroupBox#UserProfileGroup:hover {
+                border: 1px solid #384554;
+            }
+        """)
+        self.profile_group.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.profile_group.customContextMenuRequested.connect(self._show_profile_context_menu)
+        
+        profile_vbox = QVBoxLayout(self.profile_group)
+        profile_vbox.setContentsMargins(10, 10, 10, 10)
+        profile_vbox.setSpacing(5)
+        profile_vbox.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        # 1. Logo on top (centered)
+        avatar_box = QHBoxLayout()
+        avatar_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.avatar_label = CircularAvatarLabel(self)
+        self.avatar_label.setFixedSize(60, 60)
+        self.avatar_label.setToolTip("Click or Right-Click to Manage Profile & License")
+        self.avatar_label.clicked.connect(self.open_profile_edit_dialog)
+        self.avatar_label.right_clicked.connect(self.open_profile_edit_dialog)
+        avatar_box.addWidget(self.avatar_label)
+        profile_vbox.addLayout(avatar_box)
+        
+        # 2. Organization Name directly underneath Logo
+        self.lbl_profile_name = QLabel("R1 AI LAB")
+        self.lbl_profile_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.lbl_profile_name.setStyleSheet("color: #ffffff; font-family: 'Segoe UI', sans-serif; font-size: 13px; font-weight: 700; margin-top: 2px;")
+        self.lbl_profile_name.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.lbl_profile_name.setToolTip("Click to Manage Profile & License")
+        self.lbl_profile_name.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.lbl_profile_name.customContextMenuRequested.connect(self._show_profile_context_menu)
+        self.lbl_profile_name.mousePressEvent = lambda e: self.open_profile_edit_dialog()
+        profile_vbox.addWidget(self.lbl_profile_name)
+        
+        # 3. Active License / Programmer Status Badge
+        prog_status_layout = QHBoxLayout()
+        prog_status_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        prog_status_layout.setContentsMargins(0, 2, 0, 0)
+        prog_status_layout.setSpacing(6)
+        
+        self.programmer_dot = QLabel("●")
+        self.programmer_dot.setStyleSheet("color: #ff5252; font-size: 13px; padding: 0 1px;")
+        self.programmer_dot.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.programmer_dot.setToolTip("Click to Manage Profile & License")
+        self.programmer_dot.mousePressEvent = lambda e: self.open_profile_edit_dialog()
+        prog_status_layout.addWidget(self.programmer_dot)
+        
+        self.programmer_status_label = QLabel("DEVICE DISCONNECTED")
+        self.programmer_status_label.setCursor(Qt.PointingHandCursor)
+        self.programmer_status_label.setToolTip("Click to Manage Profile & License")
+        self.programmer_status_label.mousePressEvent = lambda e: self.open_profile_edit_dialog()
+        self.programmer_status_label.setStyleSheet(
+            "background: #2a1c1d; color: #ff5252; font-size: 10px; font-weight: bold; font-family: 'Segoe UI', sans-serif; "
+            "border: 1px solid #4a2123; border-radius: 6px; padding: 2px 8px;"
+        )
+        prog_status_layout.addWidget(self.programmer_status_label)
+        profile_vbox.addLayout(prog_status_layout)
+        
+        layout.addWidget(self.profile_group)
+
+        # ── 2. DMI INFORMATION SECTION (BELOW PROFILE) ───────────────────
         title_label = QLabel("DMI INFORMATION")
-        title_label.setStyleSheet("font-weight: bold; font-family: 'Segoe UI', sans-serif; font-size: 12px; color: #4cd3e3; letter-spacing: 1px; margin-bottom: 6px;")
+        title_label.setStyleSheet("font-weight: bold; font-family: 'Segoe UI', sans-serif; font-size: 12px; color: #4cd3e3; letter-spacing: 1px; margin-top: 6px; margin-bottom: 2px;")
         layout.addWidget(title_label)
         
         # Group Box
@@ -4986,8 +5568,8 @@ class BiosServiceTool(QMainWindow):
         """)
         
         form_layout = QFormLayout(dmi_group)
-        form_layout.setContentsMargins(12, 14, 12, 14)
-        form_layout.setSpacing(10)
+        form_layout.setContentsMargins(12, 12, 12, 12)
+        form_layout.setSpacing(8)
         
         # Helper to create styled labels
         def create_value_label():
@@ -5020,7 +5602,7 @@ class BiosServiceTool(QMainWindow):
         # DMI Action Buttons (SAVE, LOAD, APPLY)
         dmi_btn_layout = QVBoxLayout()
         dmi_btn_layout.setSpacing(6)
-        dmi_btn_layout.setContentsMargins(0, 8, 0, 4)
+        dmi_btn_layout.setContentsMargins(0, 6, 0, 2)
         
         row_save_load = QHBoxLayout()
         row_save_load.setSpacing(6)
@@ -5111,37 +5693,93 @@ class BiosServiceTool(QMainWindow):
         layout.addLayout(dmi_btn_layout)
         
         # Recent Files button below DMI info
-        from PySide6.QtWidgets import QMenu
         self.btn_recent_files = QPushButton("Recent Files ▾")
         self.btn_recent_files.setStyleSheet(
             "background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #252a2e, stop:1 #1c2024); color: #c8d6e0; border: 1px solid #333d47;"
-            "border-radius: 6px; padding: 6px 12px; font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; margin-top: 8px;"
+            "border-radius: 6px; padding: 6px 12px; font-family: 'Segoe UI', sans-serif; font-size: 11px; font-weight: 600; margin-top: 6px;"
         )
         self.btn_recent_files.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_recent_files.clicked.connect(self._show_recent_files_menu)
         layout.addWidget(self.btn_recent_files)
         
-        # Programmer Status Indicator
-        prog_status_layout = QHBoxLayout()
-        prog_status_layout.setContentsMargins(0, 10, 0, 0)
-        
-        self.programmer_dot = QLabel("●")
-        self.programmer_dot.setStyleSheet("color: #ff5252; font-size: 14px; padding: 0 2px;")
-        prog_status_layout.addWidget(self.programmer_dot)
-        
-        self.programmer_status_label = QLabel("PROGRAMMER: DISCONNECTED")
-        self.programmer_status_label.setCursor(Qt.PointingHandCursor)
-        self.programmer_status_label.mousePressEvent = self.show_license_menu
-        self.programmer_status_label.setStyleSheet(
-            "background: #2a1c1d; color: #ff5252; font-size: 10px; font-weight: bold; font-family: 'Segoe UI', sans-serif; "
-            "border: 1px solid #4a2123; border-radius: 6px; padding: 2px 8px;"
-        )
-        prog_status_layout.addWidget(self.programmer_status_label)
-        prog_status_layout.addStretch()
-        
-        layout.addLayout(prog_status_layout)
-        
         layout.addStretch()
+        
+        # Initialize Profile Avatar display
+        self.update_avatar_display()
+
+    def update_avatar_display(self):
+        """Loads and applies the avatar image and organization name from settings or active license."""
+        from PySide6.QtCore import QSettings
+        settings = QSettings("R1AILAB", "BIOS_TOOL")
+        
+        # 1. Avatar Image
+        custom_path = settings.value("user_profile_avatar_path", "")
+        default_logo = os.path.join(str(get_app_root()), "assets", "R1AILAB.png")
+        if not os.path.exists(default_logo):
+            default_logo = os.path.join(os.getcwd(), "assets", "R1AILAB.png")
+            
+        pix = QPixmap()
+        if custom_path and os.path.exists(custom_path):
+            pix.load(custom_path)
+            
+        if pix.isNull() and os.path.exists(default_logo):
+            pix.load(default_logo)
+            
+        if hasattr(self, 'avatar_label'):
+            self.avatar_label.set_avatar(pix)
+            
+        # 2. Organization Name resolution (License Key vs Hardware Device)
+        try:
+            import license_manager
+            active_license = license_manager.get_active_license()
+        except Exception:
+            active_license = None
+            
+        if active_license and active_license.get('company'):
+            # Enforce registered company name if active via license
+            user_name = active_license['company'].strip()
+        else:
+            # Active via Hardware Programmer Device or custom mode
+            user_name = settings.value("user_profile_name", "").strip()
+            if not user_name:
+                user_name = "R1 AI LAB"
+                
+        if hasattr(self, 'lbl_profile_name'):
+            self.lbl_profile_name.setText(user_name)
+
+    def open_profile_edit_dialog(self):
+        """Opens the sleek Profile Edit Dialog."""
+        dialog = ProfileEditDialog(self)
+        if dialog.exec():
+            self.update_avatar_display()
+            self.log_to_terminal("[SUCCESS] Profile configuration updated successfully.")
+
+    def _show_profile_context_menu(self, pos=None):
+        """Displays context menu when right-clicking on Profile avatar or section."""
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #1a222d;
+                color: #e2e8f0;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                padding: 4px;
+                font-family: 'Segoe UI', sans-serif;
+                font-size: 11px;
+            }
+            QMenu::item {
+                padding: 6px 20px 6px 12px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #0284c7;
+                color: #ffffff;
+            }
+        """)
+        action_manage = menu.addAction("⚙ Manage Profile & License...")
+        selected = menu.exec(QCursor.pos())
+        if selected == action_manage:
+            self.open_profile_edit_dialog()
 
     def _set_dmi_label(self, lbl, value):
         """Update a DMI label: cyan+bold if real value, grey if N/A."""
@@ -8282,37 +8920,8 @@ class BiosServiceTool(QMainWindow):
 
         dlg.exec()
 
-    def show_license_menu(self, event):
-        from PySide6.QtWidgets import QMenu
-        from PySide6.QtGui import QCursor
-        
-        menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #2b2b2b;
-                color: #ffffff;
-                border: 1px solid #444;
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 12px;
-            }
-            QMenu::item {
-                padding: 8px 20px;
-            }
-            QMenu::item:selected {
-                background-color: #00ff41;
-                color: #000;
-            }
-        """)
-        
-        action_license = menu.addAction("🔑 Manage License Key")
-        action = menu.exec(QCursor.pos())
-        
-        if action == action_license:
-            dialog = LicenseKeyDialog(self)
-            dialog.exec()
-            # Re-check status after dialog closes
-            from programmer_guard import is_programmer_connected
-            self.update_programmer_status(is_programmer_connected())
+    def show_license_menu(self, event=None):
+        self.open_profile_edit_dialog()
 
     @Slot(bool)
     def update_programmer_status(self, connected: bool):
@@ -8323,17 +8932,18 @@ class BiosServiceTool(QMainWindow):
         if active_license:
             self._programmer_connected = True
             self.programmer_dot.setStyleSheet(
-                "color: #00ff88; font-size: 14px; padding: 0 2px;"
+                "color: #00ff88; font-size: 13px; padding: 0 1px;"
             )
             company = active_license.get('company', 'Unknown')
             # Truncate company name if too long to prevent pushing UI
-            if len(company) > 15:
-                company = company[:12] + "..."
-            self.programmer_status_label.setText(f"LICENSE ACTIVE: {company}")
+            display_company = company if len(company) <= 15 else company[:12] + "..."
+            self.programmer_status_label.setText(f"LICENSE ACTIVE: {display_company}")
             self.programmer_status_label.setStyleSheet(
                 "background: #1c2524; color: #4cd3e3; font-size: 10px; font-weight: bold; font-family: 'Segoe UI', sans-serif; "
                 "border: 1px solid #1f4a56; border-radius: 6px; padding: 2px 8px;"
             )
+            if hasattr(self, 'lbl_profile_name'):
+                self.lbl_profile_name.setText(company)
             if hasattr(self, 'top_toolbar'):
                 self.top_toolbar.setEnabled(True)
             return
@@ -8342,24 +8952,34 @@ class BiosServiceTool(QMainWindow):
 
         if connected:
             self.programmer_dot.setStyleSheet(
-                "color: #00ff88; font-size: 14px; padding: 0 2px;"
+                "color: #00ff88; font-size: 13px; padding: 0 1px;"
             )
-            self.programmer_status_label.setText("PROGRAMMER: CONNECTED")
+            self.programmer_status_label.setText("DEVICE CONNECTED")
             self.programmer_status_label.setStyleSheet(
                 "background: #1c2524; color: #00ff88; font-size: 10px; font-weight: bold; font-family: 'Segoe UI', sans-serif; "
                 "border: 1px solid #1f4a3c; border-radius: 6px; padding: 2px 8px;"
             )
+            from PySide6.QtCore import QSettings
+            settings = QSettings("R1AILAB", "BIOS_TOOL")
+            dev_name = settings.value("user_profile_name", "R1 AI LAB")
+            if hasattr(self, 'lbl_profile_name'):
+                self.lbl_profile_name.setText(dev_name)
             if hasattr(self, 'top_toolbar'):
                 self.top_toolbar.setEnabled(True)
         else:
             self.programmer_dot.setStyleSheet(
-                "color: #ff5252; font-size: 14px; padding: 0 2px;"
+                "color: #ff5252; font-size: 13px; padding: 0 1px;"
             )
-            self.programmer_status_label.setText("PROGRAMMER: DISCONNECTED")
+            self.programmer_status_label.setText("DEVICE DISCONNECTED")
             self.programmer_status_label.setStyleSheet(
                 "background: #2a1c1d; color: #ff5252; font-size: 10px; font-weight: bold; font-family: 'Segoe UI', sans-serif; "
                 "border: 1px solid #4a2123; border-radius: 6px; padding: 2px 8px;"
             )
+            from PySide6.QtCore import QSettings
+            settings = QSettings("R1AILAB", "BIOS_TOOL")
+            dev_name = settings.value("user_profile_name", "R1 AI LAB")
+            if hasattr(self, 'lbl_profile_name'):
+                self.lbl_profile_name.setText(dev_name)
             if hasattr(self, 'top_toolbar'):
                 self.top_toolbar.setEnabled(False)
 
