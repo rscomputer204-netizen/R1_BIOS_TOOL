@@ -9027,6 +9027,14 @@ class BiosServiceTool(QMainWindow):
                 self.last_directory = fp_dir
         except Exception:
             pass
+
+        # Clean up any leftover rogue disassembled.txt in the source folder
+        try:
+            rogue_txt = str(file_path) + "_disassembled.txt"
+            if os.path.exists(rogue_txt):
+                os.remove(rogue_txt)
+        except Exception:
+            pass
         self.reset_stage = 0
         self.terminal.clear()
         self.mea_history = ""

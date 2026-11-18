@@ -489,15 +489,11 @@ def main():
     elif not options.disasm is None:
         with open(options.disasm, 'rb') as f:
             binary = f.read()
-        
 
         script = BigScript(code_bytes=binary)
-        out_file = options.disasm + '_disassembled.txt'
-        with open(out_file, 'w') as f:
-            f.write(script.to_string())
 
         if script.instructions:
-            print('SUCCESS: disassembled code written to ' + out_file)
+            print(script.to_string())
         else:
             print('INFO: No BIOS Guard script detected in this file.')
         return 0

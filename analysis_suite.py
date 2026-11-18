@@ -130,7 +130,15 @@ class AnalysisSuite:
             terminal_callback("--- PHASE 3: INTEL BIOS GUARD ANALYSIS ---")
             terminal_callback("="*50)
         # Note: big_script_tool.py requires -d and does NOT support Platomav flags
-        return AnalysisSuite._run_script(script, "", terminal_callback, extra_args=["-d", file_path], use_platomav_flags=False)
+        result = AnalysisSuite._run_script(script, "", terminal_callback, extra_args=["-d", file_path], use_platomav_flags=False)
+        # Ensure no rogue _disassembled.txt remains in the user's directory
+        try:
+            rogue_txt = file_path + "_disassembled.txt"
+            if os.path.exists(rogue_txt):
+                os.remove(rogue_txt)
+        except Exception:
+            pass
+        return result
 
     @staticmethod
     def run_microcode_analyzer(file_path: str, terminal_callback):
