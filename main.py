@@ -706,7 +706,7 @@ class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Settings - Engine & Display")
-        self.setFixedSize(450, 340)
+        self.setFixedSize(460, 440)
         self.setStyleSheet("""
             QDialog {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #1a222d, stop:1 #111720);
@@ -784,6 +784,33 @@ class SettingsDialog(QDialog):
         eg_layout.addWidget(lbl_hybrid_desc)
         layout.addWidget(engine_group)
         
+        # --- Auto Verify Group (অটো ভেরিফাই) ---
+        verify_group = QGroupBox("Auto Verify")
+        vg_layout = QVBoxLayout(verify_group)
+        vg_layout.setSpacing(6)
+        
+        self.cb_verify_me = QCheckBox("ME Clean Auto Verify (Smart ME Fix)")
+        self.cb_verify_me.setToolTip("Automatically reload and analyze firmware within 2 seconds after ME Clean.")
+        self.cb_verify_me.setStyleSheet("""
+            QCheckBox { color: #e2e8f0; font-size: 12px; font-weight: 600; }
+            QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #283038; border-radius: 4px; background: #14171a; }
+            QCheckBox::indicator:checked { background: #00d2ff; border-color: #0ef6fd; }
+        """)
+        self.cb_verify_me.setChecked(self.settings.value("auto_verify_me", True, type=bool))
+        
+        self.cb_verify_bios_rg = QCheckBox("BIOS Region Clean Auto Verify (ALL RG / BIOS RG)")
+        self.cb_verify_bios_rg.setToolTip("Automatically reload and analyze firmware within 2 seconds after BIOS Region Clean.")
+        self.cb_verify_bios_rg.setStyleSheet("""
+            QCheckBox { color: #e2e8f0; font-size: 12px; font-weight: 600; }
+            QCheckBox::indicator { width: 16px; height: 16px; border: 1px solid #283038; border-radius: 4px; background: #14171a; }
+            QCheckBox::indicator:checked { background: #00d2ff; border-color: #0ef6fd; }
+        """)
+        self.cb_verify_bios_rg.setChecked(self.settings.value("auto_verify_bios_rg", True, type=bool))
+        
+        vg_layout.addWidget(self.cb_verify_me)
+        vg_layout.addWidget(self.cb_verify_bios_rg)
+        layout.addWidget(verify_group)
+        
         # --- Display & Scanner Settings ---
         self.cb_detach_hex = QCheckBox("Show Hex Viewer (Floating)")
         self.cb_detach_hex.setStyleSheet("""
@@ -841,6 +868,8 @@ class SettingsDialog(QDialog):
         settings.setValue("detached_hex_viewer", self.cb_detach_hex.isChecked())
         mode = "hybrid" if self.rb_hybrid.isChecked() else "analog"
         settings.setValue("repair_engine_mode", mode)
+        settings.setValue("auto_verify_me", self.cb_verify_me.isChecked())
+        settings.setValue("auto_verify_bios_rg", self.cb_verify_bios_rg.isChecked())
         super().accept()
 
     def open_report_settings(self):
@@ -6815,12 +6844,29 @@ class BiosServiceTool(QMainWindow):
                 else:
                     self.log_to_terminal(f"[SUCCESS] Saved successfully. ✅")
                 self.log_to_terminal(f"[INFO] File: {os.path.basename(save_path)}")
+
+                # --- AUTO-RELOAD SAVED FILE (AUTO VERIFY FOR BIOS REGION) ---
+                from PySide6.QtCore import QSettings
+                settings = QSettings("R1AILAB", "BIOS_TOOL")
+                if settings.value("auto_verify_bios_rg", True, type=bool):
+                    self.log_to_terminal("[INFO] Auto Verify enabled: Automatically reloading the saved file after 2 seconds for verification...")
+                    QMetaObject.invokeMethod(self, "_trigger_rg_reload", Qt.ConnectionType.QueuedConnection, Q_ARG(str, str(save_path)))
+                else:
+                    self.log_to_terminal("[INFO] Auto Verify is disabled in Settings. File will not be automatically reloaded.")
             except Exception as e:
                 self.log_to_terminal(f"[ERROR] Failed to save: {str(e)}")
             finally:
                 QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
 
         threading.Thread(target=_do_save, daemon=True).start()
+
+    @Slot(str)
+    def _trigger_rg_reload(self, saved_path):
+        """Reloads and fully analyzes the saved file after 2 seconds for BIOS Region Auto Verify."""
+        self._rg_reload_timer = QTimer(self)
+        self._rg_reload_timer.setSingleShot(True)
+        self._rg_reload_timer.timeout.connect(lambda: self.load_bios_file(saved_path))
+        self._rg_reload_timer.start(2000)
 
     def unlock_bios(self):
         self.is_task_running = True
@@ -8671,13 +8717,18 @@ class BiosServiceTool(QMainWindow):
                     f.write(self.hex_model.get_data())
                 self.log_to_terminal(f"[SUCCESS] Changes saved successfully to: {os.path.basename(reply[0])}")
                 
-                # --- AUTO-RELOAD SAVED FILE ---
-                self.log_to_terminal("[INFO] Automatically reloading the saved file after 2 seconds for verification...")
-                saved_path = str(reply[0])
-                self._reload_timer = QTimer(self)
-                self._reload_timer.setSingleShot(True)
-                self._reload_timer.timeout.connect(lambda: self.load_bios_file(saved_path))
-                self._reload_timer.start(2000)
+                # --- AUTO-RELOAD SAVED FILE (AUTO VERIFY) ---
+                from PySide6.QtCore import QSettings
+                settings = QSettings("R1AILAB", "BIOS_TOOL")
+                if settings.value("auto_verify_me", True, type=bool):
+                    self.log_to_terminal("[INFO] Auto Verify enabled: Automatically reloading the saved file after 2 seconds for verification...")
+                    saved_path = str(reply[0])
+                    self._reload_timer = QTimer(self)
+                    self._reload_timer.setSingleShot(True)
+                    self._reload_timer.timeout.connect(lambda: self.load_bios_file(saved_path))
+                    self._reload_timer.start(2000)
+                else:
+                    self.log_to_terminal("[INFO] Auto Verify is disabled in Settings. File will not be automatically reloaded.")
         except Exception as e:
             self.log_to_terminal(f"[ERROR] Failed to save changes: {str(e)}")
         finally:
