@@ -139,7 +139,15 @@ def delete_dirs(in_path: str) -> None:
     """ Delete folder(s), if present """
 
     if is_dir(in_path=in_path):
-        shutil.rmtree(in_path, onerror=clear_readonly_callback)  # pylint: disable=deprecated-argument
+        try:
+            shutil.rmtree(in_path, onerror=clear_readonly_callback)  # pylint: disable=deprecated-argument
+        except Exception:
+            try:
+                import time
+                time.sleep(0.05)
+                shutil.rmtree(in_path, ignore_errors=True)
+            except Exception:
+                pass
 
 
 def delete_file(in_path: str) -> None:

@@ -7756,9 +7756,18 @@ class BiosServiceTool(QMainWindow):
 
         def _extract_and_match():
             try:
-                # Step 1: Extract (Exact same extraction pipeline as BIOS RG .EXE)
+                # Step 1: Decompile Backup BIOS first using Intel Flash Image Tool (FIT)
+                from all_rg_clean_engine import decompile_backup_bios_with_fit, match_official_components
+                self.progress_signal.emit(15)
+                self.log_to_terminal("[ACTION] Step 1: Running Intel FIT Decompile on Backup BIOS...")
+                decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
+                self._pending_decomp_ctx = decomp_ctx
+                self.progress_signal.emit(35)
+
+                # Step 2: Extract Official Vendor Package
+                self.log_to_terminal(f"[ACTION] Step 2: Extracting Official Package: {os.path.basename(exe_path)}")
                 dest_dir = extract_bios_package(exe_path, log_callback=self.log_to_terminal)
-                self.progress_signal.emit(30)
+                self.progress_signal.emit(50)
 
                 self.log_to_terminal("Reading Extracted Files...")
                 extracted_files = list_extracted_files(dest_dir, log_callback=self.log_to_terminal)
@@ -7767,8 +7776,8 @@ class BiosServiceTool(QMainWindow):
                     QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1000))
                     return
 
-                self.progress_signal.emit(40)
-                self.log_to_terminal("Analyzing and Matching Regions...")
+                self.progress_signal.emit(60)
+                self.log_to_terminal("Analyzing and Matching Regions via Topper & Footer...")
                 matches = match_official_components(self.current_bios_file, extracted_files, log_cb=self.log_to_terminal)
                 if not matches:
                     self.log_to_terminal("[ERROR] No matching regions found between backup dump and official update.")
@@ -7800,11 +7809,11 @@ class BiosServiceTool(QMainWindow):
 
     def _execute_all_rg_clean_thread(self, matches):
         self._handle_loading_state(True, "Applying ALL RG CLEAN...")
-        self.progress_signal.emit(60)
+        self.progress_signal.emit(70)
 
         def _worker():
             try:
-                from all_rg_clean_engine import perform_all_rg_clean
+                from all_rg_clean_engine import perform_all_rg_clean_with_fit, decompile_backup_bios_with_fit
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
                 out_name = f"ALL_RG_CLEAN_{timestamp}_{orig_base}.bin"
@@ -7812,7 +7821,11 @@ class BiosServiceTool(QMainWindow):
                 os.makedirs(out_dir, exist_ok=True)
                 out_path = os.path.join(out_dir, out_name)
 
-                res = perform_all_rg_clean(self.current_bios_file, matches, out_path, log_cb=self.log_to_terminal)
+                decomp_ctx = getattr(self, "_pending_decomp_ctx", None)
+                if not decomp_ctx:
+                    decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
+
+                res = perform_all_rg_clean_with_fit(decomp_ctx, matches, out_path, log_cb=self.log_to_terminal)
                 if res and res.get("success"):
                     self.progress_signal.emit(100)
                     self.current_bios_file = out_path
@@ -7820,7 +7833,7 @@ class BiosServiceTool(QMainWindow):
                         data = f.read()
                         self.hex_data_signal.emit(data)
 
-                    self.log_to_terminal(f"\n[SUCCESS] ALL RG CLEAN FINISHED SUCCESSFULLY!")
+                    self.log_to_terminal(f"\n[SUCCESS] [OK] ALL RG CLEAN FINISHED SUCCESSFULLY!")
                     self.log_to_terminal(f"Saved: {out_path}\n")
                     self.trigger_rg_save_dialog.emit(out_name)
                 else:
@@ -8047,9 +8060,18 @@ class BiosServiceTool(QMainWindow):
 
         def _run_pipeline():
             try:
-                # Step 1: Extract
+                # Step 1: Decompile Backup BIOS first using Intel Flash Image Tool (FIT)
+                from all_rg_clean_engine import decompile_backup_bios_with_fit
+                self.progress_signal.emit(15)
+                self.log_to_terminal("[ACTION] Step 1: Running Intel FIT Decompile on Backup BIOS...")
+                decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
+                self._pending_decomp_ctx = decomp_ctx
+                self.progress_signal.emit(35)
+
+                # Step 2: Extract Official Vendor Package
+                self.log_to_terminal(f"[ACTION] Step 2: Extracting Official Package: {os.path.basename(exe_path)}")
                 dest_dir = extract_bios_package(exe_path, log_callback=self.log_to_terminal)
-                self.progress_signal.emit(30)
+                self.progress_signal.emit(50)
                 
                 self.log_to_terminal("Reading Extracted Files...")
                 extracted_files = list_extracted_files(dest_dir, log_callback=self.log_to_terminal)
@@ -8058,7 +8080,7 @@ class BiosServiceTool(QMainWindow):
                     self.log_to_terminal("[ERROR] No files were extracted. Unsupported package.")
                     return
                 
-                self.progress_signal.emit(40)
+                self.progress_signal.emit(60)
                 self.log_to_terminal("Waiting For User Selection...")
                 
                 # Use a proper Signal to send the file list safely to the main thread.
@@ -8083,83 +8105,60 @@ class BiosServiceTool(QMainWindow):
         selected_candidate = dialog.selected_file
         self.log_to_terminal(f"[INFO] User Selected: {os.path.basename(selected_candidate)}")
         self._handle_loading_state(True, "Validating Region...")
-        
-        # Determine target size
-        if not hasattr(self, 'current_regions_map') or "bios" not in self.current_regions_map:
-            # Fallback to older nomenclature or error
-            if "bios_region" in self.current_regions_map:
-                region_info = self.current_regions_map["bios_region"]
-            else:
-                self.log_to_terminal("[ERROR] BIOS Region not found in current map.")
-                self.initiate_loader_stop(0)
-                return
-        else:
-            region_info = self.current_regions_map["bios"]
-            
-        target_offset = region_info["offset"]
-        target_size = region_info["size"]
-        
-        # Read Old BIOS Region from currently loaded file
-        old_bios_region = None
-        try:
-            with open(self.current_bios_file, "rb") as bf:
-                bf.seek(target_offset)
-                old_bios_region = bf.read(target_size)
-        except Exception as rf_e:
-            self.log_to_terminal(f"[WARNING] Could not read old BIOS region: {rf_e}")
 
         def _run_validation_and_replace():
-            from rg_engine.validator import validate_and_trim
-            from rg_engine.replacer import replace_bios_region
-            import time
-            
+            from all_rg_clean_engine import perform_bios_rg_exe_with_fit, decompile_backup_bios_with_fit
             try:
-                # Step 2: Validate and Trim
-                self.progress_signal.emit(50)
-                valid_data, head_rem, foot_rem = validate_and_trim(
-                    selected_candidate, 
-                    target_size, 
-                    old_bios_region=old_bios_region,
-                    log_callback=self.log_to_terminal
-                )
-                
-                if not valid_data:
-                    self.log_to_terminal("[ERROR] Validation Failed: Selected candidate rejected (Header/Footer mismatch). Operation Stopped.")
-                    return
-                
+                decomp_ctx = getattr(self, "_pending_decomp_ctx", None)
+                if not decomp_ctx:
+                    decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
+
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
+                out_name = f"BIOS_RG_EXE_{timestamp}_{orig_base}.bin"
+                out_dir = os.path.join(str(get_app_root()), "REPAIRED_BIOS")
+                os.makedirs(out_dir, exist_ok=True)
+                out_path = os.path.join(out_dir, out_name)
+
                 self.progress_signal.emit(70)
-                
-                # Step 3: Replace
-                report = replace_bios_region(self.current_bios_file, valid_data, target_offset, target_size, log_callback=self.log_to_terminal)
-                
+                res = perform_bios_rg_exe_with_fit(decomp_ctx, selected_candidate, out_path, log_cb=self.log_to_terminal)
+
+                if not res or not res.get("success"):
+                    self.log_to_terminal("[ERROR] BIOS RG .EXE replacement failed.")
+                    return
+
                 self.progress_signal.emit(100)
-                
+                head_rem = res.get("head_removed", 0)
+                foot_rem = res.get("foot_removed", 0)
+
                 # Report
                 self.log_to_terminal("\n--- BIOS RG FIX REPORT ---")
-                self.log_to_terminal(f"Original Region Size: {target_size} bytes")
                 self.log_to_terminal(f"Header Removed:       {head_rem} bytes")
                 self.log_to_terminal(f"Footer Removed:       {foot_rem} bytes")
-                self.log_to_terminal(f"Backup File:          {os.path.basename(report['backup_path'])}")
-                self.log_to_terminal("Status:               SUCCESS")
+                self.log_to_terminal(f"Saved:                {os.path.basename(out_path)}")
+                self.log_to_terminal("Status:               SUCCESS [OK]")
                 self.log_to_terminal("--------------------------\n")
                 
                 # Reload Hex View
-                with open(self.current_bios_file, "rb") as f:
+                self.current_bios_file = out_path
+                with open(out_path, "rb") as f:
                     data = f.read()
                     self.hex_data_signal.emit(data)
-                
-                # Build suggested save name: {original_name}_RG_cline.bin
-                orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
-                suggested_name = f"{orig_base}_RG_cline.bin"
-                
-                # Emit signal to open Save dialog safely in main thread
-                self.trigger_rg_save_dialog.emit(suggested_name)
+
+                # Trigger Save As Dialog in workspace source folder
+                self.trigger_rg_save_dialog.emit(out_name)
+
+                # Run Auto-Verify on clean file if enabled
+                if hasattr(self, 'chk_auto_verify') and self.chk_auto_verify.isChecked():
+                    self.log_to_terminal("[AUTO-VERIFY] Initiating verification pass on newly generated build...")
+                    self.run_auto_verify_pass(out_path)
 
             except Exception as e:
-                self.log_to_terminal(f"[ERROR] Exception during validation/replace: {str(e)}")
+                self.log_to_terminal(f"[ERROR] Exception during BIOS RG replacement: {str(e)}")
             finally:
-                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
-                
+                self.is_task_running = False
+                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1000))
+
         threading.Thread(target=_run_validation_and_replace, daemon=True).start()
 
     def open_password_remove_dialog(self):

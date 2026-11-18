@@ -141,16 +141,27 @@ def parse_candidate_version(filename: str) -> str:
     return ""
 
 
+def safe_path(p: str) -> str:
+    """Returns extended-length path on Windows to avoid MAX_PATH (260) limitations."""
+    if not p:
+        return p
+    p_abs = os.path.abspath(p)
+    if os.name == 'nt' and not p_abs.startswith('\\\\?\\'):
+        return '\\\\?\\' + p_abs
+    return p_abs
+
+
 def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> dict:
     """
     Calculates matching score and recommendation metadata for a single candidate file.
     """
+    cand_path_safe = safe_path(cand_path)
     filename = os.path.basename(cand_path)
     base_name, ext = os.path.splitext(filename)
     ext = ext.lower()
     parent_dir = os.path.basename(os.path.dirname(cand_path))
     try:
-        size_bytes = os.path.getsize(cand_path)
+        size_bytes = os.path.getsize(cand_path_safe)
     except Exception:
         size_bytes = 0
 
@@ -165,6 +176,20 @@ def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> di
     matched_id = None
     reason = "No board identifier match found."
     is_match = False
+
+    # Check Reset Vector match against original dump
+    if orig_data and len(orig_data) >= 64 and size_bytes >= 64:
+        try:
+            with open(cand_path_safe, "rb") as cf:
+                cf.seek(size_bytes - 64)
+                cand_tail = cf.read(64)
+            if cand_tail == orig_data[-64:] or cand_tail[-16:] == orig_data[-16:]:
+                score = 100
+                is_match = True
+                matched_id = "Reset Vector Match"
+                reason = "Exact match with loaded BIOS Entry Point & Reset Vector."
+        except Exception:
+            pass
 
     primary_fam = board_info.get("primary_family")
     known_families = [f["family"] for f in board_info.get("board_families", [])]

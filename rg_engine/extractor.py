@@ -67,23 +67,40 @@ def extract_bios_package(exe_path, log_callback=print):
 
     return dest_dir
 
+def safe_path(p: str) -> str:
+    """Returns extended-length path on Windows to avoid MAX_PATH (260) limitations."""
+    if not p:
+        return p
+    p_abs = os.path.abspath(p)
+    if os.name == 'nt' and not p_abs.startswith('\\\\?\\'):
+        return '\\\\?\\' + p_abs
+    return p_abs
+
+
 def list_extracted_files(dest_dir, log_callback=print):
     """
-    Recursively scans dest_dir and returns ONLY files with BIOS-relevant extensions.
-    Filters out garbage files (txt, exe, dll, ini, log, xml, etc.).
+    Recursively scans dest_dir and returns ONLY .bin firmware files from official update.
+    Filters out any non-binary files (txt, exe, dll, ini, log, xml, etc.).
+    Uses safe extended-length paths on Windows.
     """
-    all_files = []
-    for root, dirs, files in os.walk(dest_dir):
+    bin_files = []
+    fallback_files = []
+    scan_dir = safe_path(dest_dir)
+
+    for root, dirs, files in os.walk(scan_dir):
         for f in files:
             full_path = os.path.join(root, f)
             ext = os.path.splitext(f)[1].lower()
-            if ext in BIOS_EXTENSIONS:
-                all_files.append(full_path)
-    
-    if not all_files:
-        log_callback("[WARNING] No BIOS firmware files found in extracted package.")
-        log_callback(f"[INFO] Expected extensions: {', '.join(sorted(BIOS_EXTENSIONS))}")
+            if ext == ".bin":
+                bin_files.append(full_path)
+            elif ext in (".rom", ".fd", ".cap"):
+                fallback_files.append(full_path)
+
+    selected_files = bin_files if bin_files else fallback_files
+
+    if not selected_files:
+        log_callback("[WARNING] No .bin firmware files found in extracted package.")
     else:
-        log_callback(f"[INFO] Found {len(all_files)} BIOS candidate file(s).")
-    
-    return all_files
+        log_callback(f"[INFO] Filtered {len(selected_files)} .bin firmware file(s) from extracted package.")
+
+    return selected_files
