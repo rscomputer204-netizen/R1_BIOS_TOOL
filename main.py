@@ -4482,6 +4482,7 @@ class BiosServiceTool(QMainWindow):
             self.log_file = os.path.join(fallback_dir, "app.log")
             self.workspace_dir = os.path.join(fallback_dir, "WORKSPACE")
         self.reset_stage = 0
+        self.original_source_dir = None  # Tracks the user's original backup BIOS folder for Save dialogs
         self.auto_save_prefix = "" # For custom prefixes during auto-save
         self.pending_save_name = ""  # Pre-filled save filename (e.g. after RG Fix)
         self.cached_dmi_info = None
@@ -6766,7 +6767,9 @@ class BiosServiceTool(QMainWindow):
             return
 
         # Always default to the original file's directory
-        base_dir = os.path.dirname(self.current_bios_file)
+        base_dir = getattr(self, 'original_source_dir', None)
+        if not base_dir or not os.path.exists(base_dir):
+            base_dir = os.path.dirname(os.path.abspath(self.current_bios_file)) if self.current_bios_file else getattr(self, 'last_directory', os.getcwd())
 
         # If a pending save name was pre-set (e.g. from RG Fix pipeline), use it
         if self.pending_save_name:
@@ -6817,8 +6820,10 @@ class BiosServiceTool(QMainWindow):
         if not self.current_bios_file:
             return
 
-        # Always use the original BIOS file's directory as the base directory
-        base_dir = os.path.dirname(self.current_bios_file)
+        # Always prioritize the original loaded BIOS file's directory
+        base_dir = getattr(self, 'original_source_dir', None)
+        if not base_dir or not os.path.exists(base_dir):
+            base_dir = os.path.dirname(os.path.abspath(self.current_bios_file)) if self.current_bios_file else getattr(self, 'last_directory', os.getcwd())
         suggested_path = os.path.join(base_dir, suggested_name)
 
         save_path, _ = QFileDialog.getSaveFileName(
@@ -8391,6 +8396,17 @@ class BiosServiceTool(QMainWindow):
         self.overlay_log_signal.emit(f"Ingesting {os.path.basename(file_path)}...")
 
         self.current_bios_file = str(file_path)
+        
+        # Track the true source directory where the user opened their original BIOS dump from
+        try:
+            abs_fp = os.path.abspath(file_path)
+            fp_dir = os.path.dirname(abs_fp)
+            internal_markers = ["repaired_bios", "fit_workspace", "testing_area", "firmware_repository"]
+            if not any(m in fp_dir.lower() for m in internal_markers):
+                self.original_source_dir = fp_dir
+                self.last_directory = fp_dir
+        except Exception:
+            pass
         self.reset_stage = 0
         self.terminal.clear()
         self.mea_history = ""
@@ -8703,8 +8719,13 @@ class BiosServiceTool(QMainWindow):
             filename = self.auto_save_prefix + filename
             self.auto_save_prefix = "" # Reset after use
             
-        # Suggest the current filename in the last used directory
-        suggested_path = os.path.join(self.last_directory, filename)
+        # Target directory: ALWAYS prioritize the original loaded BIOS directory
+        target_dir = getattr(self, 'original_source_dir', None)
+        if not target_dir or not os.path.exists(target_dir):
+            target_dir = os.path.dirname(os.path.abspath(self.current_bios_file)) if self.current_bios_file else getattr(self, 'last_directory', os.getcwd())
+            if not target_dir or not os.path.exists(target_dir):
+                target_dir = self.last_directory
+        suggested_path = os.path.join(target_dir, filename)
         
         try:
             reply = QFileDialog.getSaveFileName(
