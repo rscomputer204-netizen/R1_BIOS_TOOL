@@ -134,11 +134,7 @@ class AllRgCleanDialog(QDialog):
 
         op_desc_map = {
             "bios": "Surgical binary replacement from official update (DMI data preserved)",
-            "me": "Clean factory MFS partition injection + runtime log reset -> Configured State",
-            "pmc": "Intel Power Management Controller (PMC) factory configuration",
-            "pchc": "PCH Configuration (PCHC) Controller factory configuration",
-            "iom_phy": "Type-C I/O Manageability & Physical Layer (PHY) factory configuration",
-            "tbt_retimer": "Type-C / Thunderbolt Retimer Controller firmware payload",
+            "me": "Clean factory MFS partition injection (Resets PMC, PCHC, IOM) -> Configured State",
             "ec": "Official Embedded Controller binary replacement into dump EC region",
             "gbe": "Official Gigabit Ethernet binary replacement into dump GbE region"
         }
@@ -166,7 +162,7 @@ class AllRgCleanDialog(QDialog):
             header_row.addWidget(cb)
             header_row.addStretch()
 
-            if key in ("me", "pmc", "pchc", "iom_phy"):
+            if key == "me":
                 badge = QLabel("FACTORY RESET")
                 badge.setStyleSheet("""
                     background-color: #083344;

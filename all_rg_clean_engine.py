@@ -187,82 +187,39 @@ def match_official_components(dump_path: str, extracted_files: list, log_cb=prin
         me_candidates.sort(key=lambda x: x[0], reverse=True)
         chosen_me = me_candidates[0][1]
         sz = os.path.getsize(safe_path(chosen_me))
-        matches["me"] = {
-            "title": "CSME / ME Region",
-            "file": chosen_me,
-            "filename": os.path.basename(chosen_me),
-            "size": sz,
-            "version": dump_ver,
-            "sku": dump_sku,
-            "target_desc": f"Clean Factory ME (MFS -> Configured)"
-        }
-
-        # Physically parse FPT partition table from the official ME binary
+        # Parse internal sub-partitions (PMC, PCHC, IOM) from FPT for informational display
+        sub_info_list = []
         try:
             with open(safe_path(chosen_me), "rb") as mf:
                 me_head = mf.read(0x8000)
             fpt_pos = me_head.find(b"\x24\x46\x50\x54")
-            fpt_parts = set()
             if fpt_pos != -1:
                 entries = int.from_bytes(me_head[fpt_pos + 4 : fpt_pos + 8], "little")
                 for i in range(min(entries, 64)):
                     off = fpt_pos + 32 + i * 32
                     p_name = me_head[off : off + 4].rstrip(b"\x00").decode("ascii", errors="ignore").strip()
-                    if p_name:
-                        fpt_parts.add(p_name)
-
-            if "PMCP" in fpt_parts or "PMC" in fpt_parts:
-                matches["pmc"] = {
-                    "title": "PMC Controller Firmware",
-                    "file": chosen_me,
-                    "filename": os.path.basename(chosen_me),
-                    "size": sz,
-                    "target_desc": "Intel Power Management Controller (Verified in CSME FPT)",
-                    "op_desc": "Factory reset & configuration via CSME MFS injection"
-                }
-            if "PCHC" in fpt_parts:
-                matches["pchc"] = {
-                    "title": "PCHC Controller Firmware",
-                    "file": chosen_me,
-                    "filename": os.path.basename(chosen_me),
-                    "size": sz,
-                    "target_desc": "PCH Configuration Controller (Verified in CSME FPT)",
-                    "op_desc": "Factory reset & configuration via CSME MFS injection"
-                }
-            if any(p in fpt_parts for p in ("IOMP", "IOM", "NPHY", "TBTP")):
-                matches["iom_phy"] = {
-                    "title": "Type-C IOM & PHY Controller",
-                    "file": chosen_me,
-                    "filename": os.path.basename(chosen_me),
-                    "size": sz,
-                    "target_desc": "Type-C I/O Manageability & PHY (Verified in CSME FPT)",
-                    "op_desc": "Factory reset & configuration via CSME MFS injection"
-                }
+                    if p_name in ("PMCP", "PMC") and "PMC" not in sub_info_list:
+                        sub_info_list.append("PMC")
+                    elif p_name == "PCHC" and "PCHC" not in sub_info_list:
+                        sub_info_list.append("PCHC")
+                    elif any(p == p_name for p in ("IOMP", "IOM", "NPHY", "TBTP")) and "Type-C IOM" not in sub_info_list:
+                        sub_info_list.append("Type-C IOM")
         except Exception:
             pass
 
-    # 3. Match Standalone Type-C Retimer Controller (if present)
-    retimer_candidates = []
-    for f in extracted_files:
-        fname = os.path.basename(f).lower()
-        if "retimer" in fname or "tbt" in fname:
-            score = 50
-            if flavor and flavor in fname:
-                score += 200
-            retimer_candidates.append((score, f))
-    if retimer_candidates:
-        retimer_candidates.sort(key=lambda x: x[0], reverse=True)
-        chosen_retimer = retimer_candidates[0][1]
-        matches["tbt_retimer"] = {
-            "title": "Type-C / Thunderbolt Retimer",
-            "file": chosen_retimer,
-            "filename": os.path.basename(chosen_retimer),
-            "size": os.path.getsize(safe_path(chosen_retimer)),
-            "target_desc": f"{os.path.getsize(safe_path(chosen_retimer)) // 1024} KB (Type-C Retimer FW)",
-            "op_desc": "Official Type-C Thunderbolt Retimer controller update"
+        sub_desc = f" (Includes {', '.join(sub_info_list)} Reset)" if sub_info_list else ""
+        matches["me"] = {
+            "title": f"CSME / ME Region{sub_desc}",
+            "file": chosen_me,
+            "filename": os.path.basename(chosen_me),
+            "size": sz,
+            "version": dump_ver,
+            "sku": dump_sku,
+            "target_desc": "Clean Factory ME (MFS -> Configured)",
+            "op_desc": f"Clean Factory ME injection (PMC, PCHC, Type-C IOM automatically reset)"
         }
 
-    # 4. Match Embedded Controller (EC)
+    # 3. Match Embedded Controller (EC)
     if ec_reg:
         ec_candidates = []
         for f in extracted_files:
