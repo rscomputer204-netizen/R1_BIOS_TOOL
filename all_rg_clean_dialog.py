@@ -1,18 +1,39 @@
 """
 all_rg_clean_dialog.py
 ======================
-User-friendly, informative region replacement dialog for ALL RG CLEAN.
-Clearly presents target regions in the backup dump, official donor files,
-and surgical operations with per-region selection checkboxes.
+Ultra-clean, modern, professional region replacement dialog for ALL RG CLEAN.
+Presents clean component targets, verified donor components, and surgical actions
+without clutter, excessive labels, or unwieldy raw paths.
 """
 
 import os
+import re
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QScrollArea, QWidget, QCheckBox, QSizePolicy
 )
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QCursor
+
+
+def clean_component_name(filename: str) -> str:
+    """Extracts a clean, human-readable component name from official package filenames."""
+    name = filename or ""
+    if "--" in name:
+        name = name.split("--", 1)[1].strip()
+    name = re.sub(r"^\d+\s+", "", name)
+    if name.lower().endswith(".bin"):
+        name = name[:-4]
+    return name.strip() or filename
+
+
+def format_size(size_bytes: int) -> str:
+    if size_bytes >= 1024 * 1024:
+        mb = size_bytes / (1024 * 1024)
+        return f"{mb:.1f} MB" if mb != int(mb) else f"{int(mb)} MB"
+    elif size_bytes >= 1024:
+        return f"{size_bytes // 1024} KB"
+    return f"{size_bytes} B"
 
 
 class AllRgCleanDialog(QDialog):
@@ -23,30 +44,30 @@ class AllRgCleanDialog(QDialog):
         self.checkboxes = {}
 
         self.setWindowTitle("ALL RG CLEAN - REGION REPLACEMENT")
-        self.setFixedSize(560, 460)
+        self.setFixedSize(580, 440)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
 
         self.setStyleSheet("""
             QDialog {
-                background-color: #0b1120;
+                background-color: #070d19;
                 border: 1px solid #1e293b;
                 border-radius: 8px;
             }
             QLabel {
-                font-family: 'Segoe UI', sans-serif;
+                font-family: 'Segoe UI', -apple-system, sans-serif;
             }
             QCheckBox {
-                color: #f1f5f9;
+                color: #f8fafc;
                 font-family: 'Segoe UI', sans-serif;
-                font-size: 12px;
-                font-weight: bold;
+                font-size: 13px;
+                font-weight: 700;
                 spacing: 8px;
             }
             QCheckBox::indicator {
-                width: 16px;
-                height: 16px;
+                width: 17px;
+                height: 17px;
                 border: 1px solid #38bdf8;
-                border-radius: 3px;
+                border-radius: 4px;
                 background-color: #0f172a;
             }
             QCheckBox::indicator:checked {
@@ -60,18 +81,18 @@ class AllRgCleanDialog(QDialog):
 
     def _setup_ui(self):
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(18, 14, 18, 14)
-        layout.setSpacing(8)
+        layout.setContentsMargins(20, 16, 20, 16)
+        layout.setSpacing(10)
 
         # Header Title
         title_lbl = QLabel("ALL RG CLEAN")
-        title_lbl.setStyleSheet("color: #00f2ff; font-size: 15px; font-weight: 900; letter-spacing: 1.5px;")
+        title_lbl.setStyleSheet("color: #00f2ff; font-size: 16px; font-weight: 900; letter-spacing: 2px;")
         title_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_lbl)
 
         # Subtitle
         match_count = len(self.matches)
-        sub_lbl = QLabel(f"Detected {match_count} component(s) ready for surgical clean & replacement:")
+        sub_lbl = QLabel(f"Detected {match_count} verified component(s) ready for clean replacement:")
         sub_lbl.setStyleSheet("color: #94a3b8; font-size: 11px;")
         sub_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(sub_lbl)
@@ -85,17 +106,17 @@ class AllRgCleanDialog(QDialog):
 
         btn_select_all = QPushButton("Select All")
         btn_select_all.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_select_all.setStyleSheet("QPushButton { background: transparent; color: #38bdf8; font-size: 10px; border: none; } QPushButton:hover { text-decoration: underline; }")
+        btn_select_all.setStyleSheet("QPushButton { background: transparent; color: #38bdf8; font-size: 10px; border: none; font-weight: 600; } QPushButton:hover { text-decoration: underline; color: #7dd3fc; }")
         btn_select_all.clicked.connect(lambda: self._set_all_checked(True))
         top_bar.addWidget(btn_select_all)
 
-        lbl_slash = QLabel("|")
+        lbl_slash = QLabel("•")
         lbl_slash.setStyleSheet("color: #334155; font-size: 10px;")
         top_bar.addWidget(lbl_slash)
 
         btn_desel_all = QPushButton("Deselect All")
         btn_desel_all.setCursor(Qt.CursorShape.PointingHandCursor)
-        btn_desel_all.setStyleSheet("QPushButton { background: transparent; color: #94a3b8; font-size: 10px; border: none; } QPushButton:hover { text-decoration: underline; }")
+        btn_desel_all.setStyleSheet("QPushButton { background: transparent; color: #94a3b8; font-size: 10px; border: none; font-weight: 600; } QPushButton:hover { text-decoration: underline; color: #f1f5f9; }")
         btn_desel_all.clicked.connect(lambda: self._set_all_checked(False))
         top_bar.addWidget(btn_desel_all)
 
@@ -119,6 +140,7 @@ class AllRgCleanDialog(QDialog):
                 border: none;
                 background: #0f172a;
                 width: 6px;
+                border-radius: 3px;
             }
             QScrollBar::handle:vertical {
                 background: #334155;
@@ -129,49 +151,68 @@ class AllRgCleanDialog(QDialog):
         container = QWidget()
         container.setStyleSheet("background-color: transparent;")
         c_layout = QVBoxLayout(container)
-        c_layout.setContentsMargins(2, 2, 2, 2)
-        c_layout.setSpacing(8)
-
-        op_desc_map = {
-            "bios": "Surgical binary replacement from official update (DMI data preserved)",
-            "me": "Clean factory MFS partition injection (Resets PMC, PCHC, IOM) -> Configured State",
-            "ec": "Official Embedded Controller binary replacement into dump EC region",
-            "gbe": "Official Gigabit Ethernet binary replacement into dump GbE region"
-        }
+        c_layout.setContentsMargins(0, 4, 4, 4)
+        c_layout.setSpacing(10)
 
         for key, item in self.matches.items():
             card = QFrame()
             card.setStyleSheet("""
                 QFrame {
-                    background-color: #0f172a;
+                    background-color: #0b1329;
                     border: 1px solid #1e293b;
                     border-left: 3px solid #00f2ff;
-                    border-radius: 6px;
+                    border-radius: 7px;
+                }
+                QFrame:hover {
+                    border-color: #334155;
+                    border-left: 3px solid #38bdf8;
                 }
             """)
             card_layout = QVBoxLayout(card)
-            card_layout.setContentsMargins(10, 8, 10, 8)
-            card_layout.setSpacing(4)
+            card_layout.setContentsMargins(14, 10, 14, 10)
+            card_layout.setSpacing(6)
 
-            # Row 1: Checkbox + Action Badge
-            header_row = QHBoxLayout()
-            cb = QCheckBox(item.get("title", key.upper()))
+            # Row 1: Checkbox + Target Size Pill + Status Badge
+            top_row = QHBoxLayout()
+            top_row.setSpacing(10)
+
+            title = item.get("title", key.upper())
+            cb = QCheckBox(title)
             cb.setChecked(True)
             cb.stateChanged.connect(self._on_check_changed)
             self.checkboxes[key] = cb
-            header_row.addWidget(cb)
-            header_row.addStretch()
+            top_row.addWidget(cb)
 
+            top_row.addStretch()
+
+            # Target Size & Offset Pill
+            sz_str = format_size(item.get("size", 0))
+            offset = item.get("offset")
+            pill_text = f"{sz_str} • 0x{offset:X}" if offset is not None else sz_str
+            pill = QLabel(pill_text)
+            pill.setStyleSheet("""
+                background-color: #0f172a;
+                color: #38bdf8;
+                border: 1px solid #1e293b;
+                font-family: 'Consolas', monospace;
+                font-size: 10px;
+                font-weight: 600;
+                padding: 2px 8px;
+                border-radius: 4px;
+            """)
+            top_row.addWidget(pill)
+
+            # Badge: WILL REPLACE / FACTORY RESET
             if key == "me":
                 badge = QLabel("FACTORY RESET")
                 badge.setStyleSheet("""
                     background-color: #083344;
                     color: #22d3ee;
                     border: 1px solid #0891b2;
-                    border-radius: 3px;
+                    border-radius: 4px;
                     font-size: 9px;
                     font-weight: 800;
-                    padding: 2px 6px;
+                    padding: 3px 8px;
                     letter-spacing: 0.5px;
                 """)
             else:
@@ -180,56 +221,55 @@ class AllRgCleanDialog(QDialog):
                     background-color: #064e3b;
                     color: #34d399;
                     border: 1px solid #059669;
-                    border-radius: 3px;
+                    border-radius: 4px;
                     font-size: 9px;
                     font-weight: 800;
-                    padding: 2px 6px;
+                    padding: 3px 8px;
                     letter-spacing: 0.5px;
                 """)
-            header_row.addWidget(badge)
-            card_layout.addLayout(header_row)
+            top_row.addWidget(badge)
+            card_layout.addLayout(top_row)
 
-            # Row 2: Target in Backup BIOS
-            target_row = QHBoxLayout()
-            target_lbl = QLabel("Target in Backup:")
-            target_lbl.setFixedWidth(105)
-            target_lbl.setStyleSheet("color: #64748b; font-size: 10px; font-weight: bold;")
-            target_row.addWidget(target_lbl)
+            # Clean Info Row 1: Official Donor
+            raw_fn = item.get("filename", "")
+            clean_fn = clean_component_name(raw_fn)
 
-            target_val = QLabel(item.get("target_desc", "Region Match"))
-            target_val.setStyleSheet("color: #f1f5f9; font-size: 10px;")
-            target_row.addWidget(target_val)
-            target_row.addStretch()
-            card_layout.addLayout(target_row)
-
-            # Row 3: Official Donor File
             donor_row = QHBoxLayout()
-            donor_lbl = QLabel("Official Donor File:")
-            donor_lbl.setFixedWidth(105)
-            donor_lbl.setStyleSheet("color: #64748b; font-size: 10px; font-weight: bold;")
-            donor_row.addWidget(donor_lbl)
+            donor_row.setSpacing(6)
+            tag_donor = QLabel("Official Donor:")
+            tag_donor.setStyleSheet("color: #64748b; font-size: 10px; font-weight: 600;")
+            donor_row.addWidget(tag_donor)
 
-            fname = item.get("filename", "")
-            donor_val = QLabel(fname)
-            donor_val.setToolTip(item.get("file", fname))
-            donor_val.setStyleSheet("color: #38bdf8; font-size: 10px; font-family: 'Consolas', monospace;")
-            donor_val.setWordWrap(True)
-            donor_row.addWidget(donor_val)
+            val_donor = QLabel(clean_fn)
+            val_donor.setToolTip(item.get("file", raw_fn))
+            val_donor.setStyleSheet("color: #f1f5f9; font-size: 10px; font-weight: 500;")
+            donor_row.addWidget(val_donor)
+            donor_row.addStretch()
             card_layout.addLayout(donor_row)
 
-            # Row 4: Operation Explanation
-            op_row = QHBoxLayout()
-            op_lbl = QLabel("Operation:")
-            op_lbl.setFixedWidth(105)
-            op_lbl.setStyleSheet("color: #64748b; font-size: 10px; font-weight: bold;")
-            op_row.addWidget(op_lbl)
+            # Clean Info Row 2: Action / Preservation
+            action_row = QHBoxLayout()
+            action_row.setSpacing(6)
+            tag_action = QLabel("Action:")
+            tag_action.setStyleSheet("color: #64748b; font-size: 10px; font-weight: 600;")
+            action_row.addWidget(tag_action)
 
-            op_text = item.get("op_desc") or op_desc_map.get(key, "Surgical clean replacement")
-            op_val = QLabel(op_text)
-            op_val.setStyleSheet("color: #94a3b8; font-size: 9px; font-style: italic;")
-            op_row.addWidget(op_val)
-            op_row.addStretch()
-            card_layout.addLayout(op_row)
+            if key == "bios":
+                act_str = "Clean binary replacement • Original DMI, Serial & Keys preserved"
+            elif key == "me":
+                act_str = "Clean factory ME injection • Automatically resets PMC, PCHC & Type-C IOM"
+            elif key == "ec":
+                act_str = "Clean Embedded Controller firmware injection"
+            elif key == "gbe":
+                act_str = "Clean Gigabit Ethernet firmware injection • Original MAC preserved"
+            else:
+                act_str = item.get("op_desc", "Clean firmware injection")
+
+            val_action = QLabel(act_str)
+            val_action.setStyleSheet("color: #94a3b8; font-size: 10px;")
+            action_row.addWidget(val_action)
+            action_row.addStretch()
+            card_layout.addLayout(action_row)
 
             c_layout.addWidget(card)
 
@@ -237,16 +277,15 @@ class AllRgCleanDialog(QDialog):
         untouched_card = QFrame()
         untouched_card.setStyleSheet("""
             QFrame {
-                background-color: #0b1329;
-                border: 1px dashed #334155;
-                border-radius: 4px;
-                padding: 4px;
+                background-color: #060b14;
+                border: 1px dashed #1e293b;
+                border-radius: 5px;
             }
         """)
         ut_layout = QHBoxLayout(untouched_card)
-        ut_layout.setContentsMargins(8, 4, 8, 4)
+        ut_layout.setContentsMargins(10, 6, 10, 6)
         ut_lbl = QLabel("Descriptor & non-selected regions will remain 100% original from your backup dump.")
-        ut_lbl.setStyleSheet("color: #64748b; font-size: 9px; font-style: italic;")
+        ut_lbl.setStyleSheet("color: #64748b; font-size: 10px; font-style: italic;")
         ut_layout.addWidget(ut_lbl)
         c_layout.addWidget(untouched_card)
 
@@ -259,22 +298,22 @@ class AllRgCleanDialog(QDialog):
         btn_layout.setSpacing(10)
 
         self.summary_lbl = QLabel(f"Ready: {match_count} of {match_count} region(s) selected.")
-        self.summary_lbl.setStyleSheet("color: #94a3b8; font-size: 10px;")
+        self.summary_lbl.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 500;")
         btn_layout.addWidget(self.summary_lbl)
         btn_layout.addStretch()
 
         cancel_btn = QPushButton("CANCEL")
         cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        cancel_btn.setFixedHeight(30)
+        cancel_btn.setFixedHeight(32)
         cancel_btn.setStyleSheet("""
             QPushButton {
                 background-color: #0f172a;
                 color: #94a3b8;
                 border: 1px solid #334155;
-                border-radius: 4px;
+                border-radius: 5px;
                 font-size: 11px;
                 font-weight: 700;
-                padding: 0 16px;
+                padding: 0 18px;
             }
             QPushButton:hover {
                 background-color: #1e293b;
@@ -286,17 +325,17 @@ class AllRgCleanDialog(QDialog):
 
         self.clean_btn = QPushButton("CLEAN")
         self.clean_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.clean_btn.setFixedHeight(30)
+        self.clean_btn.setFixedHeight(32)
         self.clean_btn.setStyleSheet("""
             QPushButton {
                 background-color: #00f2ff;
                 color: #010409;
                 border: none;
-                border-radius: 4px;
+                border-radius: 5px;
                 font-size: 11px;
                 font-weight: 800;
                 letter-spacing: 1px;
-                padding: 0 20px;
+                padding: 0 22px;
             }
             QPushButton:hover {
                 background-color: #38f8ff;

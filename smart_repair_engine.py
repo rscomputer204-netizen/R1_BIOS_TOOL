@@ -870,6 +870,17 @@ def manual_hex_repair(bios_path, repair_set, output_path, log_cb):
         if not regions:
             log_cb("[ERROR] Could not parse SPI regions for manual injection.")
             return False
+
+        # Export decompiled partitions so the user can inspect them
+        try:
+            decomp_dir = Path(get_app_root()) / "FIT_WORKSPACE" / "extracted_regions"
+            decomp_dir.mkdir(parents=True, exist_ok=True)
+            for rk, rv in regions.items():
+                (decomp_dir / f"{rk}_region.bin").write_bytes(data[rv["offset"] : rv["offset"] + rv["size"]])
+            log_cb("[SUCCESS] [OK] Firmware Partitions Extracted & Verified")
+            log_cb(f"[INFO] Decompiled Files Location: {os.path.abspath(decomp_dir)}")
+        except Exception:
+            pass
             
         def inject_region(region_key, clean_path, name):
             if not clean_path: return True

@@ -4363,7 +4363,7 @@ class ProfileEditDialog(QDialog):
         avatar_col.setSpacing(6)
         
         self.preview_avatar = CircularAvatarLabel(self)
-        self.preview_avatar.setFixedSize(56, 56)
+        self.preview_avatar.setFixedSize(68, 68)
         self.preview_avatar.setCursor(Qt.CursorShape.PointingHandCursor)
         self.preview_avatar.clicked.connect(self._browse_image)
         avatar_col.addWidget(self.preview_avatar, alignment=Qt.AlignmentFlag.AlignCenter)
@@ -4612,7 +4612,11 @@ class ProfileEditDialog(QDialog):
             QMessageBox.information(self, "License Removed", "License key removed successfully.")
 
     def _load_current_avatar(self):
-        default_logo = os.path.join(str(get_app_root()), "assets", "R1AILAB.png")
+        default_logo = os.path.join(str(get_app_root()), "assets", "profile_avatar.png")
+        if not os.path.exists(default_logo):
+            default_logo = os.path.join(str(get_app_root()), "assets", "R1AILAB.png")
+        if not os.path.exists(default_logo):
+            default_logo = os.path.join(os.getcwd(), "assets", "profile_avatar.png")
         if not os.path.exists(default_logo):
             default_logo = os.path.join(os.getcwd(), "assets", "R1AILAB.png")
             
@@ -5508,7 +5512,7 @@ class BiosServiceTool(QMainWindow):
         avatar_box = QHBoxLayout()
         avatar_box.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.avatar_label = CircularAvatarLabel(self)
-        self.avatar_label.setFixedSize(60, 60)
+        self.avatar_label.setFixedSize(72, 72)
         self.avatar_label.setToolTip("Click or Right-Click to Manage Profile & License")
         self.avatar_label.clicked.connect(self.open_profile_edit_dialog)
         self.avatar_label.right_clicked.connect(self.open_profile_edit_dialog)
@@ -5714,7 +5718,11 @@ class BiosServiceTool(QMainWindow):
         
         # 1. Avatar Image
         custom_path = settings.value("user_profile_avatar_path", "")
-        default_logo = os.path.join(str(get_app_root()), "assets", "R1AILAB.png")
+        default_logo = os.path.join(str(get_app_root()), "assets", "profile_avatar.png")
+        if not os.path.exists(default_logo):
+            default_logo = os.path.join(str(get_app_root()), "assets", "R1AILAB.png")
+        if not os.path.exists(default_logo):
+            default_logo = os.path.join(os.getcwd(), "assets", "profile_avatar.png")
         if not os.path.exists(default_logo):
             default_logo = os.path.join(os.getcwd(), "assets", "R1AILAB.png")
             
@@ -7694,25 +7702,25 @@ class BiosServiceTool(QMainWindow):
         """Show options for BIOS RG Fix."""
         from PySide6.QtGui import QAction
         from PySide6.QtWidgets import QMenu
-        
+
         self.log_to_terminal("[INFO] BIOS RG FIX button clicked")
         if not self.current_bios_file:
             self.log_to_terminal("[WARNING] No BIOS file loaded")
             return
-            
+
         menu = QMenu(self)
         menu.setStyleSheet(
-            "QMenu { background-color: #0f172a; color: #ffffff; border: 1px solid #38bdf8; }"
-            "QMenu::item { padding: 8px 24px; font-weight: bold; }"
-            "QMenu::item:selected { background-color: #0369a1; }"
+            "QMenu { background-color: #0a1120; color: #f8fafc; border: 1px solid #00f2ff; border-radius: 6px; padding: 4px; }"
+            "QMenu::item { padding: 8px 24px; font-weight: 800; font-family: 'Segoe UI', sans-serif; font-size: 11px; letter-spacing: 0.5px; border-radius: 4px; }"
+            "QMenu::item:selected { background-color: #00f2ff; color: #010409; }"
         )
 
-        ready_action = QAction("ALL RG CLEAN", self)
-        ready_action.triggered.connect(self.run_all_rg_clean)
+        ready_action = QAction("BIOS RG READY", self)
+        ready_action.triggered.connect(self.run_bios_rg_ready)
         menu.addAction(ready_action)
 
         exe_action = QAction("BIOS RG .EXE", self)
-        exe_action.triggered.connect(self.run_bios_rg_exe)
+        exe_action.triggered.connect(self.run_all_rg_clean)
         menu.addAction(exe_action)
 
         menu.exec(self.btn_dmi_migrate.mapToGlobal(self.btn_dmi_migrate.rect().bottomLeft()))

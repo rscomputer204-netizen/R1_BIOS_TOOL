@@ -559,6 +559,7 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
                 # Deep Validation
                 if validate_decompiled_structure(decomp_target, terminal_callback):
                     print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Decompile Complete via {tool_folder_name}")
+                    print_terminal_log(terminal_callback, f"[INFO] Decompiled Files Location: {os.path.abspath(decomp_target)}")
                     print_terminal_log(terminal_callback, f"[INFO] Decompiled layout verified: config.xml and partition binaries ready.")
                     return str(decomp_target)
                 else:
@@ -665,6 +666,7 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
             if validate_decompiled_structure(decomp_target, terminal_callback):
                 decompile_ok = True
                 print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Decompile Complete via {tool_name}")
+                print_terminal_log(terminal_callback, f"[INFO] Decompiled Files Location: {os.path.abspath(decomp_target)}")
                 print_terminal_log(terminal_callback, f"[INFO] Decompiled layout verified: {xml_path.name} and partition binaries ready.")
             else:
                 print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Decompiled structure incomplete or missing partitions with {tool_name}. Trying next tool in queue...", "WARNING")

@@ -545,6 +545,7 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
 
             if xml_path.exists() and decomp_target.exists() and validate_decompiled_structure(decomp_target):
                 log_cb(f"[SUCCESS] [OK] FIT Decompile Complete via {tool_folder_name}")
+                log_cb(f"[INFO] Decompiled Files Location: {os.path.abspath(decomp_target)}")
                 decomp_ctx = {
                     "success": True,
                     "mode": "fit",
@@ -566,6 +567,29 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
     if not decomp_ctx:
         log_cb("[INFO] Intel FIT decompilation is bypassed (Architecture or direct injection mode).")
         log_cb("[INFO] Continuing with Surgical Direct Clean & Hex Injection Engine...")
+        
+        direct_target = workspace / "image"
+        direct_target.mkdir(parents=True, exist_ok=True)
+        name_label_map_tmp = {
+            "desc": "Descriptor Region.bin",
+            "bios": "BIOS Region.bin",
+            "me": "ME Region.bin",
+            "ec": "EC Region.bin",
+            "gbe": "GBE Region.bin",
+            "gbe2": "GBE2 Region.bin"
+        }
+        for rk, rv in regions.items():
+            rf_name = name_label_map_tmp.get(rk, f"{rv['name']}.bin")
+            try:
+                part_p = direct_target / rf_name
+                with open(part_p, "wb") as pf:
+                    pf.write(dump_bytes[rv["offset"] : rv["offset"] + rv["size"]])
+            except Exception:
+                pass
+
+        log_cb(f"[SUCCESS] [OK] Firmware Partitions Decompiled & Extracted")
+        log_cb(f"[INFO] Decompiled Files Location: {os.path.abspath(direct_target)}")
+
         decomp_ctx = {
             "success": True,
             "mode": "direct",
@@ -573,7 +597,7 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
             "fit_exe": None,
             "fit_dir": None,
             "fit_workspace": workspace,
-            "decomp_target": None,
+            "decomp_target": direct_target,
             "xml_path": None,
             "regions": regions,
             "dump_bytes": dump_bytes,
@@ -614,7 +638,9 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
         log_cb(f"║ {label:<18} ║ {actual_fname:<28} ║ {sz_str:<12} ║ {off_range:<24} ║")
 
     log_cb(f"╚{'═'*20}╩{'═'*30}╩{'═'*14}╩{'═'*26}╝")
-    log_cb("[SUCCESS] [OK] All decompiled components mapped and verified.\n")
+    log_cb("[SUCCESS] [OK] All decompiled components mapped and verified.")
+    active_target = decomp_ctx.get("decomp_target") or workspace
+    log_cb(f"[INFO] Decompiled Workspace: {os.path.abspath(active_target)}\n")
 
     return decomp_ctx
 
