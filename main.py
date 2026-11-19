@@ -6813,10 +6813,12 @@ class BiosServiceTool(QMainWindow):
         self.log_to_terminal(message)
 
     @Slot(str)
-    def log_to_terminal(self, message):
+    def log_to_terminal(self, message, *args, **kwargs):
         """Callback for the parser to log messages."""
+        if str(message).strip() == "" and args:
+            message = str(args[0])
         if threading.current_thread() is not threading.main_thread():
-            QMetaObject.invokeMethod(self, "log_to_terminal", Qt.ConnectionType.QueuedConnection, Q_ARG(str, message))
+            QMetaObject.invokeMethod(self, "log_to_terminal", Qt.ConnectionType.QueuedConnection, Q_ARG(str, str(message)))
             return
             
         # Suppress Outdated ME Analyzer and GitHub download links

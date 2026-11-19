@@ -1096,7 +1096,7 @@ def _run_smart_repair_internal(bios_path, mea_meta, log_cb, progress_cb=None, de
             success = run_full_fit_rebuild(bios_path, repair_set, ver_str, out_path, log_cb, custom_fit_exe=custom_fit_exe)
 
             if not success:
-                log_cb("[WARN] Intel FIT engine could not rebuild. Automatically falling back to HYBRID System...", "WARN")
+                log_cb("[WARN] Intel FIT engine could not rebuild (buffer overflow / non-standard layout). Automatically falling back to Surgical Engine...")
                 if major >= 15:
                     success = run_surgical_modern_repair(
                         bios_path, repair_set, mea_meta["version"], out_path, log_cb,
