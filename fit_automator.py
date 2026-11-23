@@ -573,6 +573,14 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
                     print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Decompile Complete via {tool_folder_name}")
                     print_terminal_log(terminal_callback, f"[INFO] Decompiled Files Location: {os.path.abspath(decomp_target)}")
                     print_terminal_log(terminal_callback, f"[INFO] Decompiled layout verified: config.xml and partition binaries ready.")
+                    
+                    # Clean any residual junk in tool folder
+                    try:
+                        import clean_fit_tools
+                        clean_fit_tools.clean_specific_tool_dir(fit_dir)
+                    except Exception:
+                        pass
+                        
                     return str(decomp_target)
                 else:
                     print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt} validation failed with {tool_folder_name}. Trying next tool in queue...", "WARNING")
@@ -748,6 +756,11 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
                 print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Compile / Rebuild Complete via {tool_name}")
                 shutil.copy2(final_out, output_path)
                 print_terminal_log(terminal_callback, "[SUCCESS] Full CSME Rebuild Completed!")
+                try:
+                    import clean_fit_tools
+                    clean_fit_tools.clean_specific_tool_dir(fit_dir)
+                except Exception:
+                    pass
                 return True
             else:
                 print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Integrity check failed for build via {tool_name}. Trying next tool...", "WARNING")

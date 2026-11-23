@@ -9302,6 +9302,31 @@ class BiosServiceTool(QMainWindow):
         self.log_to_terminal("[SUCCESS] Operation finished.")
         # Snappy closure
         self.initiate_loader_stop(500) 
+        
+        # ── Automated Background Cleanup (Runs 2 seconds after report is presented to user) ──
+        try:
+            QTimer.singleShot(2000, self._auto_cleanup_fit_tools_bg)
+        except Exception:
+            pass
+
+    def _auto_cleanup_fit_tools_bg(self):
+        """Runs the clean_fit_tools script in a background thread 2 seconds after user sees report and logs status."""
+        def _worker():
+            try:
+                self.log_to_terminal("[ACTION] Auto Maintenance: Scanning & cleaning FLASH System Tools repository...")
+                import clean_fit_tools
+                res = clean_fit_tools.clean_all_fit_tools()
+                del_files = res.get("deleted_files", 0)
+                del_dirs = res.get("deleted_dirs", 0)
+                freed_mb = res.get("freed_bytes", 0) / (1024 * 1024)
+                
+                if del_files > 0 or del_dirs > 0:
+                    self.log_to_terminal(f"[SUCCESS] Auto Maintenance Complete: Purged {del_files} residual files and {del_dirs} folders ({freed_mb:.2f} MB freed).")
+                else:
+                    self.log_to_terminal("[SUCCESS] Auto Maintenance Complete: Tools repository verified 100% clean (Zero residue).")
+            except Exception as e:
+                self.log_to_terminal(f"[WARN] Auto Maintenance warning: {str(e)}")
+        threading.Thread(target=_worker, daemon=True).start() 
 
     def run_auto_decompile(self):
         """Deprecated: Auto-decompilation on initial file load is disabled.
