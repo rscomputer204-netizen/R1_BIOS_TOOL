@@ -16,19 +16,38 @@ from rg_engine.board_matcher import rank_candidates, format_size
 
 
 class ExtractedFileListDialog(QDialog):
-    def __init__(self, extracted_files, original_bios_path=None, parent=None):
+    def __init__(self, extracted_files, original_bios_path=None, target_bios_size=None, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Select BIOS Candidate")
-        self.setFixedSize(540, 420)
+        self.setFixedSize(560, 440)
         self.setStyleSheet("background-color: #0f172a; color: #ffffff;")
 
         self.selected_file = None
         self.original_bios_path = original_bios_path
 
+        # Determine target BIOS Region size from original BIOS dump if not provided
+        if (not target_bios_size or target_bios_size <= 0) and original_bios_path and os.path.exists(original_bios_path):
+            try:
+                from all_rg_clean_engine import parse_dump_spi_regions
+                with open(original_bios_path, "rb") as bf:
+                    head_data = bf.read(0x1000)
+                regs = parse_dump_spi_regions(head_data)
+                if "bios" in regs:
+                    target_bios_size = regs["bios"]["size"]
+            except Exception:
+                pass
+
+        # Filter extracted files: ONLY show files with size >= target_bios_size
+        if target_bios_size > 0:
+            filtered = [f for f in extracted_files if os.path.getsize(f) >= target_bios_size]
+            if filtered:
+                extracted_files = filtered
+
         # Rank candidates
         self.ranked_candidates, self.board_info = rank_candidates(extracted_files, original_bios_path)
         self.has_match = any(c["is_match"] for c in self.ranked_candidates)
         self.best_candidate = self.ranked_candidates[0] if self.has_match else None
+        self.target_bios_size = target_bios_size
 
         self._init_ui()
 
@@ -120,10 +139,8 @@ class ExtractedFileListDialog(QDialog):
 
         layout.addLayout(btn_layout)
 
-        # Pre-select recommended file
-        if self.ranked_candidates:
-            self.list_widget.setCurrentRow(recommended_row)
-            self._update_warning(recommended_row)
+        # No automatic selection: user must explicitly choose from the list
+        self.list_widget.setCurrentRow(-1)
 
     def _on_selection_changed(self, row: int):
         if 0 <= row < len(self.ranked_candidates):

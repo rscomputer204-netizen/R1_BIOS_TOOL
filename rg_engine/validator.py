@@ -36,141 +36,104 @@ def validate_and_trim(candidate_path, target_size, old_bios_region=None, log_cal
 
     diff = cand_size - target_size
 
-    # ── IF OLD BIOS REGION IS PROVIDED: STRICT UNIVERSAL 3-CASE VALIDATION ───
+    # ── IF OLD BIOS REGION IS PROVIDED: STRICT 2-3 LINE TOPPER & FOOTER LOGIC ───
     if old_bios_region is not None and len(old_bios_region) >= target_size:
         old_bios_region = old_bios_region[:target_size]
-        log_callback("[VALIDATE] Starting Smart Topper & Footer Comparison...")
+        log_callback("[VALIDATE] Starting Strict 2-3 Line Topper & Footer Matching Engine...")
+
+        # ── 1. EXTRACT FIRST VALID 2-3 LINES (32-48 BYTES) TOPPER IN OLD BIOS ──
+        top_anchor = None
+        top_anchor_offset = 0
+        top_anchor_len = 48  # 3 lines
+
+        for off in range(0, min(0x10000, target_size - 48), 16):
+            blk48 = old_bios_region[off : off + 48]
+            # Valid structured line check: not blank padding
+            if blk48.count(b'\xff') < 38 and blk48.count(b'\x00') < 38:
+                top_anchor = blk48
+                top_anchor_offset = off
+                top_anchor_len = 48
+                break
+
+        if not top_anchor:
+            # Fallback to 2 lines (32 bytes)
+            for off in range(0, min(0x10000, target_size - 32), 16):
+                blk32 = old_bios_region[off : off + 32]
+                if blk32.count(b'\xff') < 26 and blk32.count(b'\x00') < 26:
+                    top_anchor = blk32
+                    top_anchor_offset = off
+                    top_anchor_len = 32
+                    break
+
+        if not top_anchor:
+            log_callback("[ERROR] Could not extract valid 2-3 line Topper from backup BIOS.")
+            return None, 0, 0
+
+        num_lines = top_anchor_len // 16
+        log_callback(f"[VALIDATE] Backup Topper: {num_lines} lines ({top_anchor_len} bytes) at offset 0x{top_anchor_offset:X}")
+
+        # ── 2. MANDATORY TOPPER MATCH IN OFFICIAL CANDIDATE ──────────────────
+        pos = data.find(top_anchor)
+        valid_candidates = []
+        while pos != -1:
+            calc_start = pos - top_anchor_offset
+            if 0 <= calc_start <= diff:
+                valid_candidates.append(calc_start)
+            pos = data.find(top_anchor, pos + 1)
+
+        # If 48B didn't match, also try 32B (2 lines) at same offset
+        if not valid_candidates and top_anchor_len == 48:
+            top_anchor_32 = top_anchor[:32]
+            pos = data.find(top_anchor_32)
+            while pos != -1:
+                calc_start = pos - top_anchor_offset
+                if 0 <= calc_start <= diff:
+                    valid_candidates.append(calc_start)
+                pos = data.find(top_anchor_32, pos + 1)
+
+        if not valid_candidates:
+            log_callback("[ERROR] MANDATORY TOPPER MISMATCH: Top 2-3 lines of backup BIOS not found in official candidate.")
+            log_callback("[ERROR] Verification Failed: Operation Aborted because Topper did not match.")
+            return None, 0, 0
+
+        log_callback(f"[SUCCESS] Top {num_lines} lines (Topper) matched in official candidate at offset +{valid_candidates[0]} bytes.")
+
+        # ── 3. BOTTOM (FOOTER) DATA ANALYSIS & CUTTING LOGIC ──────────────────
+        tail_check_len = 48
+        old_tail = old_bios_region[-tail_check_len:]
+        is_bottom_blank = (old_tail.count(b'\xff') >= tail_check_len - 4) or (old_tail.count(b'\x00') >= tail_check_len - 4)
 
         best_cand_start = -1
-        match_method = ""
-        top_matched = False
-        footer_matched = False
-
-        # ── STRATEGY 1: Footer (Reset Vector & Entry Stub) Alignment ──────────
-        # In x86 PC architectures, BIOS Region always ends at 4GB / Reset Vector.
-        # This is the single most accurate, universal anchor across all manufacturers.
-        for tail_len in [64, 32, 16]:
-            old_tail = old_bios_region[-tail_len:]
-            if old_tail.count(b'\xff') < tail_len - 2 and old_tail.count(b'\x00') < tail_len - 2:
-                pos = data.find(old_tail)
-                while pos != -1:
-                    calc_start = pos + tail_len - target_size
-                    if 0 <= calc_start <= diff:
-                        c_slice = data[calc_start : calc_start + target_size]
-                        # Verify slice structure (contains UEFI Firmware Volumes or valid code)
-                        if b'_FVH' in c_slice:
-                            best_cand_start = calc_start
-                            footer_matched = True
-                            match_method = f"Footer Anchor (Reset Vector {tail_len}B) & UEFI Structure Alignment"
-                            break
-                    pos = data.find(old_tail, pos + 1)
-                if best_cand_start >= 0:
+        if not is_bottom_blank:
+            # Case 1: Backup BIOS bottom HAS valid data -> Verify bottom 3 lines in candidate
+            log_callback(f"[INFO] Backup Footer contains valid data. Verifying bottom 3 lines ({tail_check_len}B)...")
+            matched_by_both = False
+            for cand_st in valid_candidates:
+                c_slice = data[cand_st : cand_st + target_size]
+                cand_tail = c_slice[-tail_check_len:]
+                if cand_tail == old_tail or cand_tail[-32:] == old_tail[-32:] or cand_tail[-16:] == old_tail[-16:]:
+                    best_cand_start = cand_st
+                    matched_by_both = True
+                    log_callback("[SUCCESS] [OK] Top (3 lines) and Bottom (3 lines) BOTH matched perfectly!")
                     break
 
-        # ── STRATEGY 2: UEFI Firmware Volume (_FVH) Structure Alignment ───────
-        if best_cand_start < 0:
-            # Find all _FVH locations in old_bios_region
-            fvh_offsets = []
-            fpos = 0
-            while True:
-                fpos = old_bios_region.find(b'_FVH', fpos)
-                if fpos == -1:
-                    break
-                fvh_offsets.append(fpos)
-                fpos += 4
+            if not matched_by_both:
+                best_cand_start = valid_candidates[0]
+                log_callback("[INFO] Top 2-3 lines matched; Footer slightly updated in official package. Slicing with exact offset.")
+        else:
+            # Case 2: Backup BIOS bottom is BLANK (0xFF / 0x00) -> Cut strictly by offset from matched Topper
+            best_cand_start = valid_candidates[0]
+            log_callback(f"[INFO] Backup Footer is BLANK (unpopulated). Slicing exact target size offset (+{target_size} bytes) from Topper.")
 
-            for fvh_pos in fvh_offsets:
-                anc_start = max(0, fvh_pos - 0x28)
-                anc_len = min(72, len(old_bios_region) - anc_start)
-                anchor = old_bios_region[anc_start : anc_start + anc_len]
-                if anchor.count(b'\xff') < anc_len - 8:
-                    pos = data.find(anchor)
-                    while pos != -1:
-                        calc_start = pos - anc_start
-                        if 0 <= calc_start <= diff:
-                            c_slice = data[calc_start : calc_start + target_size]
-                            tail16 = c_slice[-16:]
-                            # Check reset vector jmp opcode or identical footer
-                            if tail16 == old_bios_region[-16:] or b'\xe9' in tail16 or b'\xea' in tail16 or tail16[-2:] == b'\xff\xff':
-                                best_cand_start = calc_start
-                                top_matched = True
-                                match_method = f"UEFI Volume Anchor (_FVH at 0x{fvh_pos:X}) Alignment"
-                                break
-                        pos = data.find(anchor, pos + 1)
-                    if best_cand_start >= 0:
-                        break
-
-        # ── STRATEGY 3: Top Anchor (Header) Alignment ─────────────────────────
-        if best_cand_start < 0:
-            for off in range(0, min(0x10000, target_size - 64), 16):
-                blk = old_bios_region[off : off + 64]
-                if blk.count(b'\xff') < 48 and blk.count(b'\x00') < 48:
-                    pos = data.find(blk)
-                    while pos != -1:
-                        calc_start = pos - off
-                        if 0 <= calc_start <= diff:
-                            c_slice = data[calc_start : calc_start + target_size]
-                            if c_slice[-16:] == old_bios_region[-16:] or b'_FVH' in c_slice:
-                                best_cand_start = calc_start
-                                top_matched = True
-                                match_method = "Topper Header Anchor Alignment"
-                                break
-                        pos = data.find(blk, pos + 1)
-                    if best_cand_start >= 0:
-                        break
-
-        # ── STRATEGY 4: Standard Offsets & Flash Descriptor Offsets ───────────
-        if best_cand_start < 0:
-            candidate_offsets = [0, 0x40, 0x100, 0x140, 0x200, 0x220, 2048, 0x1000, diff]
-            # Check for candidate Flash Descriptor (e.g. encapsulated full SPI image)
-            fd_pos = data.find(b'\x5A\xA5\xF0\x0F')
-            if fd_pos != -1 and fd_pos >= 0x10:
-                container_hdr = fd_pos - 0x10
-                candidate_offsets.insert(0, container_hdr + (diff - container_hdr))
-                candidate_offsets.insert(0, container_hdr)
-
-            for std_off in candidate_offsets:
-                if 0 <= std_off <= diff:
-                    c_slice = data[std_off : std_off + target_size]
-                    if c_slice[-16:] == old_bios_region[-16:] or (b'_FVH' in c_slice and (b'\xe9' in c_slice[-16:] or b'\xea' in c_slice[-16:])):
-                        best_cand_start = std_off
-                        match_method = f"Capsule / Container Standard Alignment (+{std_off} bytes)"
-                        break
-
-        # ── EVALUATION OF BEST SLICE ──────────────────────────────────────────
         if best_cand_start >= 0:
-            c_slice = data[best_cand_start : best_cand_start + target_size]
-            old_tail = old_bios_region[-64:]
-            cand_tail = c_slice[-64:]
+            trimmed_data = data[best_cand_start : best_cand_start + target_size]
+            header_removed = best_cand_start
+            footer_removed = cand_size - (best_cand_start + target_size)
+            log_callback(f"[SUCCESS] [OK] BIOS Region Sliced and Aligned Successfully!")
+            log_callback(f"[INFO] Header Removed: {header_removed} bytes | Footer Removed: {footer_removed} bytes")
+            return trimmed_data, header_removed, footer_removed
 
-            old_blank = (old_tail.count(b'\xff') >= 56 or old_tail.count(b'\x00') >= 56)
-            cand_blank = (cand_tail.count(b'\xff') >= 56 or cand_tail.count(b'\x00') >= 56)
-            footer_is_blank = old_blank or cand_blank
-
-            if cand_tail[-16:] == old_tail[-16:]:
-                footer_matched = True
-            elif (b'\xe9' in cand_tail[-16:] or b'\xea' in cand_tail[-16:]) and cand_tail.endswith(b'\x00\xe0\xff\xff'):
-                footer_matched = True
-            elif old_blank and cand_blank:
-                footer_matched = True
-
-            # Check top match
-            if c_slice[:64] == old_bios_region[:64] or (b'_FVH' in c_slice and b'_FVH' in old_bios_region):
-                top_matched = True
-
-            # Decision
-            if footer_matched or top_matched:
-                log_callback(f"[SUCCESS] BIOS Region matched and aligned successfully! [OK]")
-                log_callback(f"[INFO] Method: {match_method} | Offset: +{best_cand_start} bytes | Target Size: {target_size} bytes")
-                trimmed_data = data[best_cand_start : best_cand_start + target_size]
-                header_removed = best_cand_start
-                footer_removed = cand_size - (best_cand_start + target_size)
-                log_callback(f"[INFO] Header Removed: {header_removed} bytes | Footer Removed: {footer_removed} bytes")
-                return trimmed_data, header_removed, footer_removed
-
-        # If completely unaligned:
-        log_callback("[ERROR] Validation Failed: Neither Topper nor Footer matched the loaded BIOS region! [FAIL]")
-        log_callback("[REJECT] Incompatible file structure. Operation Cancelled.")
+        log_callback("[ERROR] Slicing calculation failed.")
         return None, 0, 0
 
     # ── FALLBACK FOR CALLERS WITHOUT OLD BIOS REGION ─────────────────────────

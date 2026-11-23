@@ -6902,8 +6902,8 @@ class BiosServiceTool(QMainWindow):
         QTimer.singleShot(delay_ms, self.loading_overlay.stop)
 
     def cleanup_temp_files(self):
-        """Removes temporary session files and directories on startup."""
-        dirs_to_clear = [self.workspace_dir, "backup_me", "extracted_firmware", "temp"]
+        """Removes temporary session files, decompiled folders, and artifacts on startup and restart."""
+        dirs_to_clear = [self.workspace_dir, "backup_me", "extracted_firmware", "temp", "_decomp_workspace"]
         
         for d in dirs_to_clear:
             path = os.path.join(str(get_app_root()), d) if not os.path.isabs(d) else d
@@ -6915,6 +6915,13 @@ class BiosServiceTool(QMainWindow):
         
         # Ensure workspace exists for new tasks
         os.makedirs(self.workspace_dir, exist_ok=True)
+
+        # Clean all decompiled artifacts, folders, and logs from Intel FIT and external tools
+        try:
+            from all_rg_clean_engine import cleanup_all_decompiled_temp_files
+            cleanup_all_decompiled_temp_files(log_cb=getattr(self, "log_to_terminal", None))
+        except Exception:
+            pass
 
     # Status Bar helpers
     def _sb_label(self, text, style):
@@ -7115,8 +7122,9 @@ class BiosServiceTool(QMainWindow):
             self.hex_tabs.setTabText(idx, f"{prefix}{tab._base_title}")
 
     def closeEvent(self, event):
-        """Save session before close and clean up child windows."""
+        """Save session before close and clean up child windows and temporary artifacts."""
         self._save_session()
+        self.cleanup_temp_files()
         # Close hex viewer if it's open as a floating window
         if hasattr(self, 'hex_widget') and self.hex_widget.isVisible():
             self.hex_widget.close()
@@ -7722,8 +7730,12 @@ class BiosServiceTool(QMainWindow):
         menu.addAction(ready_action)
 
         exe_action = QAction("BIOS RG .EXE", self)
-        exe_action.triggered.connect(self.run_all_rg_clean)
+        exe_action.triggered.connect(self.run_bios_rg_exe)
         menu.addAction(exe_action)
+
+        all_rg_action = QAction("ALL RG CLEAN (.EXE)", self)
+        all_rg_action.triggered.connect(self.run_all_rg_clean)
+        menu.addAction(all_rg_action)
 
         menu.exec(self.btn_dmi_migrate.mapToGlobal(self.btn_dmi_migrate.rect().bottomLeft()))
 
@@ -7878,6 +7890,16 @@ class BiosServiceTool(QMainWindow):
             
         def _run_fix():
             try:
+                self.progress_signal.emit(25)
+                # Step 1: Decompile Backup BIOS first into source folder
+                try:
+                    from all_rg_clean_engine import decompile_backup_bios_with_fit
+                    self.log_to_terminal(f"[ACTION] Step 1: Decompiling Backup BIOS into source directory...")
+                    decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
+                    self._pending_decomp_ctx = decomp_ctx
+                except Exception as dec_err:
+                    self.log_to_terminal(f"[WARNING] Step 1 Backup Decompile note: {dec_err}")
+
                 self.progress_signal.emit(40)
                 
                 # --- HP SOFTPAQ AUTO-DETECTION ---
@@ -8106,7 +8128,13 @@ class BiosServiceTool(QMainWindow):
     def _show_rg_exe_selection_dialog(self, extracted_files):
         from rg_engine.ui import ExtractedFileListDialog
         
-        dialog = ExtractedFileListDialog(extracted_files, original_bios_path=self.current_bios_file, parent=self)
+        target_size = 0
+        if hasattr(self, 'current_regions_map') and self.current_regions_map:
+            reg = self.current_regions_map.get("bios") or self.current_regions_map.get("bios_region")
+            if reg:
+                target_size = reg.get("size", 0)
+
+        dialog = ExtractedFileListDialog(extracted_files, original_bios_path=self.current_bios_file, target_bios_size=target_size, parent=self)
         if dialog.exec() != QDialog.Accepted or not dialog.selected_file:
             self.log_to_terminal("[INFO] User cancelled file selection.")
             self.initiate_loader_stop(0)

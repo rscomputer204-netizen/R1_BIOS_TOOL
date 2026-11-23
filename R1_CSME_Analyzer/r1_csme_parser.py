@@ -164,9 +164,12 @@ CPUID_MAP = {
     "000906E9": ("Kaby Lake (7th Gen)", "KBP-S B"),
 
     # 4th / 5th Gen Haswell / Broadwell
+    "000306D2": ("Broadwell (5th Gen)", "WPT-LP"),
+    "000306D3": ("Broadwell (5th Gen)", "WPT-LP"),
     "000306D4": ("Broadwell (5th Gen)", "WPT-LP"),
+    "00040650": ("Broadwell (5th Gen)", "WPT-LP"),
+    "00040651": ("Broadwell (5th Gen)", "WPT-LP"),
     "00040671": ("Broadwell (5th Gen)", "WPT"),
-    "00040651": ("Broadwell (5th Gen)", "WPT"),
     "000306C1": ("Haswell (4th Gen)", "LPT"),
     "000306C2": ("Haswell (4th Gen)", "LPT"),
     "000306C3": ("Haswell (4th Gen)", "LPT"),
@@ -407,6 +410,59 @@ class R1CSMEAnalyzer:
                         self.info["chipset"] = best_chipset
                         return
                     self.info["cpu_gen"] = f"Intel | Generic Intel x86 | {', '.join(unique_cpuids)}"
+                    return
+
+        # Fallback Direct Microcode Scan (for truncated dumps, split chips, or missing FIT pointers)
+        direct_cpuids = []
+        for i in range(0, flen - 48, 16):
+            hdr_ver = struct.unpack("<I", data[i:i+4])[0]
+            ldr_rev = struct.unpack("<I", data[i+20:i+24])[0]
+            if hdr_ver == 1 and ldr_rev == 1:
+                rev = struct.unpack("<I", data[i+4:i+8])[0]
+                cpuid = struct.unpack("<I", data[i+12:i+16])[0]
+                plat = struct.unpack("<I", data[i+24:i+28])[0]
+                sz = struct.unpack("<I", data[i+32:i+36])[0] or 2048
+                if 2048 <= sz <= 262144 and i + sz <= flen:
+                    total_sum = sum(struct.unpack(f"<{sz//4}I", data[i:i+sz])) & 0xFFFFFFFF
+                    if total_sum == 0:
+                        cpuid_hex = f"{cpuid:08X}"
+                        if cpuid_hex not in ["00000000", "FFFFFFFF"]:
+                            direct_cpuids.append(cpuid_hex)
+                            mc_yr = f"{data[i+9]:02X}{data[i+8]:02X}"
+                            mc_day = f"{data[i+10]:02X}"
+                            mc_mon = f"{data[i+11]:02X}"
+                            mc_date = f"{mc_yr}-{mc_mon}-{mc_day}"
+                            self.info["microcodes"].append({
+                                "cpuid": cpuid_hex,
+                                "platform": f"0x{plat:02X}",
+                                "revision": f"0x{rev:08X}",
+                                "date": mc_date,
+                                "size": f"0x{sz:X}"
+                            })
+
+        if direct_cpuids:
+            unique_cpuids = sorted(list(set(direct_cpuids)))
+            self.info["cpuids"] = unique_cpuids
+            best_rank = -1
+            best_gen = None
+            best_chipset = None
+            for cid in unique_cpuids:
+                if cid in CPUID_MAP:
+                    gen_str, chipset_val = CPUID_MAP[cid]
+                    rank = 0
+                    for k, r in GEN_RANK.items():
+                        if k in gen_str.lower():
+                            rank = max(rank, r)
+                    if rank > best_rank:
+                        best_rank = rank
+                        best_gen = gen_str
+                        best_chipset = chipset_val
+            if best_gen:
+                self.info["cpu_gen"] = f"Intel | {best_gen} | {', '.join(unique_cpuids)}"
+                self.info["chipset"] = best_chipset
+                return
+            self.info["cpu_gen"] = f"Intel | Generic Intel x86 | {', '.join(unique_cpuids)}"
+            return
 
     def _parse_flash_descriptor(self):
         data = self.raw_data
@@ -418,12 +474,47 @@ class R1CSMEAnalyzer:
             elif data[0x0:0x4] == SIG_FD:
                 fd_pos = 0x0
             else:
-                # Some dumps start within first 4KB
                 p = data.find(SIG_FD, 0, min(0x1000, len(data)))
                 if p != -1 and p + 0x50 <= len(data):
                     fd_pos = p
 
         if fd_pos != -1:
+            # Component Count & Flash Density (C0DEN, C1DEN)
+            try:
+                flmap0 = int.from_bytes(data[fd_pos + 4 : fd_pos + 8], "little")
+                fcba = (flmap0 & 0xFF) << 4
+                nc = ((flmap0 >> 8) & 3) + 1  # Number of flash chips (1 or 2)
+                isl = data[fd_pos + 0x8 + 0x3] if fd_pos + 0xB <= len(data) else 0x15
+                c1_bitwise = 0xF if isl >= 0x13 else 0x7
+                c2_shift = 0x4 if isl >= 0x13 else 0x3
+
+                density_dict = {
+                    0: 0.5, 1: 1.0, 2: 2.0, 3: 4.0, 4: 8.0, 5: 16.0, 6: 32.0, 7: 64.0
+                }
+
+                if fcba < len(data):
+                    comp_den = data[fcba]
+                    c1_sz = density_dict.get(comp_den & c1_bitwise, 0.0)
+                    c2_sz = density_dict.get((comp_den >> c2_shift) & 0xF, 0.0) if nc == 2 else 0.0
+                    total_flash_mb = c1_sz + c2_sz
+                    actual_file_mb = round(len(data) / (1024 * 1024), 2)
+                    missing_mb = round(total_flash_mb - actual_file_mb, 2)
+
+                    self.info["num_chips"] = nc
+                    self.info["comp1_mb"] = c1_sz
+                    self.info["comp2_mb"] = c2_sz
+                    self.info["total_flash_mb"] = total_flash_mb
+
+                    if missing_mb > 0.1:
+                        total_disp = int(total_flash_mb) if total_flash_mb.is_integer() else total_flash_mb
+                        actual_disp = int(actual_file_mb) if actual_file_mb.is_integer() else actual_file_mb
+                        missing_disp = int(missing_mb) if missing_mb.is_integer() else missing_mb
+                        self.info["missing_chip_warning"] = (
+                            f"Full BIOS is {total_disp} MB, but we found only {actual_disp} MB & {missing_disp} MB is missing."
+                        )
+            except Exception:
+                pass
+
             end_fd_match = fd_pos + 4
             fd_rgn_base = end_fd_match + 0x2C
 
@@ -1080,10 +1171,16 @@ class R1CSMEAnalyzer:
         self.info["size_hex"] = f"0x{total_fw_size:X}"
 
         self.info["mfs_found"] = (mfs_buf is not None)
-        fs_state, mfs_has_oem_file = self._determine_mfs_state(
-            mfs_buf,
-            has_oem_config=(oemp_part_found or cdmd_part_found or fitc_part_found)
-        )
+        major = self.info.get("major", 0)
+        if major < 11:
+            # Intel ME v2 to v10 do not use MFS; File System State is not applicable
+            fs_state = "N/A"
+            mfs_has_oem_file = False
+        else:
+            fs_state, mfs_has_oem_file = self._determine_mfs_state(
+                mfs_buf,
+                has_oem_config=(oemp_part_found or cdmd_part_found or fitc_part_found)
+            )
 
         has_oem_config = mfs_has_oem_file or oemp_part_found or fitc_part_found or cdmd_part_found
         self.info["oem_config"] = "Yes" if has_oem_config else "No"
@@ -1457,6 +1554,8 @@ class R1CSMEAnalyzer:
                         self.info["chipset"] = "LPT-LP" if self.info.get("minor", 0) >= 5 else "LPT"
                     elif major == 10:
                         self.info["chipset"] = "WPT-LP"
+            if self.info.get("num_chips", 0) > 0 and "Chips:" not in self.info.get("full_tag", ""):
+                self.info["full_tag"] += f" | Chips: {self.info['num_chips']}"
             return
 
         # Fallback heuristic tag building
@@ -1502,6 +1601,9 @@ class R1CSMEAnalyzer:
         else:
             self.info["full_tag"] = f"{ver}_{sku_code}_{stepping}_{release}_{me_type}"
 
+        if self.info.get("num_chips", 0) > 0 and "Chips:" not in self.info["full_tag"]:
+            self.info["full_tag"] += f" | Chips: {self.info['num_chips']}"
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MODULAR REPORT RENDERERS
@@ -1519,10 +1621,16 @@ def format_default_summary(info: dict) -> str:
         f"OEM Configuration: {info['oem_config']}",
         f"Date: {info['date']}",
         f"Size: {info['size_hex']}",
-        f"File System State: {info['fs_stage']}",
+    ]
+    if info.get("major", 0) >= 11 and info.get("fs_stage") not in ("N/A", "Unknown", None, ""):
+        lines.append(f"File System State: {info['fs_stage']}")
+    lines.extend([
         f"FITC: {info['fitc_ver']}",
         f"CSME Full Version: {info['full_tag']}"
-    ]
+    ])
+    if info.get("missing_chip_warning"):
+        lines.append("-" * 50)
+        lines.append(info["missing_chip_warning"])
     sub_fw = info.get("sub_firmwares", {})
     if sub_fw:
         lines.append("-" * 50)
@@ -1670,10 +1778,15 @@ def render_boxed_csme_report(info: dict) -> list:
         ("OEM Configuration",     info["oem_config"],                                            "#f8fafc", False),
         ("Firmware Date",         info["date"],                                                  "#e2e8f0", False),
         ("Firmware Size",         info["size_hex"],                                              "#e2e8f0", False),
-        ("File System State",     info["fs_stage"],                                              "#34d399", True),  # Mint Green
+    ]
+    
+    if info.get("major", 0) >= 11 and info.get("fs_stage") not in ("N/A", "Unknown", None, ""):
+        rows.append(("File System State", info["fs_stage"], "#34d399", True))
+
+    rows.extend([
         ("FITC Version",          info["fitc_ver"],                                              "#facc15", True),  # Yellow
         ("CSME Full Version",     info["full_tag"],                                              "#38bdf8", True),  # Sky Blue
-    ]
+    ])
     
     col1_w = 20
     col2_w = 66
@@ -1708,6 +1821,8 @@ def render_boxed_csme_report(info: dict) -> list:
         lines.append(row_html)
         
     lines.append(bot_b)
+    if info.get("missing_chip_warning"):
+        lines.append(f"<font color='#f87171'><b>[!] {info['missing_chip_warning']}</b></font>")
     return lines
 
 

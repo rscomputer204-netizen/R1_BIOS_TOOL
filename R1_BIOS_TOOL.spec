@@ -12,7 +12,7 @@ datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 
 a = Analysis(
     ['main.py'],
-    pathex=['BIOSUtilities', 'd:/BIOS_-TOOL'],
+    pathex=['BIOSUtilities', 'D:/BIOS_-TOOL'],
     binaries=binaries,
     datas=datas,
     hiddenimports=hiddenimports,
@@ -41,7 +41,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon=['d:/BIOS_-TOOL/assets/icon.ico'],
+    icon=['D:/BIOS_-TOOL/assets/icon.ico'],
 )
 coll = COLLECT(
     exe,

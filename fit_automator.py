@@ -123,20 +123,27 @@ def find_fit_candidates(version_str, external_dir="external", chipset_hint=None)
         # Exact Minor match
         if t_minor == q_minor:
             score += 500000
-            # Patch match
-            if t_patch == q_patch:
-                score += 200000
-                # Exact build match
-                if t_build == q_build:
-                    score += 100000
+            
+            # Check for EXACT version match (Major + Minor + Patch + Build)
+            # Exactly matches the behavior of fit_tool_finder.py
+            if q_patch > 0 and t_patch == q_patch and q_build > 0 and t_build == q_build:
+                score += 2000000  # Exact full version match gets highest priority!
+            elif q_patch > 0 and t_patch == q_patch:
+                score += 500000
+                score += (t_patch * 10000) + t_build
             else:
-                score += max(0, 100000 - abs(t_patch - q_patch) * 500)
+                # Within the same branch, newer builds are preferred as compatible fallback
+                score += (t_patch * 10000) + t_build
+                if t_patch >= q_patch:
+                    score += 300000
+                if t_build >= q_build:
+                    score += 100000
         else:
             diff = abs(t_minor - q_minor)
             score -= min(300000, diff * 15000)
 
         # Revision bonus for fresher tool
-        score += t_rev * 100
+        score += t_rev * 1000
 
         # Chipset preference bonus
         if chipset_hint:
