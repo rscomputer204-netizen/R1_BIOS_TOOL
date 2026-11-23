@@ -9209,7 +9209,7 @@ class BiosServiceTool(QMainWindow):
                         mea_hist = getattr(self, 'mea_history', '')
                         if mea_hist:
                             mea_meta = parse_mea_output(mea_hist)
-                            ver_str = mea_meta.get("version") or mea_meta.get("Version")
+                            ver_str = mea_meta.get("fitc_ver") or mea_meta.get("FITC Version") or mea_meta.get("version") or mea_meta.get("Version")
                             if ver_str:
                                 from fit_automator import find_fit_candidates
                                 cands = find_fit_candidates(ver_str, chipset_hint=mea_meta.get("chipset"))

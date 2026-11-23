@@ -557,11 +557,16 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
     log_cb(f"[ACTION] Initializing Intel FIT Decompilation for: {os.path.basename(bios_path)}")
     dump_analyzer = R1CSMEAnalyzer(bios_path)
     dump_me = dump_analyzer.parse()
-    dump_ver = dump_me.get("version") or ""
+    fitc_target = dump_me.get("fitc_ver")
+    if fitc_target and fitc_target not in ("N/A", "Unknown", None, ""):
+        dump_ver = fitc_target
+        log_cb(f"[INFO] Using Detected FITC Version for Tool Match: {dump_ver}")
+    else:
+        dump_ver = dump_me.get("version") or ""
     dump_chipset = dump_me.get("chipset") or ""
 
     if dump_ver:
-        log_cb(f"[INFO] Detected CSME Firmware Version: {dump_ver} | Chipset: {dump_chipset or 'N/A'}")
+        log_cb(f"[INFO] Detected CSME Firmware Version: {dump_me.get('version', dump_ver)} | Chipset: {dump_chipset or 'N/A'}")
 
     # 3. Setup clean internal workspace inside application root (not polluting external BIOS source folder)
     bios_file_p = Path(bios_path).resolve()

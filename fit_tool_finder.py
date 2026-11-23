@@ -425,15 +425,11 @@ class FITFinderApp(QMainWindow):
                             score += 45
                             reasons.append(f"Minor v{q_parts[0]}.{q_parts[1]} match")
                             
-                            # Patch comparison
+                            # Patch comparison (3rd part)
                             if len(q_parts) > 2 and len(t_parts) > 2:
                                 if q_parts[2] == t_parts[2]:
-                                    score += 25
-                                    reasons.append("Patch match")
-                                    # Build comparison
-                                    if len(q_parts) > 3 and len(t_parts) > 3 and q_parts[3] == t_parts[3]:
-                                        score += 25
-                                        reasons.append("Exact build match")
+                                    score += 250  # Top priority for exact 3-part match (Major.Minor.Patch)
+                                    reasons.append("Exact 3-part match (Major.Minor.Patch)")
                         else:
                             diff = abs(q_parts[1] - t_parts[1])
                             score -= min(15, diff * 2)

@@ -124,20 +124,17 @@ def find_fit_candidates(version_str, external_dir="external", chipset_hint=None)
         if t_minor == q_minor:
             score += 500000
             
-            # Check for EXACT version match (Major + Minor + Patch + Build)
-            # Exactly matches the behavior of fit_tool_finder.py
-            if q_patch > 0 and t_patch == q_patch and q_build > 0 and t_build == q_build:
-                score += 2000000  # Exact full version match gets highest priority!
-            elif q_patch > 0 and t_patch == q_patch:
-                score += 500000
-                score += (t_patch * 10000) + t_build
+            # RULE: 3-Part Match (Major.Minor.Patch e.g. 11.8.50)
+            # When first 3 parts match, this tool wins with absolute top priority!
+            # 4th part (Build number) is ignored as per user requirement.
+            if q_patch > 0 and t_patch == q_patch:
+                score += 5000000
+                score += t_build  # Higher build within the same 3-part patch breaks tie
             else:
-                # Within the same branch, newer builds are preferred as compatible fallback
-                score += (t_patch * 10000) + t_build
-                if t_patch >= q_patch:
-                    score += 300000
-                if t_build >= q_build:
-                    score += 100000
+                # Fallback only when the exact 3-part patch is not available in database
+                diff_patch = abs(t_patch - q_patch)
+                score -= min(400000, diff_patch * 10000)
+                score += t_build
         else:
             diff = abs(t_minor - q_minor)
             score -= min(300000, diff * 15000)
@@ -484,10 +481,15 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
         print_terminal_log(terminal_callback, f"[INFO] Using external FIT tool: {Path(custom_fit_exe).name}")
         candidates = [(9999999, custom_fit_exe)]
     else:
-        # Step 2: Get ranked candidates
-        candidates = find_fit_candidates(version_string, external_dir, chipset_hint)
+        # Step 2: Get ranked candidates using FITC tool version (Major.Minor.Patch)
+        target_ver = version_string
+        fitc_ver = mea_data.get('fitc_ver') if mea_data else None
+        if fitc_ver and fitc_ver not in ("N/A", "Unknown", None, ""):
+            target_ver = fitc_ver
+            print_terminal_log(terminal_callback, f"[INFO] Matching FIT Tool by FITC Version: {target_ver}")
+        candidates = find_fit_candidates(target_ver, external_dir, chipset_hint)
         if not candidates:
-            print_terminal_log(terminal_callback, f"[ERROR] No Intel FIT found for version {version_string}.", "ERROR")
+            print_terminal_log(terminal_callback, f"[ERROR] No Intel FIT found for version {target_ver}.", "ERROR")
             return None
 
     # Step 3: Retry Loop
@@ -592,9 +594,14 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
         print_terminal_log(terminal_callback, f"[INFO] Using external FIT tool: {Path(custom_fit_exe).name}")
         candidates = [(9999999, custom_fit_exe)]
     else:
-        candidates = find_fit_candidates(version_string, external_dir, chipset_hint)
+        target_ver = version_string
+        fitc_ver = mea_data.get('fitc_ver') if mea_data else None
+        if fitc_ver and fitc_ver not in ("N/A", "Unknown", None, ""):
+            target_ver = fitc_ver
+            print_terminal_log(terminal_callback, f"[INFO] Matching FIT Rebuild Tool by FITC Version: {target_ver}")
+        candidates = find_fit_candidates(target_ver, external_dir, chipset_hint)
         if not candidates:
-            print_terminal_log(terminal_callback, f"[ERROR] No Intel FIT found for version {version_string}.", "ERROR")
+            print_terminal_log(terminal_callback, f"[ERROR] No Intel FIT found for version {target_ver}.", "ERROR")
             return False
 
     for attempt, (score, fit_exe) in enumerate(candidates, 1):
