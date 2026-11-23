@@ -9205,17 +9205,39 @@ class BiosServiceTool(QMainWindow):
                     self.log_to_terminal("-" * 30)
 
                     try:
-                        from mea_parser import parse_mea_output
-                        mea_hist = getattr(self, 'mea_history', '')
-                        if mea_hist:
-                            mea_meta = parse_mea_output(mea_hist)
-                            ver_str = mea_meta.get("fitc_ver") or mea_meta.get("FITC Version") or mea_meta.get("version") or mea_meta.get("Version")
-                            if ver_str:
-                                from fit_automator import find_fit_candidates
-                                cands = find_fit_candidates(ver_str, chipset_hint=mea_meta.get("chipset"))
-                                if cands:
-                                    best_tool = Path(cands[0][1]).parent.name
-                                    self.log_to_terminal(f"[INFO] Engine Match: {best_tool} (Ready for Analog FIT Clean/Rebuild)")
+                        fit_target_ver = None
+                        fit_chipset_hint = None
+                        
+                        # 1. Directly parse with R1CSMEAnalyzer on the loaded file to get FITC Version
+                        try:
+                            from R1_CSME_Analyzer.r1_csme_parser import R1CSMEAnalyzer
+                            r1_res = R1CSMEAnalyzer(file_path).parse()
+                            if r1_res:
+                                fit_chipset_hint = r1_res.get("chipset")
+                                fitc_cand = r1_res.get("fitc_ver")
+                                if fitc_cand and fitc_cand not in ("N/A", "Unknown", None, ""):
+                                    fit_target_ver = fitc_cand
+                                else:
+                                    fit_target_ver = r1_res.get("version")
+                        except Exception:
+                            pass
+                            
+                        # 2. Fallback to mea_history if needed
+                        if not fit_target_ver:
+                            from mea_parser import parse_mea_output
+                            mea_hist = getattr(self, 'mea_history', '')
+                            if mea_hist:
+                                mea_meta = parse_mea_output(mea_hist)
+                                fit_target_ver = mea_meta.get("fitc_ver") or mea_meta.get("version") or mea_meta.get("Version")
+                                if not fit_chipset_hint:
+                                    fit_chipset_hint = mea_meta.get("chipset")
+                                    
+                        if fit_target_ver:
+                            from fit_automator import find_fit_candidates
+                            cands = find_fit_candidates(fit_target_ver, chipset_hint=fit_chipset_hint)
+                            if cands:
+                                best_tool = Path(cands[0][1]).parent.name
+                                self.log_to_terminal(f"[INFO] Engine Match: {best_tool} (Ready for Analog FIT Clean/Rebuild)")
                     except Exception:
                         pass
                     

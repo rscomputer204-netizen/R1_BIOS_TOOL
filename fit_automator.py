@@ -124,12 +124,15 @@ def find_fit_candidates(version_str, external_dir="external", chipset_hint=None)
         if t_minor == q_minor:
             score += 500000
             
-            # RULE: 3-Part Match (Major.Minor.Patch e.g. 11.8.50)
+            # RULE: 3-Part Match (Major.Minor.Patch e.g. 11.8.50, 11.0.0, 12.0.49)
             # When first 3 parts match, this tool wins with absolute top priority!
             # 4th part (Build number) is ignored as per user requirement.
-            if q_patch > 0 and t_patch == q_patch:
+            if len(q_parts) >= 3 and t_patch == q_patch:
                 score += 5000000
-                score += t_build  # Higher build within the same 3-part patch breaks tie
+                if t_build > 0:
+                    score += 500000 + t_build  # Real tool with specific build wins over generic packages
+                else:
+                    score += t_build
             else:
                 # Fallback only when the exact 3-part patch is not available in database
                 diff_patch = abs(t_patch - q_patch)

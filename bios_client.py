@@ -2248,7 +2248,8 @@ class BiosServiceTool(QMainWindow):
         try:
             # 1. Parse Version from MEA History
             mea_meta = parse_mea_output(self.mea_history)
-            me_version = mea_meta.get("version")
+            fitc_target_ver = mea_meta.get("fitc_ver")
+            me_version = fitc_target_ver if (fitc_target_ver and fitc_target_ver not in ("N/A", "Unknown", None, "")) else mea_meta.get("version")
             
             if not me_version:
                 self.log_to_terminal("[ERROR] Automatic Version Detection Failed. Check patterns in mea_parser.py.")

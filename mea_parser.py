@@ -12,12 +12,14 @@ def parse_mea_output(output_text):
         "stepping": "",
         "release":  "",
         "type":     "",
-        "fs_state": ""
+        "fs_state": "",
+        "fitc_ver": ""
     }
     
     # Regex patterns for common MEA output fields (handles ':', '|', '║', '│')
     patterns = {
         "version":  r"(?:Version|Ver)\s*[:|║│]\s*([\d\.]+)",
+        "fitc_ver": r"(?:Flash\s*Image\s*Tool|FITC(?:\s*Version)?)\s*[:|║│]\s*([\d\.]+)",
         "family":   r"Family\s*[:|║│]\s*([^\n\r\|║│/]+)",
         "sku":      r"SKU\s*[:|║│]\s*([^\n\r\|/║│]+)",
         "chipset":  r"Chipset(?:\s+Support)?\s*[:|║│]\s*([^\n\r\|║│/]+)",
