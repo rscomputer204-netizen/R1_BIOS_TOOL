@@ -547,11 +547,22 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
                 if not decomp_target.exists():
                     fit_decomp = Path(fit_dir) / "image"
                     if not fit_decomp.exists():
-                        for cand_name in ["image", Path(temp_bios).stem, Path(bios_path).stem]:
+                        short_stem = Path(abs_temp_bios).stem
+                        for cand_name in ["image", short_stem, Path(temp_bios).stem, Path(bios_path).stem]:
                             cand_p = Path(fit_dir) / cand_name
                             if cand_p.exists() and cand_p.is_dir():
                                 fit_decomp = cand_p
                                 break
+                    if not fit_decomp.exists() and Path(fit_dir).exists():
+                        try:
+                            from clean_fit_tools import GENUINE_SUBDIRS
+                        except Exception:
+                            GENUINE_SUBDIRS = set()
+                        for sub in Path(fit_dir).iterdir():
+                            if sub.is_dir() and sub.name.lower() not in GENUINE_SUBDIRS:
+                                if (sub / "Decomp").exists() or list(sub.glob("*.bin")):
+                                    fit_decomp = sub
+                                    break
                     if fit_decomp.exists():
                         moved_from = str(fit_decomp.absolute())
                         shutil.move(str(fit_decomp), str(decomp_target))
@@ -591,8 +602,8 @@ def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_cal
             print_terminal_log(terminal_callback, f"[ERROR] Execution failed for {tool_folder_name}: {str(e)}", "ERROR")
             continue
 
-    print_terminal_log(terminal_callback, "[INFO] Intel FIT decompilation is bypassed (Modern Multi-Partition CSME 16/18 with buffer-overflow protection).", "INFO")
-    print_terminal_log(terminal_callback, "[INFO] Automatically switching to Surgical Direct Clean & Hex Injection Engine...", "INFO")
+    print_terminal_log(terminal_callback, "[ERROR] Intel FIT decompilation failed across all candidate tools. Safety lock engaged.", "ERROR")
+    print_terminal_log(terminal_callback, "[NOTICE] Direct Hex Injection Mode is permanently removed to protect motherboard from No-Display bricking.", "ERROR")
     return None
 
 def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, output_path, terminal_callback=None, external_dir="external", custom_fit_exe=None):

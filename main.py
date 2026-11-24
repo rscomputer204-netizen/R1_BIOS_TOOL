@@ -760,28 +760,15 @@ class SettingsDialog(QDialog):
         eg_layout = QVBoxLayout(engine_group)
         eg_layout.setSpacing(6)
         
-        self.rb_analog = QRadioButton("Analog System (Intel FIT with Hybrid Fallback)")
-        self.rb_analog.setToolTip("Attempts official Intel FIT/MFIT first across 117 tools. If FIT fails, automatically falls back to Hybrid Surgical Injection.")
+        self.rb_analog = QRadioButton("Official Intel FIT Engine (100% Native Recompile)")
+        self.rb_analog.setToolTip("Always operates strictly via official Intel FIT / MFIT decompilation and recompilation. Direct Hex Injection is permanently removed to prevent No-Display motherboard bricking.")
+        self.rb_analog.setChecked(True)
         
-        lbl_analog_desc = QLabel("  Uses Intel FIT tool first. If it fails, auto-falls back to Hybrid.")
+        lbl_analog_desc = QLabel("  Strict Intel FIT / MFIT Engine (100% Motherboard Safety Lock Engaged).")
         lbl_analog_desc.setStyleSheet("color: #7b94b0; font-size: 11px; margin-bottom: 2px;")
         
-        self.rb_hybrid = QRadioButton("Hybrid System (Direct Surgical Injection Mode)")
-        self.rb_hybrid.setToolTip("Always operates directly via Surgical In-Place / Offset Injection without invoking Intel FIT.")
-        
-        lbl_hybrid_desc = QLabel("  Always operates directly via Surgical In-Place / Offset Injection.")
-        lbl_hybrid_desc.setStyleSheet("color: #7b94b0; font-size: 11px;")
-        
-        saved_mode = self.settings.value("repair_engine_mode", "analog")
-        if saved_mode == "hybrid":
-            self.rb_hybrid.setChecked(True)
-        else:
-            self.rb_analog.setChecked(True)
-            
         eg_layout.addWidget(self.rb_analog)
         eg_layout.addWidget(lbl_analog_desc)
-        eg_layout.addWidget(self.rb_hybrid)
-        eg_layout.addWidget(lbl_hybrid_desc)
         layout.addWidget(engine_group)
         
         # --- Auto Verify Group (অটো ভেরিফাই) ---
@@ -9506,10 +9493,6 @@ class BiosServiceTool(QMainWindow):
         btn_layout = QHBoxLayout()
         btn_layout.setSpacing(10)
         
-        btn_inject = QPushButton("⚡ Direct Hex Injection (Cut && Paste)")
-        btn_inject.setCursor(Qt.PointingHandCursor)
-        btn_inject.setStyleSheet("QPushButton { background-color: #0284c7; color: #ffffff; border: 1px solid #38bdf8; font-size: 14px; font-weight: bold; padding: 12px; } QPushButton:hover { background-color: #0369a1; }")
-        
         btn_retry = QPushButton("Retry")
         btn_retry.setCursor(Qt.PointingHandCursor)
         btn_retry.setStyleSheet(f"QPushButton {{ background-color: {btn_bg}; color: {text_color}; border: 1px solid #f59e0b; font-size: 14px; font-weight: bold; padding: 12px; }} QPushButton:hover {{ background-color: #f59e0b; color: #fff; }}")
@@ -9522,7 +9505,6 @@ class BiosServiceTool(QMainWindow):
         btn_abort.setCursor(Qt.PointingHandCursor)
         btn_abort.setStyleSheet(f"QPushButton {{ background-color: {border_color}; color: #ffffff; border: 1px solid {border_color}; font-size: 14px; font-weight: bold; padding: 12px; }} QPushButton:hover {{ background-color: #dc2626; }}")
         
-        btn_layout.addWidget(btn_inject)
         btn_layout.addWidget(btn_retry)
         btn_layout.addWidget(btn_ignore)
         btn_layout.addWidget(btn_abort)
@@ -9572,7 +9554,6 @@ class BiosServiceTool(QMainWindow):
             drop_zone = ExternalFitDropZone(dialog, self)
             layout.addWidget(drop_zone)
         
-        btn_inject.clicked.connect(lambda: dialog.done(4))
         btn_retry.clicked.connect(lambda: dialog.done(1))
         btn_ignore.clicked.connect(lambda: dialog.done(2))
         btn_abort.clicked.connect(lambda: dialog.done(0))
@@ -9585,8 +9566,6 @@ class BiosServiceTool(QMainWindow):
             self.last_error_choice = "ignore"
         elif result == 3:
             self.last_error_choice = "retry_with_external"
-        elif result == 4:
-            self.last_error_choice = "direct_injection"
         else:
             self.last_error_choice = "abort"
 

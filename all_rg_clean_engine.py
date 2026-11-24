@@ -613,32 +613,58 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
         try:
             subprocess.run(cmd, cwd=fit_dir, capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
             
-            # Locate XML: keep in fit_dir beside decompiled folder and mirror in workspace
+            # Locate XML: check fit_xml_path, short stem, workspace, etc.
             xml_path = fit_xml_path
-            if fit_xml_path.exists():
-                try: shutil.copy2(fit_xml_path, workspace / f"{bios_stem}.xml")
-                except Exception: pass
-            elif not xml_path.exists():
-                for p in [workspace / f"{bios_stem}.xml", workspace / "config.xml", workspace / "image.xml", Path(fit_dir) / "config.xml"]:
-                    if p.exists():
-                        shutil.copy2(p, fit_xml_path)
-                        xml_path = fit_xml_path
-                        break
+            short_stem = Path(abs_temp_bios).stem
+            xml_candidates = [
+                fit_xml_path,
+                workspace / f"{bios_stem}.xml",
+                Path(fit_dir) / f"{short_stem}.xml",
+                workspace / f"{short_stem}.xml",
+                Path(fit_dir) / "config.xml",
+                workspace / "config.xml",
+                Path(fit_dir) / "image.xml",
+                workspace / "image.xml"
+            ]
+            for xc in xml_candidates:
+                if xc.exists():
+                    xml_path = xc
+                    try:
+                        shutil.copy2(xc, workspace / f"{bios_stem}.xml")
+                        shutil.copy2(xc, fit_xml_path)
+                    except Exception:
+                        pass
+                    break
 
-            # Locate decompiled directory: look for folder named after the BIOS file (bios_stem)!
+            # Locate decompiled directory
             fit_bios_folder = Path(fit_dir) / bios_stem
             ws_bios_folder = workspace / bios_stem
             
             target_bios_folder = None
-            if fit_bios_folder.exists() and fit_bios_folder.is_dir():
-                target_bios_folder = fit_bios_folder
-            elif ws_bios_folder.exists() and ws_bios_folder.is_dir():
-                target_bios_folder = ws_bios_folder
-            else:
-                for p in [Path(fit_dir) / bios_stem, workspace / bios_stem, Path(fit_dir) / "image", workspace / "image"]:
-                    if p.exists() and p.is_dir():
-                        target_bios_folder = p
-                        break
+            search_folders = [
+                fit_bios_folder,
+                ws_bios_folder,
+                Path(fit_dir) / short_stem,
+                workspace / short_stem,
+                Path(fit_dir) / "image",
+                workspace / "image"
+            ]
+            for p in search_folders:
+                if p.exists() and p.is_dir():
+                    target_bios_folder = p
+                    break
+
+            # Dynamic directory search in fit_dir for any directory containing Decomp or partition .bin files
+            if not target_bios_folder and Path(fit_dir).exists():
+                try:
+                    from clean_fit_tools import GENUINE_SUBDIRS
+                except Exception:
+                    GENUINE_SUBDIRS = set()
+                for sub in Path(fit_dir).iterdir():
+                    if sub.is_dir() and sub.name.lower() not in GENUINE_SUBDIRS:
+                        if (sub / "Decomp").exists() or list(sub.glob("*.bin")):
+                            target_bios_folder = sub
+                            break
 
             decomp_target = None
             if target_bios_folder:
@@ -693,49 +719,18 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
         except Exception:
             continue
 
-    # 5. Fallback to Direct Surgical Engine if FIT not applicable
+    # 5. Strict Gate: NO Injection Mode - Halt on FIT failure to protect motherboard from No-Display bricking
     if not decomp_ctx:
-        log_cb("[INFO] Intel FIT decompilation is bypassed (Architecture or direct injection mode).")
-        log_cb("[INFO] Continuing with Surgical Direct Clean & Hex Injection Engine...")
-        
-        direct_target = workspace / "image"
-        direct_target.mkdir(parents=True, exist_ok=True)
-        name_label_map_tmp = {
-            "desc": "Descriptor Region.bin",
-            "bios": "BIOS Region.bin",
-            "me": "ME Region.bin",
-            "ec": "EC Region.bin",
-            "gbe": "GBE Region.bin",
-            "gbe2": "GBE2 Region.bin"
-        }
-        for rk, rv in regions.items():
-            rf_name = name_label_map_tmp.get(rk, f"{rv['name']}.bin")
-            try:
-                part_bytes = dump_bytes[rv["offset"] : rv["offset"] + rv["size"]]
-                part_p = direct_target / rf_name
-                with open(part_p, "wb") as pf:
-                    pf.write(part_bytes)
-                # Also save directly in workspace root
-                with open(workspace / rf_name, "wb") as pf:
-                    pf.write(part_bytes)
-            except Exception:
-                pass
-
-        log_cb(f"[SUCCESS] [OK] Firmware Partitions Decompiled & Extracted")
-        log_cb(f"[INFO] Decompiled Files Location: {os.path.abspath(workspace)}")
-
-        decomp_ctx = {
-            "success": True,
-            "mode": "direct",
-            "tool_name": "Surgical_Direct_Engine",
-            "fit_exe": None,
-            "fit_dir": None,
-            "fit_workspace": workspace,
-            "decomp_target": direct_target,
-            "xml_path": None,
-            "regions": regions,
-            "dump_bytes": dump_bytes,
-            "bios_path": bios_path
+        log_cb("\n" + "!" * 70)
+        log_cb("[ERROR] INTEL FIT DECOMPILATION FAILED")
+        log_cb("[ERROR] None of the candidate Intel FIT tools could decompile this BIOS dump.")
+        log_cb("[SAFETY LOCK] Operation stopped to protect motherboard from No-Display bricking.")
+        log_cb("[NOTICE] Dangerous Direct Hex Injection Mode has been permanently removed.")
+        log_cb("!" * 70 + "\n")
+        return {
+            "success": False,
+            "mode": "failed",
+            "error": "Intel FIT Decompilation Failed - Direct Injection permanently removed for safety."
         }
 
     # 6. Display Decompiled / Parsed Component Table
@@ -787,13 +782,7 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
     from fit_automator import get_short_path, force_manufacturing_mode, verify_image_integrity
 
     if not decomp_ctx or decomp_ctx.get("mode") != "fit":
-        # Direct mode write
-        dump_bytes = decomp_ctx.get("dump_bytes")
-        if dump_bytes:
-            with open(safe_path(output_path), "wb") as f:
-                f.write(dump_bytes)
-            log_cb(f"[SUCCESS] [OK] Direct Firmware Rebuild Complete: {os.path.basename(output_path)}")
-            return True
+        log_cb("[ERROR] FIT Rebuild Error: Invalid decompilation context. Direct write disabled to prevent motherboard damage.")
         return False
 
     fit_exe = decomp_ctx["fit_exe"]
@@ -851,16 +840,10 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
             shutil.copy2(final_out, output_path)
             return True
         else:
-            log_cb(f"[WARNING] Image integrity notice. Using direct binary fallback.")
+            log_cb(f"[ERROR] Image integrity validation failed for compiled output. Operation stopped for motherboard safety.")
+            return False
 
-    # Seamless fallback to writing patched dump_bytes
-    dump_bytes = decomp_ctx.get("dump_bytes")
-    if dump_bytes:
-        with open(safe_path(output_path), "wb") as f:
-            f.write(dump_bytes)
-        log_cb(f"[SUCCESS] [OK] Firmware Rebuild Complete: {os.path.basename(output_path)}")
-        return True
-
+    log_cb(f"[ERROR] FIT Compilation failed to produce a valid image via {tool_name}. Operation stopped for motherboard safety.")
     return False
 
 
