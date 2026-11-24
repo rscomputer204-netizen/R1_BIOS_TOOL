@@ -607,12 +607,18 @@ class GitPushGUI:
         ver_entry.pack(fill=tk.X, pady=(2, 10), ipady=3, padx=1)
 
         # Changelog / Commit Message
-        tk.Label(left_panel, text="RELEASE NOTES / DESCRIPTION", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(anchor="w")
+        notes_hdr = tk.Frame(left_panel, bg=self.clr_card)
+        notes_hdr.pack(fill=tk.X)
+        tk.Label(notes_hdr, text="RELEASE NOTES / DESCRIPTION", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(side=tk.LEFT)
+        self.btn_auto_notes = tk.Button(notes_hdr, text="✨ Auto-Notes", bg="#1e293b", fg=self.clr_cyan,
+                                        font=("Segoe UI", 7, "bold"), relief="flat", cursor="hand2", command=self.generate_and_set_notes)
+        self.btn_auto_notes.pack(side=tk.RIGHT)
+
         self.txt_changelog = tk.Text(left_panel, bg=self.clr_bg, fg=self.clr_text, insertbackground=self.clr_cyan,
                                      relief="flat", font=("Segoe UI", 9), height=6,
                                      highlightthickness=1, highlightbackground=self.clr_border)
         self.txt_changelog.pack(fill=tk.BOTH, expand=True, pady=(2, 8))
-        self.txt_changelog.insert(tk.END, "Integrated native R1 CSME Analyzer, optimized auto-repair and verified clean builds.")
+        self.generate_and_set_notes()
 
         # Quick Settings Shortcut
         btn_cfg_quick = tk.Button(left_panel, text="⚙️ Configure Token & Repo", bg="#1e293b", fg=self.clr_cyan,
@@ -681,6 +687,67 @@ class GitPushGUI:
         # Trigger immediate connection health test
         status, user, msg = check_github_api(self.cfg.get("github_token", ""))
         self.update_health_badge(status, user, msg)
+
+    def generate_smart_notes(self, reports=None):
+        """
+        Dynamically analyzes detected changes or git diff and generates
+        a concise, professional release summary.
+        """
+        if reports is None:
+            reports = getattr(self, 'detected_changes', None)
+        
+        file_names = []
+        if reports:
+            file_names = [r["path"] for r in reports]
+        else:
+            try:
+                raw_diff = run_cmd("git diff --name-only HEAD~1", check=False)
+                if raw_diff:
+                    file_names = [f.strip() for f in raw_diff.splitlines() if f.strip()]
+            except Exception:
+                pass
+
+        categories = {
+            'all_rg_clean_engine.py': 'Engine: Intel FIT decompile/rebuild & exact partition lock',
+            'fit_automator.py': 'FIT Automator: 3-part version matching & dynamic folder resolution',
+            'clean_fit_tools.py': 'Tools: Automated background FLASH System Tools repository cleaner',
+            'fit_tool_finder.py': 'FIT Finder: Version search, candidate scoring & quick launcher',
+            'main.py': 'Core App: UI workflow updates, desktop icon & maintenance timers',
+            'mea_parser.py': 'Analyzer: CSME/FITC parser & hardware profile audit',
+            'R1_CSME_Analyzer': 'CSME Analyzer: Native CSME firmware analysis engine',
+            'push_to_github.py': 'Deployment: Smart auto-changelog generator & packaging tools',
+            'updater': 'Updater: Auto-update sync & client installer enhancements'
+        }
+
+        notes = []
+        seen_cats = set()
+
+        for f in file_names:
+            matched = False
+            for key, desc in categories.items():
+                if key in f and desc not in seen_cats:
+                    notes.append(f"• {desc}")
+                    seen_cats.add(desc)
+                    matched = True
+                    break
+            if not matched and f:
+                name = os.path.basename(f)
+                if name.endswith('.py') and not name.startswith('test'):
+                    base = name[:-3].replace('_', ' ').title()
+                    desc = f"• {base}: Code enhancements & bug fixes"
+                    if desc not in seen_cats:
+                        notes.append(desc)
+                        seen_cats.add(desc)
+
+        if not notes:
+            return "Maintenance update with latest engine stability and performance fixes."
+        return "\n".join(notes[:5])
+
+    def generate_and_set_notes(self, reports=None):
+        notes = self.generate_smart_notes(reports)
+        if hasattr(self, 'txt_changelog'):
+            self.txt_changelog.delete(1.0, tk.END)
+            self.txt_changelog.insert(tk.END, notes)
 
     # ─── STEP 1: MANUAL DETECT CHANGES ACTION ────────────────────────────────
     def on_detect_click(self):
@@ -760,6 +827,9 @@ class GitPushGUI:
                 for fn in funcs:
                     self.txt_inspector.insert(tk.END, f"    ↳ {fn}\n", "func")
             self.txt_inspector.insert(tk.END, "\n")
+
+        # Auto-update release notes description with smart summary of detected changes
+        self.generate_and_set_notes(reports)
 
         # Check Token health before enabling push
         if self.github_status == "OK":
