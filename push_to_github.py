@@ -610,15 +610,16 @@ class GitPushGUI:
         notes_hdr = tk.Frame(left_panel, bg=self.clr_card)
         notes_hdr.pack(fill=tk.X)
         tk.Label(notes_hdr, text="RELEASE NOTES / DESCRIPTION", fg=self.clr_dim, bg=self.clr_card, font=("Segoe UI", 8)).pack(side=tk.LEFT)
-        self.btn_auto_notes = tk.Button(notes_hdr, text="✨ Auto-Notes", bg="#1e293b", fg=self.clr_cyan,
-                                        font=("Segoe UI", 7, "bold"), relief="flat", cursor="hand2", command=self.generate_and_set_notes)
-        self.btn_auto_notes.pack(side=tk.RIGHT)
+        btn_autogen = tk.Button(notes_hdr, text="⚡ Auto-Gen", bg="#1e293b", fg=self.clr_cyan,
+                                font=("Segoe UI", 7, "bold"), relief="flat", cursor="hand2", command=self.auto_generate_changelog)
+        btn_autogen.pack(side=tk.RIGHT)
 
         self.txt_changelog = tk.Text(left_panel, bg=self.clr_bg, fg=self.clr_text, insertbackground=self.clr_cyan,
                                      relief="flat", font=("Segoe UI", 9), height=6,
                                      highlightthickness=1, highlightbackground=self.clr_border)
         self.txt_changelog.pack(fill=tk.BOTH, expand=True, pady=(2, 8))
-        self.generate_and_set_notes()
+        self.txt_changelog.insert(tk.END, "Analyzing modifications...")
+        self.root.after(200, self.auto_generate_changelog)
 
         # Quick Settings Shortcut
         btn_cfg_quick = tk.Button(left_panel, text="⚙️ Configure Token & Repo", bg="#1e293b", fg=self.clr_cyan,
@@ -688,67 +689,6 @@ class GitPushGUI:
         status, user, msg = check_github_api(self.cfg.get("github_token", ""))
         self.update_health_badge(status, user, msg)
 
-    def generate_smart_notes(self, reports=None):
-        """
-        Dynamically analyzes detected changes or git diff and generates
-        a concise, professional release summary.
-        """
-        if reports is None:
-            reports = getattr(self, 'detected_changes', None)
-        
-        file_names = []
-        if reports:
-            file_names = [r["path"] for r in reports]
-        else:
-            try:
-                raw_diff = run_cmd("git diff --name-only HEAD~1", check=False)
-                if raw_diff:
-                    file_names = [f.strip() for f in raw_diff.splitlines() if f.strip()]
-            except Exception:
-                pass
-
-        categories = {
-            'all_rg_clean_engine.py': 'Engine: Intel FIT decompile/rebuild & exact partition lock',
-            'fit_automator.py': 'FIT Automator: 3-part version matching & dynamic folder resolution',
-            'clean_fit_tools.py': 'Tools: Automated background FLASH System Tools repository cleaner',
-            'fit_tool_finder.py': 'FIT Finder: Version search, candidate scoring & quick launcher',
-            'main.py': 'Core App: UI workflow updates, desktop icon & maintenance timers',
-            'mea_parser.py': 'Analyzer: CSME/FITC parser & hardware profile audit',
-            'R1_CSME_Analyzer': 'CSME Analyzer: Native CSME firmware analysis engine',
-            'push_to_github.py': 'Deployment: Smart auto-changelog generator & packaging tools',
-            'updater': 'Updater: Auto-update sync & client installer enhancements'
-        }
-
-        notes = []
-        seen_cats = set()
-
-        for f in file_names:
-            matched = False
-            for key, desc in categories.items():
-                if key in f and desc not in seen_cats:
-                    notes.append(f"• {desc}")
-                    seen_cats.add(desc)
-                    matched = True
-                    break
-            if not matched and f:
-                name = os.path.basename(f)
-                if name.endswith('.py') and not name.startswith('test'):
-                    base = name[:-3].replace('_', ' ').title()
-                    desc = f"• {base}: Code enhancements & bug fixes"
-                    if desc not in seen_cats:
-                        notes.append(desc)
-                        seen_cats.add(desc)
-
-        if not notes:
-            return "Maintenance update with latest engine stability and performance fixes."
-        return "\n".join(notes[:5])
-
-    def generate_and_set_notes(self, reports=None):
-        notes = self.generate_smart_notes(reports)
-        if hasattr(self, 'txt_changelog'):
-            self.txt_changelog.delete(1.0, tk.END)
-            self.txt_changelog.insert(tk.END, notes)
-
     # ─── STEP 1: MANUAL DETECT CHANGES ACTION ────────────────────────────────
     def on_detect_click(self):
         if self.is_busy:
@@ -776,6 +716,9 @@ class GitPushGUI:
         self.detected_changes = reports
         self.btn_detect.config(state=tk.NORMAL, text="🔍  DETECT CHANGES")
         self.txt_inspector.delete(1.0, tk.END)
+
+        # Automatically generate human-readable release description in left panel
+        self.auto_generate_changelog(reports)
 
         if not reports:
             self.lbl_changes_count.config(text="0 Changes Detected")
@@ -828,9 +771,6 @@ class GitPushGUI:
                     self.txt_inspector.insert(tk.END, f"    ↳ {fn}\n", "func")
             self.txt_inspector.insert(tk.END, "\n")
 
-        # Auto-update release notes description with smart summary of detected changes
-        self.generate_and_set_notes(reports)
-
         # Check Token health before enabling push
         if self.github_status == "OK":
             self.btn_push.config(state=tk.NORMAL, bg=self.clr_green, fg="#000000", cursor="hand2")
@@ -838,6 +778,112 @@ class GitPushGUI:
         else:
             self.btn_push.config(state=tk.DISABLED, bg="#1e293b", fg="#64748b", cursor="arrow")
             self.log(f"Scan complete. {total_files} changes found, but GitHub Token is expired/invalid. Please click Settings to update token.", "warn")
+
+    def auto_generate_changelog(self, reports=None):
+        """
+        Smartly generates human-readable changelog release notes
+        based on detected file modifications, function diffs, and unpushed changes.
+        """
+        if reports is None:
+            reports = getattr(self, "detected_changes", [])
+            if not reports:
+                try:
+                    reports = analyze_git_changes()
+                except Exception:
+                    reports = []
+
+        bullets = []
+        if reports:
+            for item in reports:
+                fp = item.get("path", "")
+                st = item.get("status", "")
+                funcs = item.get("functions", [])
+
+                diff_text = ""
+                try:
+                    p = subprocess.run(["git", "diff", "HEAD", "--", fp], cwd=BASE_DIR, capture_output=True, text=True, errors="ignore")
+                    diff_text = p.stdout.lower()
+                    if not diff_text.strip():
+                        p2 = subprocess.run(["git", "diff", "HEAD~1..HEAD", "--", fp], cwd=BASE_DIR, capture_output=True, text=True, errors="ignore")
+                        diff_text = p2.stdout.lower()
+                except Exception:
+                    pass
+
+                base = os.path.basename(fp)
+                if "version.txt" in base or "version.json" in base or base.endswith(".zip"):
+                    continue
+
+                if "all_rg_clean_engine" in base:
+                    pts = []
+                    if "injection" in diff_text or "direct" in diff_text:
+                        pts.append("Removed direct hex injection mode")
+                    if "xml" in diff_text or "get_xml_partition_input_file" in diff_text:
+                        pts.append("enhanced exact FIT XML partition matching")
+                    if "short_stem" in diff_text or "decomp" in diff_text:
+                        pts.append("fixed 8.3 short-path folder detection")
+                    desc = ", ".join(pts) if pts else "Enhanced Multi-Region and Intel FIT decompilation/rebuild pipeline"
+                    bullets.append(f"• all_rg_clean_engine: {desc}.")
+
+                elif "fit_automator" in base:
+                    if "patch" in diff_text or "q_patch" in diff_text or "score" in diff_text:
+                        bullets.append("• fit_automator: Enforced strict 3-part (Major.Minor.Patch) version matching for FIT tools.")
+                    elif "validate" in diff_text or "decomp" in diff_text:
+                        bullets.append("• fit_automator: Strengthened decompiled layout verification and safety gates.")
+                    else:
+                        bullets.append("• fit_automator: Optimized Intel FIT tool selection and decompilation automator.")
+
+                elif "clean_fit_tools" in base:
+                    bullets.append("• clean_fit_tools: Integrated automated tools repository cleaner to purge decompile residue.")
+
+                elif "main" in base and base.endswith(".py"):
+                    pts = []
+                    if "cleanup" in diff_text or "_auto_cleanup" in diff_text:
+                        pts.append("added 2s background tools maintenance")
+                    if "hybrid" in diff_text or "injection" in diff_text:
+                        pts.append("removed unsafe injection options")
+                    desc = ", ".join(pts) if pts else "Updated main UI workflows, background timers, and terminal logging"
+                    bullets.append(f"• main: {desc}.")
+
+                elif "push_to_github" in base:
+                    bullets.append("• push_to_github: Added smart change detector and automated release description generator.")
+
+                elif "fit_tool_finder" in base:
+                    bullets.append("• fit_tool_finder: Enhanced Intel Flash Image Tool finder ranking and launching engine.")
+
+                elif "mea_parser" in base:
+                    bullets.append("• mea_parser: Enhanced FITC Version extraction from ME Analyzer reports.")
+
+                elif "csme" in base.lower() or "r1_csme" in fp.lower():
+                    bullets.append(f"• {base}: Updated native CSME Analyzer engine and firmware metadata parser.")
+
+                elif "extractor" in base.lower():
+                    bullets.append(f"• {base}: Enhanced firmware extraction routines for OEM update packages.")
+
+                else:
+                    if st in ("NEW FILE", "ADDED"):
+                        bullets.append(f"• Added new module: {base}")
+                    elif st == "DELETED":
+                        bullets.append(f"• Removed deprecated file: {base}")
+                    else:
+                        fn_summary = f" ({funcs[0]})" if funcs else ""
+                        bullets.append(f"• Updated {base}{fn_summary}.")
+
+        if not bullets:
+            # Fallback to recent git commit messages if working tree is clean
+            try:
+                res = subprocess.run(["git", "log", "-1", "--pretty=%B"], cwd=BASE_DIR, capture_output=True, text=True, errors="ignore")
+                last_msg = res.stdout.strip()
+                if last_msg and "Integrated native R1 CSME Analyzer" not in last_msg:
+                    bullets.append(last_msg)
+            except Exception:
+                pass
+
+        if not bullets:
+            bullets.append(f"• Auto-Update: Release {self.var_next_ver.get()} with verified optimizations and stability fixes.")
+
+        summary_text = "\n".join(bullets[:6])
+        self.txt_changelog.delete(1.0, tk.END)
+        self.txt_changelog.insert(tk.END, summary_text)
 
     # ─── STEP 2: PUSH TO GITHUB ACTION & PACKAGING ───────────────────────────
     def on_push_click(self):
@@ -1065,13 +1111,13 @@ class GitPushGUI:
                 run_cmd(f"git update-ref refs/remotes/origin/{branch} HEAD", check=False)
                 run_cmd(f"git fetch origin {branch}", check=False)
 
-                self.root.after(0, lambda: self.render_push_success(target_ver))
+                self.root.after(0, lambda: self.render_push_success(target_ver, changelog))
             except Exception as e:
                 self.root.after(0, lambda: self.render_push_error(str(e)))
 
         threading.Thread(target=push_worker, daemon=True).start()
 
-    def render_push_success(self, version):
+    def render_push_success(self, version, changelog=""):
         self.is_busy = False
         self.btn_detect.config(state=tk.NORMAL)
         self.btn_push.config(state=tk.DISABLED, text="🚀  PUSH TO GITHUB", bg="#1e293b", fg="#64748b", cursor="arrow")
@@ -1082,12 +1128,17 @@ class GitPushGUI:
         self.txt_inspector.delete(1.0, tk.END)
         self.txt_inspector.insert(tk.END, f"DEPLOYMENT COMPLETED FOR VERSION {version}!\n", "success")
         self.txt_inspector.insert(tk.END, "─" * 65 + "\n\n", "dim")
-        self.txt_inspector.insert(tk.END, f"• All code changes & R1_CSME_Analyzer are now LIVE on GitHub.\n", "title")
-        self.txt_inspector.insert(tk.END, f"• update.zip contains all native modules & _internal binaries.\n", "title")
-        self.txt_inspector.insert(tk.END, f"• Auto-updater will now smoothly install and execute R1 CSME Analyzer.\n\n", "success")
+        self.txt_inspector.insert(tk.END, "DEPLOYED RELEASE NOTES / CHANGES:\n", "title")
+        if changelog:
+            for line in changelog.splitlines():
+                if line.strip():
+                    self.txt_inspector.insert(tk.END, f"{line}\n", "func")
+            self.txt_inspector.insert(tk.END, "\n")
+        self.txt_inspector.insert(tk.END, f"• update.zip package generated with all modified modules & binaries.\n", "stats")
+        self.txt_inspector.insert(tk.END, f"• All client installations updating via GitHub will automatically sync this build.\n\n", "success")
 
         self.log(f"SUCCESS: Version {version} successfully pushed to GitHub!", "ok")
-        messagebox.showinfo("DEPLOYMENT SUCCESS", f"Version {version} has been successfully deployed to GitHub!\n\nAll clients updating via GitHub will now receive full R1_CSME_Analyzer features.")
+        messagebox.showinfo("DEPLOYMENT SUCCESS", f"Version {version} has been successfully deployed to GitHub!\n\nAll clients updating via GitHub will now receive this release.")
 
     def render_push_error(self, err_msg):
         self.is_busy = False

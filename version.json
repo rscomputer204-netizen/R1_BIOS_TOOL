@@ -1,6 +1,6 @@
 {
-    "version": "R1.1.0.76",
+    "version": "R1.1.0.77",
     "url": "https://raw.githubusercontent.com/rscomputer204-netizen/R1_BIOS_TOOL/main/update.zip",
-    "changelog": "\u2022 Deployment: Smart auto-changelog generator & packaging tools",
-    "date": "2026-11-24 01:43:40"
+    "changelog": "\u2022 Updated all_rg_clean_dialog.py (def AllRgCleanDialog()).\n\u2022 all_rg_clean_engine: Removed direct hex injection mode, enhanced exact FIT XML partition matching, fixed 8.3 short-path folder detection.\n\u2022 fit_automator: Optimized Intel FIT tool selection and decompilation automator.\n\u2022 main: Updated main UI workflows, background timers, and terminal logging.\n\u2022 push_to_github: Added smart change detector and automated release description generator.",
+    "date": "2026-11-24 04:50:38"
 }

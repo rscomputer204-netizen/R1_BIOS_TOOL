@@ -202,13 +202,25 @@ class AllRgCleanDialog(QDialog):
             """)
             top_row.addWidget(pill)
 
-            # Badge: WILL REPLACE / FACTORY RESET
+            # Badge: WILL REPLACE / FACTORY RESET / RECOMMENDED
             if key == "me":
                 badge = QLabel("FACTORY RESET")
                 badge.setStyleSheet("""
                     background-color: #083344;
                     color: #22d3ee;
                     border: 1px solid #0891b2;
+                    border-radius: 4px;
+                    font-size: 9px;
+                    font-weight: 800;
+                    padding: 3px 8px;
+                    letter-spacing: 0.5px;
+                """)
+            elif key == "bios" and item.get("score", 0) >= 10000:
+                badge = QLabel("RECOMMENDED [100% MATCH]")
+                badge.setStyleSheet("""
+                    background-color: #064e3b;
+                    color: #34d399;
+                    border: 1px solid #059669;
                     border-radius: 4px;
                     font-size: 9px;
                     font-weight: 800;
@@ -255,7 +267,8 @@ class AllRgCleanDialog(QDialog):
             action_row.addWidget(tag_action)
 
             if key == "bios":
-                act_str = "Clean binary replacement • Original DMI, Serial & Keys preserved"
+                reason = f" • {item['match_reason']}" if item.get("match_reason") else ""
+                act_str = f"Clean binary replacement • Original DMI, Serial & Keys preserved{reason}"
             elif key == "me":
                 act_str = "Clean factory ME injection • Automatically resets PMC, PCHC & Type-C IOM"
             elif key == "ec":

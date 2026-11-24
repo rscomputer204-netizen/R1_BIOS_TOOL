@@ -7482,7 +7482,15 @@ class BiosServiceTool(QMainWindow):
 
         def _do_save():
             try:
-                data = bytearray(self.hex_model.get_data())
+                # Prioritize reading the freshly compiled image directly from disk
+                if self.current_bios_file and os.path.exists(self.current_bios_file):
+                    with open(self.current_bios_file, "rb") as f:
+                        data = bytearray(f.read())
+                elif hasattr(self, 'hex_model') and self.hex_model:
+                    data = bytearray(self.hex_model.get_data())
+                else:
+                    data = bytearray()
+
                 from compare_fixer import CompareFixer
                 fix_count = CompareFixer.fix_fv_checksums(data, self.log_to_terminal)
                 with open(save_path, "wb") as f:
@@ -7844,7 +7852,8 @@ class BiosServiceTool(QMainWindow):
 
                     self.log_to_terminal(f"\n[SUCCESS] [OK] ALL RG CLEAN FINISHED SUCCESSFULLY!")
                     self.log_to_terminal(f"Saved: {out_path}\n")
-                    self.trigger_rg_save_dialog.emit(out_name)
+                    suggested_save_name = f"{orig_base}_ALL_RG_CLEAN.bin"
+                    self.trigger_rg_save_dialog.emit(suggested_save_name)
                 else:
                     self.log_to_terminal("[ERROR] ALL RG CLEAN execution encountered an error.")
             except Exception as e:
@@ -8171,7 +8180,8 @@ class BiosServiceTool(QMainWindow):
                     self.hex_data_signal.emit(data)
 
                 # Trigger Save As Dialog in workspace source folder
-                self.trigger_rg_save_dialog.emit(out_name)
+                suggested_save_name = f"{orig_base}_BIOS_RG_CLEAN.bin"
+                self.trigger_rg_save_dialog.emit(suggested_save_name)
 
                 # Run Auto-Verify on clean file if enabled
                 if hasattr(self, 'chk_auto_verify') and self.chk_auto_verify.isChecked():

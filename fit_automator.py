@@ -750,16 +750,39 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
                 cmd.extend(["/me", str(clean_paths_dict["ME"])])
             cmd.append(xml_path.name)
         else:
-            cmd = [fit_exe_safe, "-f", xml_path.name, "-b", "-o", final_out.name]
+            cmd = [fit_exe_safe, "-f", xml_path.name, "-b", "-o", final_out.name, "-i", "disable"]
             
         res = subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
-        
+
         # Check alternative output filenames that FIT might generate
         if not final_out.exists() or final_out.stat().st_size == 0:
             for alt_out in [fit_workspace / "image.bin", fit_workspace / "dummy_out.bin", Path(fit_dir) / "outimage.bin"]:
                 if alt_out.exists() and alt_out.stat().st_size > 0:
                     shutil.copy2(alt_out, final_out)
                     break
+
+        # Capture and log FIT error details if compile failed
+        if not final_out.exists() or final_out.stat().st_size == 0:
+            fit_err_lines = []
+            if res.stdout:
+                for line in res.stdout.splitlines():
+                    if any(w in line.lower() for w in ["error", "failed", "exception"]):
+                        fit_err_lines.append(line.strip())
+            if res.stderr:
+                for line in res.stderr.splitlines():
+                    if any(w in line.lower() for w in ["error", "failed", "exception"]):
+                        fit_err_lines.append(line.strip())
+            fit_log_p = Path(fit_workspace) / "fit.log"
+            if not fit_err_lines and fit_log_p.exists():
+                try:
+                    with open(str(fit_log_p), "r", encoding="utf-8", errors="replace") as fl:
+                        for line in fl.readlines()[-20:]:
+                            if any(w in line.lower() for w in ["error", "failed", "exception"]):
+                                fit_err_lines.append(line.strip())
+                except Exception:
+                    pass
+            for el in fit_err_lines[:5]:
+                print_terminal_log(terminal_callback, f"[FIT ERROR] {el}", "ERROR")
 
         if final_out.exists() and final_out.stat().st_size > 0:
             # Final Integrity Check

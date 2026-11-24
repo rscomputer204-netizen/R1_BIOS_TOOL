@@ -200,16 +200,53 @@ def match_official_components(dump_path: str, extracted_files: list, log_cb=prin
         old_bios_slice = dump_bytes[bios_reg["offset"] : bios_reg["offset"] + target_size]
         old_tail64 = bytes(old_bios_slice[-64:]) if len(old_bios_slice) >= 64 else b""
 
+        # Extract Board ID / BID patterns from backup dump for exact board variant matching
+        detected_bids = set()
+        for m in re.finditer(rb'(?<![A-Za-z0-9])(0[6789A-F][0-9A-F]{3,4})(?![A-Za-z0-9])', dump_bytes):
+            detected_bids.add(m.group(1).decode('ascii', errors='ignore').upper())
+        for m in re.finditer(rb'BID\s*[:=]?\s*([0-9A-F]{4,6})', dump_bytes, re.IGNORECASE):
+            detected_bids.add(m.group(1).decode('ascii', errors='ignore').upper())
+
+        from rg_engine.validator import validate_and_trim
+
         bios_candidates = []
         for f in extracted_files:
             try:
                 sz = os.path.getsize(safe_path(f))
-                fname = os.path.basename(f).lower()
+                fname = os.path.basename(f)
+                fname_lower = fname.lower()
                 if sz < target_size:
                     continue
 
                 score = 0
-                if "system bios" in fname or "bios" in fname:
+                match_reasons = []
+
+                # Dry-run Topper & Footer Validation on candidate
+                dry_trimmed, h_rem, f_rem = validate_and_trim(
+                    f, target_size, old_bios_region=old_bios_slice, log_callback=lambda x: None
+                )
+
+                if dry_trimmed is not None:
+                    score += 10000
+                    match_reasons.append("Topper Matched")
+                    if f_rem == 0 and h_rem == 0:
+                        score += 5000
+                        match_reasons.append("Exact Image Alignment")
+                    elif f_rem > 0 or h_rem > 0:
+                        score += 3000
+                        match_reasons.append(f"Trimmed (Top: {h_rem}B, Foot: {f_rem}B)")
+                else:
+                    # Topper mismatch disqualifies candidate from being recommended
+                    score -= 50000
+
+                # Board ID / BID matching in filename
+                for bid in detected_bids:
+                    if bid in fname.upper():
+                        score += 8000
+                        match_reasons.append(f"Board ID Matched ({bid})")
+                        break
+
+                if "system bios" in fname_lower or "bios" in fname_lower:
                     score += 50
 
                 # Check Reset Vector / footer tail match
@@ -218,35 +255,46 @@ def match_official_components(dump_path: str, extracted_files: list, log_cb=prin
                         cf.seek(sz - 64)
                         cand_tail = cf.read(64)
                     if old_tail64 and (cand_tail == old_tail64 or cand_tail[-16:] == old_tail64[-16:]):
-                        score += 200  # Exact Reset Vector match
+                        score += 1000
+                        match_reasons.append("Reset Vector Matched")
                 except Exception:
                     pass
 
-                # Exact size bonus or encapsulated container match
+                # Exact size bonus
                 if sz == target_size:
-                    score += 100
-                elif sz > target_size:
-                    score += 50
+                    score += 500
+                    match_reasons.append("Exact Size Match")
 
                 # Architecture flavor bonus
-                if "mtl" in fname and (b"MTL" in dump_bytes or "METEOR" in dump_cpu):
-                    score += 80
-                elif "rpl" in fname and (b"RPL" in dump_bytes or "RAPTOR" in dump_cpu):
-                    score += 80
+                if "mtl" in fname_lower and (b"MTL" in dump_bytes or "METEOR" in dump_cpu):
+                    score += 500
+                elif "rpl" in fname_lower and (b"RPL" in dump_bytes or "RAPTOR" in dump_cpu):
+                    score += 500
 
-                bios_candidates.append((score, f, sz))
+                bios_candidates.append((score, f, sz, ", ".join(match_reasons)))
             except Exception:
                 continue
 
         if bios_candidates:
             bios_candidates.sort(key=lambda x: x[0], reverse=True)
-            chosen_bios = bios_candidates[0][1]
+            best_score, chosen_bios, best_sz, best_reason = bios_candidates[0]
+
+            # Log candidates breakdown if multiple candidates exist
+            if len(bios_candidates) > 1:
+                log_cb(f"[INFO] Evaluated {len(bios_candidates)} BIOS candidates:")
+                for sc, cf, csz, rsn in bios_candidates:
+                    cname = os.path.basename(cf)
+                    tag = " [RECOMMENDED]" if cf == chosen_bios else ""
+                    log_cb(f"  • {cname} (Score: {sc}) -> {rsn}{tag}")
+
             matches["bios"] = {
                 "title": "System BIOS Region",
                 "file": chosen_bios,
                 "filename": os.path.basename(chosen_bios),
                 "size": bios_reg["size"],
                 "offset": bios_reg["offset"],
+                "score": best_score,
+                "match_reason": best_reason,
                 "target_desc": f"{bios_reg['size'] // (1024 * 1024)} MB (Offset: 0x{bios_reg['offset']:X})"
             }
 
@@ -549,6 +597,66 @@ def format_size_str(size_bytes: int) -> str:
     return f"{size_bytes} B"
 
 
+def sync_fit_logs_to_terminal(proc_res, log_cb=print, fit_dir=None, workspace=None, start_log_pos=0):
+    """
+    Synchronizes Intel Flash Image Tool (FIT/MFIT) execution logs, warnings,
+    and errors directly into the software's active terminal in real-time.
+    Captures:
+    1. CLI process stdout & stderr (especially for MFIT and console FIT tools)
+    2. fit.log generated by Intel FIT GUI / WIN32 engine
+    Categorizes lines into [FIT ERROR], [FIT WARNING], and [FIT LOG].
+    """
+    if log_cb is None:
+        return
+
+    captured_lines = []
+
+    # 1. Capture from process stdout / stderr
+    if proc_res:
+        if proc_res.stdout:
+            captured_lines.extend(proc_res.stdout.splitlines())
+        if proc_res.stderr:
+            captured_lines.extend(proc_res.stderr.splitlines())
+
+    # 2. Capture fresh entries from fit.log
+    log_candidates = []
+    if fit_dir:
+        log_candidates.append(Path(fit_dir) / "fit.log")
+    if workspace:
+        log_candidates.append(Path(workspace) / "fit.log")
+    log_candidates.append(Path(os.getcwd()) / "fit.log")
+
+    for l_path in log_candidates:
+        if l_path.exists():
+            try:
+                with open(str(l_path), "r", encoding="utf-8", errors="replace") as f:
+                    if start_log_pos > 0 and l_path.stat().st_size > start_log_pos:
+                        f.seek(start_log_pos)
+                    new_lines = f.readlines()
+                    if new_lines:
+                        captured_lines.extend(new_lines)
+                        break
+            except Exception:
+                pass
+
+    if not captured_lines:
+        return
+
+    # 3. Clean and emit relevant lines to terminal
+    for raw in captured_lines:
+        line = raw.strip()
+        if not line or "====" in line or line.startswith("Copyright") or line.startswith("Using vsccommn"):
+            continue
+
+        line_lower = line.lower()
+        if any(err_word in line_lower for err_word in ["error", "failed", "exception", "overflow", "fatal"]):
+            log_cb(f"[FIT ERROR] {line}")
+        elif "warning" in line_lower or "warn" in line_lower:
+            log_cb(f"[FIT WARNING] {line}")
+        elif any(k in line_lower for k in ["decomposed", "writing map", "building", "success", "close manufacturing", "output file"]):
+            log_cb(f"[FIT LOG] {line}")
+
+
 def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: str = None) -> dict:
     """
     Step 1: Decompile Backup BIOS dump first using Intel Flash Image Tool (FIT).
@@ -630,8 +738,16 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
         else:
             cmd = [abs_fit_exe, "-f", abs_temp_bios, "-save", abs_xml_path, "-i", "disable"]
 
+        # Measure initial fit.log size to only capture fresh lines
+        log_pos = 0
+        fit_log_p = Path(fit_dir) / "fit.log"
+        if fit_log_p.exists():
+            try: log_pos = fit_log_p.stat().st_size
+            except Exception: pass
+
         try:
-            subprocess.run(cmd, cwd=fit_dir, capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+            sub_res = subprocess.run(cmd, cwd=fit_dir, capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+            sync_fit_logs_to_terminal(sub_res, log_cb=log_cb, fit_dir=fit_dir, workspace=workspace, start_log_pos=log_pos)
             
             # Locate XML: check fit_xml_path, short stem, workspace, etc.
             xml_path = fit_xml_path
@@ -840,12 +956,26 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
     elif is_legacy_fitc:
         cmd = [fit_exe_safe, "/b", "/w", str(run_cwd), "/s", str(run_cwd), "/d", str(run_cwd), xml_path.name]
     else:
-        cmd = [fit_exe_safe, "-f", abs_xml, "-b", "-o", abs_final_out]
+        cmd = [fit_exe_safe, "-f", abs_xml, "-b", "-o", abs_final_out, "-i", "disable"]
 
+    # Measure initial fit.log size to capture fresh logs
+    log_pos = 0
+    for cand in [Path(run_cwd) / "fit.log", Path(fit_dir) / "fit.log", workspace / "fit.log"]:
+        if cand.exists():
+            try:
+                log_pos = cand.stat().st_size
+                break
+            except Exception:
+                pass
+
+    sub_res = None
     try:
-        subprocess.run(cmd, cwd=str(run_cwd), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+        sub_res = subprocess.run(cmd, cwd=str(run_cwd), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
     except Exception as e:
         log_cb(f"[WARNING] Rebuild process note: {e}")
+
+    # Synchronize Intel FIT logs and errors directly to software terminal
+    sync_fit_logs_to_terminal(sub_res, log_cb=log_cb, fit_dir=fit_dir, workspace=workspace, start_log_pos=log_pos)
 
     # Check output binary
     if not final_out.exists() or final_out.stat().st_size == 0:
@@ -855,6 +985,15 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
                 break
 
     if final_out.exists() and final_out.stat().st_size > 0:
+        # Strict Rebuild Image Size Verification against Backup Dump
+        dump_bytes = decomp_ctx.get("dump_bytes")
+        if dump_bytes:
+            expected_sz = len(dump_bytes)
+            actual_sz = final_out.stat().st_size
+            if expected_sz != actual_sz:
+                log_cb(f"[ERROR] STRICT REBUILD REJECTION: Compiled image size ({actual_sz} bytes) does not match original backup dump size ({expected_sz} bytes)!")
+                return False
+
         if verify_image_integrity(final_out, log_cb):
             log_cb(f"[SUCCESS] [OK] FIT Compile / Rebuild Complete via {tool_name}")
             shutil.copy2(final_out, output_path)
@@ -959,12 +1098,24 @@ def perform_bios_rg_exe_with_fit(decomp_ctx: dict, candidate_path: str, output_p
     replaced_any = False
     for t_file in replace_targets:
         try:
+            # ── STRICT MULTI-LAYER BYTE SECURITY GATE ─────────────────────────
+            # Compares exact byte size of decompiled target against new candidate
             if t_file.exists():
+                existing_size = t_file.stat().st_size
+                candidate_size = len(trimmed_data)
+                if existing_size != candidate_size:
+                    log_cb(f"[ERROR] STRICT SECURITY REJECTION: Byte size mismatch on '{t_file.name}'!")
+                    log_cb(f"  • Decompiled Target File Size: {existing_size} bytes")
+                    log_cb(f"  • Trimmed Replacement Size:    {candidate_size} bytes")
+                    log_cb("[SAFETY LOCK] Operation aborted to protect motherboard from invalid partition size.")
+                    return {"success": False, "error": f"Byte size mismatch on {t_file.name}"}
+
                 os.chmod(str(t_file), 0o666)
+
             t_file.parent.mkdir(parents=True, exist_ok=True)
             with open(str(t_file), "wb") as pf:
                 pf.write(trimmed_data)
-            log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {t_file.parent.name}\\{t_file.name}")
+            log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {t_file.parent.name}\\{t_file.name} (Exact {len(trimmed_data)} bytes verified)")
             replaced_any = True
         except Exception as ex:
             log_cb(f"[WARNING] File write note ({t_file.name}): {ex}")
@@ -1070,12 +1221,23 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
 
             for t_file in replace_targets:
                 try:
+                    # STRICT MULTI-LAYER BYTE SECURITY GATE
                     if t_file.exists():
+                        existing_size = t_file.stat().st_size
+                        candidate_size = len(trimmed_data)
+                        if existing_size != candidate_size:
+                            log_cb(f"[ERROR] STRICT SECURITY REJECTION: Byte size mismatch on '{t_file.name}'!")
+                            log_cb(f"  • Decompiled Target File Size: {existing_size} bytes")
+                            log_cb(f"  • Trimmed Replacement Size:    {candidate_size} bytes")
+                            log_cb("[SAFETY LOCK] Operation aborted to protect motherboard from invalid partition size.")
+                            return {"success": False, "error": f"Byte size mismatch on {t_file.name}"}
+
                         os.chmod(str(t_file), 0o666)
+
                     t_file.parent.mkdir(parents=True, exist_ok=True)
                     with open(str(t_file), "wb") as pf:
                         pf.write(trimmed_data)
-                    log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {t_file.parent.name}\\{t_file.name}")
+                    log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {t_file.parent.name}\\{t_file.name} (Exact {len(trimmed_data)} bytes verified)")
                 except Exception as ex:
                     log_cb(f"[WARNING] File write note ({t_file.name}): {ex}")
 
