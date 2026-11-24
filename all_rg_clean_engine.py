@@ -71,7 +71,7 @@ def cleanup_all_decompiled_temp_files(log_cb=None):
 def get_xml_partition_input_file(xml_path, region_type: str = "BIOS"):
     """
     Extracts the exact input file path specified in the FIT XML configuration for a given region.
-    Ensures replaced files maintain 100% exact matching filenames with the decompiled files.
+    Ensures replaced files maintain 100% exact matching filenames (case, spaces, suffix) with the decompiled files.
     """
     if not xml_path or not os.path.exists(str(xml_path)):
         return None
@@ -79,19 +79,39 @@ def get_xml_partition_input_file(xml_path, region_type: str = "BIOS"):
         with open(str(xml_path), "r", encoding="utf-8", errors="ignore") as f:
             content = f.read()
 
-        region_pattern_map = {
-            "BIOS": r'<BiosRegion[^>]*>.*?<InputFile\s+value="([^"]+)"',
-            "ME": r'<(?:MeRegion|CsmeRegion)[^>]*>.*?<InputFile\s+value="([^"]+)"',
-            "EC": r'<EcRegion[^>]*>.*?<InputFile\s+value="([^"]+)"',
-            "GBE": r'<GbeRegion[^>]*>.*?<InputFile\s+value="([^"]+)"'
-        }
+        rtype = region_type.upper()
+        if rtype == "BIOS":
+            patterns = [
+                r'<InputFile\s+value="([^"]+)"[^>]*label="BIOS Binary File"',
+                r'<BiosRegion[^>]*>.*?<InputFile\s+value="([^"]+)"',
+                r'<InputFile\s+value="([^"]*BIOS[^"]*\.bin)"'
+            ]
+        elif rtype in ("ME", "CSME", "CSE"):
+            patterns = [
+                r'<MeRegionFile\s+value="([^"]+)"',
+                r'<CsmeRegionFile\s+value="([^"]+)"',
+                r'<InputFile\s+value="([^"]+)"[^>]*label="Intel\(R\)\s+ME\s+Binary\s+File"',
+                r'<(?:MeRegion|CsmeRegion)[^>]*>.*?<InputFile\s+value="([^"]+)"',
+                r'<InputFile\s+value="([^"]*(?:ME\s+Sub|ME\s+Region|CSE\s+Region)[^"]*\.bin)"'
+            ]
+        elif rtype == "EC":
+            patterns = [
+                r'<InputFile\s+value="([^"]+)"[^>]*label="EC Binary File"',
+                r'<EcRegion[^>]*>.*?<InputFile\s+value="([^"]+)"'
+            ]
+        elif rtype in ("GBE", "GBE2"):
+            patterns = [
+                r'<InputFile\s+value="([^"]+)"[^>]*label="GbE Binary File"',
+                r'<GbeRegion[^>]*>.*?<InputFile\s+value="([^"]+)"'
+            ]
+        else:
+            patterns = []
 
-        pattern = region_pattern_map.get(region_type.upper())
-        if pattern:
-            match = re.search(pattern, content, re.DOTALL | re.IGNORECASE)
+        for pat in patterns:
+            match = re.search(pat, content, re.DOTALL | re.IGNORECASE)
             if match and match.group(1):
                 raw = match.group(1).strip()
-                if raw and raw.lower() != "none":
+                if raw and raw.lower() != "none" and raw != "":
                     return Path(raw)
     except Exception:
         pass
