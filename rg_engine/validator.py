@@ -34,6 +34,11 @@ def validate_and_trim(candidate_path, target_size, old_bios_region=None, log_cal
         log_callback(f"[ERROR] Candidate file is too small. Expected at least {target_size} bytes, got {cand_size} bytes.")
         return None, 0, 0
 
+    # ── CASE 1: EXACT BYTE SIZE MATCH (NO CUTTING / TRIMMING REQUIRED) ────────
+    if cand_size == target_size:
+        log_callback(f"[SUCCESS] [OK] Candidate matches target region size exactly ({cand_size} bytes). Direct 1:1 replacement - No cutting required.")
+        return data, 0, 0
+
     diff = cand_size - target_size
 
     # ── IF OLD BIOS REGION IS PROVIDED: STRICT 2-3 LINE TOPPER & FOOTER LOGIC ───

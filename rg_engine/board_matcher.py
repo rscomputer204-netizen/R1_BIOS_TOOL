@@ -191,6 +191,43 @@ def evaluate_candidate(cand_path: str, orig_data: bytes, board_info: dict) -> di
         except Exception:
             pass
 
+    # Check CPU Flavor match (e.g. U-series vs H-series, Low Power LP vs Standard H)
+    fname_upper = filename.upper()
+    is_u_flavor = any(k in fname_upper for k in ["-U", "_U", " U ", "VPRO LP", "BRECKENRIDGE-U"])
+    is_h_flavor = any(k in fname_upper for k in ["-H", "_H", " H ", "VPRO H", "BRECKENRIDGE-H"])
+
+    if orig_data:
+        orig_data_upper = orig_data.upper()
+        # Check if dump has Low Power LP or KBP-LP or SPT-LP
+        has_lp = (b"-LP" in orig_data or b"KBP-LP" in orig_data or b"SPT-LP" in orig_data or
+                  b"LP SERIES" in orig_data_upper or b"CORPORATE LP" in orig_data_upper or b"CONSUMER LP" in orig_data_upper)
+        has_h = (b"-H" in orig_data or b"KBP-H" in orig_data or b"SPT-H" in orig_data or
+                 b"H SERIES" in orig_data_upper or b"CORPORATE H" in orig_data_upper or b"CONSUMER H" in orig_data_upper)
+
+        # Direct board string match in dump (e.g. Breckenridge-U / Breckenridge-H)
+        for b_name in ["BRECKENRIDGE-U", "BRECKENRIDGE-H"]:
+            if b_name.encode('ascii') in orig_data_upper:
+                if b_name in fname_upper:
+                    score += 200
+                    matched_id = b_name
+                    is_match = True
+                    reason = f"Exact Board Model Matched in Backup: {b_name}"
+
+        if is_u_flavor and has_lp:
+            score += 150
+            if not matched_id or matched_id == "Reset Vector Match":
+                matched_id = "U-Series (LP Match)"
+                reason = "Matches Low-Power (U-Series / LP) Processor & Chipset Architecture."
+        elif is_h_flavor and has_h:
+            score += 150
+            if not matched_id or matched_id == "Reset Vector Match":
+                matched_id = "H-Series (HQ Match)"
+                reason = "Matches High-Performance (H-Series / HQ) Processor Architecture."
+        elif is_u_flavor and has_h:
+            score -= 100
+        elif is_h_flavor and has_lp:
+            score -= 100
+
     primary_fam = board_info.get("primary_family")
     known_families = [f["family"] for f in board_info.get("board_families", [])]
     known_bids = board_info.get("board_ids", [])

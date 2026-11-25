@@ -7864,192 +7864,121 @@ class BiosServiceTool(QMainWindow):
         threading.Thread(target=_worker, daemon=True).start()
 
     def run_bios_rg_ready(self):
-        """Original BIOS RG Fix logic using a pre-extracted file."""
-        donor_path, _ = QFileDialog.getOpenFileName(self, "Select Clean BIOS/Update File", self.last_directory, "Bin (*.bin *.rom *.fd *.cap *.exe *.pfs);;All Files (*)")
-        if not donor_path:
+        """Direct 1:1 Replacement for Ready Donor BIOS Region using Intel FIT workspace."""
+        if not self.current_bios_file or not os.path.exists(self.current_bios_file):
+            self.log_to_terminal("[WARNING] Please load a backup BIOS dump first.")
             return
-            
-        self.last_directory = os.path.dirname(donor_path)
-        
-        self.is_task_running = True
-        
-        # --- DMI Confirmation Dialog ---
-        reply = QMessageBox.question(
-            self, 'DMI Migration', 
-            "Do you want to migrate DMI data (Serial Number, Windows Key, etc.) from the original file?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No, QMessageBox.StandardButton.Yes
-        )
-        migrate_dmi = (reply == QMessageBox.StandardButton.Yes)
-        
-        self._handle_loading_state(True, "Cleaning BIOS Region...")
-        self.progress_signal.emit(20)
-            
-        def _run_fix():
+
+        # 1. Determine Target BIOS Region Size from current regions map or Flash Descriptor
+        target_size = 0
+        if hasattr(self, 'current_regions_map') and self.current_regions_map:
+            reg = self.current_regions_map.get("bios") or self.current_regions_map.get("bios_region")
+            if reg:
+                target_size = reg.get("size", 0)
+
+        if not target_size:
             try:
+                with open(self.current_bios_file, "rb") as f:
+                    dump_sample = f.read(0x2000)
+                from all_rg_clean_engine import parse_dump_spi_regions
+                regs = parse_dump_spi_regions(dump_sample)
+                if "bios" in regs:
+                    target_size = regs["bios"]["size"]
+            except Exception:
+                pass
+
+        if not target_size:
+            self.log_to_terminal("[ERROR] Could not determine BIOS Region size from loaded image.")
+            return
+
+        # 2. Open Custom Drag & Drop Dialog with Live Size Matching
+        from bios_rg_ready_dialog import BiosRgReadyDialog
+        dialog = BiosRgReadyDialog(self.current_bios_file, target_size, parent=self)
+        if dialog.exec() != QDialog.Accepted or not dialog.selected_file:
+            self.log_to_terminal("[INFO] BIOS RG READY cancelled by user.")
+            return
+
+        donor_path = dialog.selected_file
+        self.last_directory = os.path.dirname(donor_path)
+        donor_size = os.path.getsize(donor_path)
+
+        # 3. Check exact size match
+        if donor_size != target_size:
+            self.log_to_terminal(f"[ERROR] Donor size ({donor_size} bytes) does not match target BIOS Region ({target_size} bytes).")
+            return
+
+        self.is_task_running = True
+        self._handle_loading_state(True, "Replacing BIOS Region (FIT Workspace)...")
+        self.progress_signal.emit(10)
+
+        def _run_ready_pipeline():
+            from all_rg_clean_engine import decompile_backup_bios_with_fit, perform_bios_rg_ready_with_fit
+            try:
+                self.log_to_terminal(f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                self.log_to_terminal(f"📍 BIOS RG READY ENGINE INITIALIZED")
+                self.log_to_terminal(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+                self.log_to_terminal(f"[INFO] Backup File:  {os.path.basename(self.current_bios_file)}")
+                self.log_to_terminal(f"[INFO] Donor File:   {os.path.basename(donor_path)}")
+                self.log_to_terminal(f"[INFO] Region Size:  {donor_size:,} bytes (100% Matched)")
                 self.progress_signal.emit(25)
-                # Step 1: Decompile Backup BIOS first into source folder
-                try:
-                    from all_rg_clean_engine import decompile_backup_bios_with_fit
-                    self.log_to_terminal(f"[ACTION] Step 1: Decompiling Backup BIOS into source directory...")
-                    decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
-                    self._pending_decomp_ctx = decomp_ctx
-                except Exception as dec_err:
-                    self.log_to_terminal(f"[WARNING] Step 1 Backup Decompile note: {dec_err}")
 
-                self.progress_signal.emit(40)
-                
-                # --- HP SOFTPAQ AUTO-DETECTION ---
-                is_hp_exe = donor_path.lower().endswith(".exe")
-                
-                if is_hp_exe:
-                    self.log_to_terminal("[INFO] HP SoftPaq detected. File Match Complete ✅")
-                    self.log_to_terminal("[INFO] Using Adaptive HP Repair logic...")
-                    repairer = HPBIOSRepairer(self.current_bios_file, donor_path, migrate_dmi=migrate_dmi)
-                    # Monkey-patch log methods
-                    repairer.log_info = lambda msg: self.log_to_terminal(f"[INFO] {msg}")
-                    repairer.log_error = lambda msg: self.log_to_terminal(f"[ERROR] {msg}")
-                    
-                    # Output path
-                    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                    current_bios_str = str(self.current_bios_file or "unknown.bin")
-                    out_name = f"HP_CLEAN_{timestamp}_{os.path.basename(current_bios_str)}"
-                    out_dir = os.path.join(str(get_app_root()), "REPAIRED_BIOS")
-                    os.makedirs(out_dir, exist_ok=True)
-                    out_path = os.path.join(out_dir, out_name)
-                    
-                    success = repairer.perform_repair(out_path)
-                    output_path = out_path if success else None
-                    
-                    if output_path:
-                        self.progress_signal.emit(100)
-                        self.log_to_terminal("[SUCCESS] HP SoftPaq BIOS Clean Complete ✅")
-                        self.log_to_terminal("[INFO] Reloading Hex View with Clean BIOS Region...")
-                        self.current_bios_file = output_path
-                        with open(output_path, "rb") as f:
-                            data = f.read()
-                            self.hex_data_signal.emit(data)
-                        
-                        orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
-                        suggested_name = f"{orig_base}_RG_cline.bin"
-                        self.trigger_rg_save_dialog.emit(suggested_name)
-                    else:
-                        self.log_to_terminal("[ERROR] HP SoftPaq Repair failed.")
-                else:
-                    # USE V1 SMART ENGINE FOR ALL NON-HP EXEs (Standard BIOS RG Ready flow)
-                    from rg_engine.validator import validate_and_trim
-                    from rg_engine.replacer import replace_bios_region
-                    
-                    if not hasattr(self, 'current_regions_map') or "bios" not in self.current_regions_map:
-                        if "bios_region" in self.current_regions_map:
-                            region_info = self.current_regions_map["bios_region"]
-                        else:
-                            self.log_to_terminal("[ERROR] BIOS Region not found in current map.")
-                            QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
-                            return
-                    else:
-                        region_info = self.current_regions_map["bios"]
-                        
-                    target_offset = region_info["offset"]
-                    target_size = region_info["size"]
-                    
-                    self.log_to_terminal(f"[INFO] Target BIOS Region Size: {target_size} bytes")
-                    
-                    # Read Old BIOS Region from currently loaded file
-                    old_bios_region = None
-                    try:
-                        with open(self.current_bios_file, "rb") as bf:
-                            bf.seek(target_offset)
-                            old_bios_region = bf.read(target_size)
-                    except Exception as rf_e:
-                        self.log_to_terminal(f"[WARNING] Could not read old BIOS region: {rf_e}")
+                # Step 1: Decompile Backup BIOS first using Intel Flash Image Tool (FIT)
+                self.log_to_terminal("[ACTION] Step 1: Running Intel FIT Decompile on Backup BIOS...")
+                decomp_ctx = decompile_backup_bios_with_fit(self.current_bios_file, log_cb=self.log_to_terminal)
 
-                    self.progress_signal.emit(50)
-                    valid_data, head_rem, foot_rem = validate_and_trim(
-                        donor_path, 
-                        target_size, 
-                        old_bios_region=old_bios_region,
-                        log_callback=self.log_to_terminal
-                    )
-                    
-                    if not valid_data:
-                        self.log_to_terminal("[ERROR] Validation Failed: File rejected because Header/Footer did not match loaded BIOS region.")
-                        QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
-                        return
-                        
-                    self.progress_signal.emit(70)
-                    
-                    migrated_dmi_data = None
-                    if migrate_dmi:
-                        try:
-                            from dmi_extractor import DMIExtractor
-                            self.log_to_terminal("[INFO] Preserving DMI/NVRAM data before BIOS Region replacement...")
-                            migrated_dmi_data = DMIExtractor.extract_info(
-                                self.current_bios_file,
-                                getattr(self, 'current_regions_map', None),
-                                self.log_to_terminal
-                            )
-                        except Exception as dmi_e:
-                            self.log_to_terminal(f"[WARNING] Could not extract DMI for migration: {dmi_e}")
+                if not decomp_ctx or not decomp_ctx.get("success"):
+                    self.log_to_terminal("[ERROR] Intel FIT Decompile failed. Operation aborted.")
+                    return
 
-                    report = replace_bios_region(self.current_bios_file, valid_data, target_offset, target_size, log_callback=self.log_to_terminal)
+                self.progress_signal.emit(65)
 
-                    if migrate_dmi and migrated_dmi_data and migrated_dmi_data.get("Details"):
-                        try:
-                            self.log_to_terminal("[ACTION] Migrating preserved DMI/NVRAM into clean BIOS Region...")
-                            with open(self.current_bios_file, "rb") as rf:
-                                new_bin_data = bytearray(rf.read())
-                            
-                            from dmi_injector import DMIInjector
-                            inj_fields = {}
-                            for k, v in migrated_dmi_data.get("Details", {}).items():
-                                inj_fields[k] = {
-                                    "value": v,
-                                    "offset": migrated_dmi_data.get("Offsets", {}).get(k, ""),
-                                    "end_offset": migrated_dmi_data.get("EndOffsets", {}).get(k, ""),
-                                    "length": migrated_dmi_data.get("Lengths", {}).get(k, 0),
-                                    "encoding": migrated_dmi_data.get("Encodings", {}).get(k, "UTF-16LE"),
-                                    "region": migrated_dmi_data.get("Regions", {}).get(k, "BIOS"),
-                                    "relative_offset": migrated_dmi_data.get("RelativeOffsets", {}).get(k, "")
-                                }
-                            raw_blocks = migrated_dmi_data.get("RawBlocks", {})
-                            c = DMIInjector.inject_fields(
-                                new_bin_data, inj_fields, 
-                                regions_map=getattr(self, 'current_regions_map', None),
-                                raw_blocks=raw_blocks,
-                                log_cb=self.log_to_terminal
-                            )
-                            with open(self.current_bios_file, "wb") as wf:
-                                wf.write(new_bin_data)
-                                wf.flush()
-                                os.fsync(wf.fileno())
-                            self.log_to_terminal(f"[SUCCESS] DMI Migration Complete: {c} field(s) preserved in clean BIOS! ✅")
-                        except Exception as mig_err:
-                            self.log_to_terminal(f"[ERROR] DMI auto-migration failed: {mig_err}")
-                    
-                    self.progress_signal.emit(100)
-                    self.log_to_terminal("\n--- BIOS RG FIX REPORT ---")
-                    self.log_to_terminal(f"Original Region Size: {target_size} bytes")
-                    self.log_to_terminal(f"Header Removed:       {head_rem} bytes")
-                    self.log_to_terminal(f"Footer Removed:       {foot_rem} bytes")
-                    self.log_to_terminal(f"Backup File:          {os.path.basename(report['backup_path'])}")
-                    self.log_to_terminal("Status:               SUCCESS")
-                    self.log_to_terminal("--------------------------\n")
-                    
-                    self.log_to_terminal("[INFO] Reloading Hex View with Clean BIOS Region...")
-                    with open(self.current_bios_file, "rb") as f:
-                        data = f.read()
-                        self.hex_data_signal.emit(data)
-                        
-                    orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
-                    suggested_name = f"{orig_base}_RG_cline.bin"
-                    self.trigger_rg_save_dialog.emit(suggested_name)
-                    
+                # Step 2: Direct 1:1 Replacement into FIT Workspace & Rebuild
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                orig_base = os.path.splitext(os.path.basename(self.current_bios_file))[0]
+                out_name = f"BIOS_RG_READY_{timestamp}_{orig_base}.bin"
+                out_dir = os.path.join(str(get_app_root()), "REPAIRED_BIOS")
+                os.makedirs(out_dir, exist_ok=True)
+                out_path = os.path.join(out_dir, out_name)
+
+                self.log_to_terminal("[ACTION] Step 2: Direct 1:1 Replacement into FIT Workspace & Compiling...")
+                res = perform_bios_rg_ready_with_fit(decomp_ctx, donor_path, out_path, log_cb=self.log_to_terminal)
+
+                if not res or not res.get("success"):
+                    self.log_to_terminal("[ERROR] BIOS RG READY replacement / FIT Compile failed.")
+                    return
+
+                self.progress_signal.emit(100)
+                self.log_to_terminal("\n--- BIOS RG READY REPORT ---")
+                self.log_to_terminal(f"Original Donor:       {os.path.basename(donor_path)}")
+                self.log_to_terminal(f"Renamed In FIT:       BIOS Region.bin (Matching backup dump structure)")
+                self.log_to_terminal(f"Exact Size Replaced:  {donor_size:,} bytes")
+                self.log_to_terminal(f"Cutting / Slicing:    NONE (Direct 1:1 Replacement)")
+                self.log_to_terminal(f"Compiled Build:       {os.path.basename(out_path)}")
+                self.log_to_terminal("Status:               SUCCESS [OK]")
+                self.log_to_terminal("----------------------------\n")
+
+                # Reload Hex View
+                self.current_bios_file = out_path
+                with open(out_path, "rb") as f:
+                    data = f.read()
+                    self.hex_data_signal.emit(data)
+
+                # Trigger Save As Dialog in workspace source folder
+                suggested_save_name = f"{orig_base}_BIOS_RG_CLEAN.bin"
+                self.trigger_rg_save_dialog.emit(suggested_save_name)
+
+                # Run Auto-Verify on clean file if enabled
+                if hasattr(self, 'chk_auto_verify') and self.chk_auto_verify.isChecked():
+                    self.log_to_terminal("[AUTO-VERIFY] Initiating verification pass on newly generated build...")
+                    self.run_auto_verify_pass(out_path)
+
             except Exception as e:
-                self.log_to_terminal(f"[ERROR] Exception during BIOS RG FIX: {str(e)}")
+                self.log_to_terminal(f"[ERROR] Exception during BIOS RG READY: {str(e)}")
             finally:
-                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 2000))
-                
-        threading.Thread(target=_run_fix, daemon=True).start()
+                self.is_task_running = False
+                QMetaObject.invokeMethod(self, "initiate_loader_stop", Qt.ConnectionType.QueuedConnection, Q_ARG(int, 1000))
+
+        threading.Thread(target=_run_ready_pipeline, daemon=True).start()
 
     def run_bios_rg_exe(self):
         """New V1 Pipeline for extracting and replacing BIOS region from vendor EXEs."""
@@ -8167,9 +8096,11 @@ class BiosServiceTool(QMainWindow):
 
                 # Report
                 self.log_to_terminal("\n--- BIOS RG FIX REPORT ---")
+                self.log_to_terminal(f"Selected Candidate:   {os.path.basename(selected_candidate)}")
+                self.log_to_terminal(f"Renamed in FIT:       BIOS Region.bin (Matching backup dump structure)")
                 self.log_to_terminal(f"Header Removed:       {head_rem} bytes")
                 self.log_to_terminal(f"Footer Removed:       {foot_rem} bytes")
-                self.log_to_terminal(f"Saved:                {os.path.basename(out_path)}")
+                self.log_to_terminal(f"Compiled Build:       {os.path.basename(out_path)}")
                 self.log_to_terminal("Status:               SUCCESS [OK]")
                 self.log_to_terminal("--------------------------\n")
                 

@@ -53,7 +53,7 @@ def cleanup_all_decompiled_temp_files(log_cb=None):
                     pass
 
     # 2. Clean temporary decompiled directories in app root
-    temp_dir_names = ["workspace", "temp", "backup_me", "extracted_firmware", "_decomp_workspace"]
+    temp_dir_names = ["workspace", "temp", "backup_me", "extracted_firmware", "_decomp_workspace", "FIT_WORKSPACE"]
     for td in temp_dir_names:
         p = app_root / td
         if p.exists():
@@ -209,83 +209,108 @@ def match_official_components(dump_path: str, extracted_files: list, log_cb=prin
 
         from rg_engine.validator import validate_and_trim
 
-        bios_candidates = []
+        # Check for files that match the decompiled BIOS Region size EXACTLY (Byte-for-Byte)
+        exact_size_files = []
         for f in extracted_files:
             try:
-                sz = os.path.getsize(safe_path(f))
+                if os.path.getsize(safe_path(f)) == target_size:
+                    exact_size_files.append(f)
+            except Exception:
+                pass
+
+        chosen_bios = None
+        best_reason = ""
+        best_score = 0
+
+        # SCENARIO A: Exactly ONE file matches the exact byte size (No cutting / topper needed)
+        if len(exact_size_files) == 1:
+            chosen_bios = exact_size_files[0]
+            best_score = 100000
+            best_reason = "100% Exact Byte Size Match (Direct 1:1 Donor - No Cutting Needed)"
+            log_cb(f"[INFO] Found single exact byte size matching donor: {os.path.basename(chosen_bios)} ({target_size} bytes). Direct replacement without cutting.")
+
+        # SCENARIO B: MULTIPLE files match exact byte size (rank among them by Board ID & Reset Vector, no cutting)
+        elif len(exact_size_files) > 1:
+            log_cb(f"[INFO] Found {len(exact_size_files)} donor files matching exact byte size ({target_size} bytes). Ranking by Board ID & Reset Vector...")
+            same_size_candidates = []
+            for f in exact_size_files:
                 fname = os.path.basename(f)
-                fname_lower = fname.lower()
-                if sz < target_size:
-                    continue
+                score = 50000
+                reasons = ["Exact Size Match"]
 
-                score = 0
-                match_reasons = []
-
-                # Dry-run Topper & Footer Validation on candidate
-                dry_trimmed, h_rem, f_rem = validate_and_trim(
-                    f, target_size, old_bios_region=old_bios_slice, log_callback=lambda x: None
-                )
-
-                if dry_trimmed is not None:
-                    score += 10000
-                    match_reasons.append("Topper Matched")
-                    if f_rem == 0 and h_rem == 0:
-                        score += 5000
-                        match_reasons.append("Exact Image Alignment")
-                    elif f_rem > 0 or h_rem > 0:
-                        score += 3000
-                        match_reasons.append(f"Trimmed (Top: {h_rem}B, Foot: {f_rem}B)")
-                else:
-                    # Topper mismatch disqualifies candidate from being recommended
-                    score -= 50000
-
-                # Board ID / BID matching in filename
+                # Board ID match in filename
                 for bid in detected_bids:
                     if bid in fname.upper():
-                        score += 8000
-                        match_reasons.append(f"Board ID Matched ({bid})")
+                        score += 20000
+                        reasons.append(f"Board ID Matched ({bid})")
                         break
 
-                if "system bios" in fname_lower or "bios" in fname_lower:
-                    score += 50
-
-                # Check Reset Vector / footer tail match
+                # Reset Vector / footer tail match
                 try:
                     with open(safe_path(f), "rb") as cf:
-                        cf.seek(sz - 64)
+                        cf.seek(target_size - 64)
                         cand_tail = cf.read(64)
                     if old_tail64 and (cand_tail == old_tail64 or cand_tail[-16:] == old_tail64[-16:]):
-                        score += 1000
-                        match_reasons.append("Reset Vector Matched")
+                        score += 10000
+                        reasons.append("Reset Vector Matched")
                 except Exception:
                     pass
 
-                # Exact size bonus
-                if sz == target_size:
-                    score += 500
-                    match_reasons.append("Exact Size Match")
+                same_size_candidates.append((score, f, target_size, ", ".join(reasons)))
 
-                # Architecture flavor bonus
-                if "mtl" in fname_lower and (b"MTL" in dump_bytes or "METEOR" in dump_cpu):
-                    score += 500
-                elif "rpl" in fname_lower and (b"RPL" in dump_bytes or "RAPTOR" in dump_cpu):
-                    score += 500
+            same_size_candidates.sort(key=lambda x: x[0], reverse=True)
+            best_score, chosen_bios, best_sz, best_reason = same_size_candidates[0]
+            log_cb(f"[INFO] Evaluated {len(same_size_candidates)} same-size candidates:")
+            for sc, cf, csz, rsn in same_size_candidates:
+                cname = os.path.basename(cf)
+                tag = " [RECOMMENDED]" if cf == chosen_bios else ""
+                log_cb(f"  • {cname} (Score: {sc}) -> {rsn}{tag}")
 
-                bios_candidates.append((score, f, sz, ", ".join(match_reasons)))
-            except Exception:
-                continue
+        # SCENARIO C: NO file matches exact size (all candidates are larger -> require Topper/Footer cutting)
+        else:
+            bios_candidates = []
+            for f in extracted_files:
+                try:
+                    sz = os.path.getsize(safe_path(f))
+                    fname = os.path.basename(f)
+                    fname_lower = fname.lower()
+                    if sz < target_size:
+                        continue
 
-        if bios_candidates:
-            bios_candidates.sort(key=lambda x: x[0], reverse=True)
-            best_score, chosen_bios, best_sz, best_reason = bios_candidates[0]
+                    score = 0
+                    match_reasons = []
 
-            # Log candidates breakdown if multiple candidates exist
-            if len(bios_candidates) > 1:
-                log_cb(f"[INFO] Evaluated {len(bios_candidates)} BIOS candidates:")
-                for sc, cf, csz, rsn in bios_candidates:
-                    cname = os.path.basename(cf)
-                    tag = " [RECOMMENDED]" if cf == chosen_bios else ""
-                    log_cb(f"  • {cname} (Score: {sc}) -> {rsn}{tag}")
+                    # Dry-run Topper & Footer Validation on candidate
+                    dry_trimmed, h_rem, f_rem = validate_and_trim(
+                        f, target_size, old_bios_region=old_bios_slice, log_callback=lambda x: None
+                    )
+
+                    if dry_trimmed is not None:
+                        score += 10000
+                        match_reasons.append(f"Topper Matched (Trimmed Top: {h_rem}B, Foot: {f_rem}B)")
+                    else:
+                        score -= 50000
+
+                    # Board ID / BID matching in filename
+                    for bid in detected_bids:
+                        if bid in fname.upper():
+                            score += 8000
+                            match_reasons.append(f"Board ID Matched ({bid})")
+                            break
+
+                    bios_candidates.append((score, f, sz, ", ".join(match_reasons)))
+                except Exception:
+                    continue
+
+            if bios_candidates:
+                bios_candidates.sort(key=lambda x: x[0], reverse=True)
+                best_score, chosen_bios, best_sz, best_reason = bios_candidates[0]
+                if len(bios_candidates) > 1:
+                    log_cb(f"[INFO] Evaluated {len(bios_candidates)} larger candidates requiring trimming:")
+                    for sc, cf, csz, rsn in bios_candidates:
+                        cname = os.path.basename(cf)
+                        tag = " [RECOMMENDED]" if cf == chosen_bios else ""
+                        log_cb(f"  • {cname} (Score: {sc}) -> {rsn}{tag}")
 
             matches["bios"] = {
                 "title": "System BIOS Region",
@@ -696,17 +721,14 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
     if dump_ver:
         log_cb(f"[INFO] Detected CSME Firmware Version: {dump_me.get('version', dump_ver)} | Chipset: {dump_chipset or 'N/A'}")
 
-    # 3. Setup clean internal workspace inside application root (not polluting external BIOS source folder)
+    # 3. Setup clean isolated workspace inside application root (matching ME Clean 1:1)
     bios_file_p = Path(bios_path).resolve()
     bios_stem = bios_file_p.stem
 
-    if workspace_dir:
-        workspace = Path(workspace_dir)
-    else:
-        # Keep decompilation strictly internal inside software workspace directory
-        workspace = Path(get_app_root()) / "workspace" / f"{bios_stem}_Decompiled"
-
-    workspace.mkdir(parents=True, exist_ok=True)
+    fit_workspace = Path(workspace_dir) if workspace_dir else (Path(get_app_root()) / "FIT_WORKSPACE")
+    if fit_workspace.exists():
+        shutil.rmtree(fit_workspace, ignore_errors=True)
+    fit_workspace.mkdir(parents=True, exist_ok=True)
 
     # 4. Attempt FIT Decompile
     candidates = find_fit_candidates(dump_ver, chipset_hint=dump_chipset)
@@ -714,120 +736,116 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
 
     for attempt, (score, fit_exe) in enumerate(candidates[:10], 1):
         tool_folder_name = Path(fit_exe).parent.name
+        log_cb(f"[INFO] Intel FIT Decompile Attempt {attempt} of {min(10, len(candidates))}: Trying {tool_folder_name} (Score: {score})...")
         abs_fit_exe = get_short_path(os.path.abspath(fit_exe))
         fit_dir = get_short_path(os.path.dirname(os.path.abspath(fit_exe)))
         
-        # Keep real BIOS filename (do not rename to backup_dump.bin!)
-        real_bios_name = Path(bios_path).name
-        temp_bios = workspace / real_bios_name
+        # Reset isolated workspace for fresh decompile
+        if fit_workspace.exists():
+            shutil.rmtree(fit_workspace, ignore_errors=True)
+        fit_workspace.mkdir(parents=True, exist_ok=True)
+
+        temp_bios = fit_workspace / f"{bios_stem}.bin"
         try:
             shutil.copy2(os.path.abspath(bios_path), str(temp_bios))
         except Exception:
             continue
 
-        fit_xml_path = Path(fit_dir) / f"{bios_stem}.xml"
-        abs_xml_path = get_short_path(os.path.abspath(fit_xml_path))
-        abs_temp_bios = get_short_path(os.path.abspath(temp_bios))
+        xml_path = fit_workspace / "config.xml"
         is_mfit = abs_fit_exe.lower().endswith("mfit.exe")
         is_legacy_fitc = "fitc.exe" in abs_fit_exe.lower()
 
         if is_mfit:
-            cmd = [abs_fit_exe, "--decompose", abs_temp_bios, "--saveconfig", abs_xml_path]
+            cmd = [abs_fit_exe, "--decompose", temp_bios.name, "--saveconfig", xml_path.name.replace(" ", "_")]
         elif is_legacy_fitc:
-            cmd = [abs_fit_exe, "/b", "/w", str(fit_dir), "/s", str(fit_dir), "/d", str(fit_dir), "/save", fit_xml_path.name, temp_bios.name]
+            cmd = [abs_fit_exe, "/b", "/w", str(fit_workspace), "/s", str(fit_workspace), "/d", str(fit_workspace), "/save", xml_path.name.replace(" ", "_"), temp_bios.name]
         else:
-            cmd = [abs_fit_exe, "-f", abs_temp_bios, "-save", abs_xml_path, "-i", "disable"]
+            cmd = [abs_fit_exe, "-f", temp_bios.name, "-save", xml_path.name.replace(" ", "_"), "-i", "disable"]
 
         # Measure initial fit.log size to only capture fresh lines
         log_pos = 0
-        fit_log_p = Path(fit_dir) / "fit.log"
+        fit_log_p = fit_workspace / "fit.log"
+        if not fit_log_p.exists():
+            fit_log_p = Path(fit_dir) / "fit.log"
         if fit_log_p.exists():
             try: log_pos = fit_log_p.stat().st_size
             except Exception: pass
 
         try:
-            sub_res = subprocess.run(cmd, cwd=fit_dir, capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
-            sync_fit_logs_to_terminal(sub_res, log_cb=log_cb, fit_dir=fit_dir, workspace=workspace, start_log_pos=log_pos)
+            sub_res = subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+            sync_fit_logs_to_terminal(sub_res, log_cb=log_cb, fit_dir=fit_dir, workspace=fit_workspace, start_log_pos=log_pos)
             
-            # Locate XML: check fit_xml_path, short stem, workspace, etc.
-            xml_path = fit_xml_path
-            short_stem = Path(abs_temp_bios).stem
-            xml_candidates = [
-                fit_xml_path,
-                workspace / f"{bios_stem}.xml",
-                Path(fit_dir) / f"{short_stem}.xml",
-                workspace / f"{short_stem}.xml",
-                Path(fit_dir) / "config.xml",
-                workspace / "config.xml",
-                Path(fit_dir) / "image.xml",
-                workspace / "image.xml"
-            ]
-            for xc in xml_candidates:
-                if xc.exists():
-                    xml_path = xc
-                    try:
-                        shutil.copy2(xc, workspace / f"{bios_stem}.xml")
-                        shutil.copy2(xc, fit_xml_path)
-                    except Exception:
-                        pass
-                    break
+            # Locate XML: check fit_workspace, fit_dir
+            if not xml_path.exists():
+                for xc in [
+                    fit_workspace / f"{bios_stem}.xml",
+                    fit_workspace / "image.xml",
+                    fit_workspace / "corrupt.xml",
+                    Path(fit_dir) / "config.xml",
+                    Path(fit_dir) / f"{bios_stem}.xml",
+                    Path(fit_dir) / "image.xml"
+                ]:
+                    if xc.exists():
+                        shutil.copy2(xc, xml_path)
+                        if xc.parent == Path(fit_dir):
+                            try: os.remove(str(xc))
+                            except Exception: pass
+                        break
 
-            # Locate decompiled directory
-            fit_bios_folder = Path(fit_dir) / bios_stem
-            ws_bios_folder = workspace / bios_stem
-            
-            target_bios_folder = None
-            search_folders = [
-                fit_bios_folder,
-                ws_bios_folder,
-                Path(fit_dir) / short_stem,
-                workspace / short_stem,
-                Path(fit_dir) / "image",
-                workspace / "image"
-            ]
-            for p in search_folders:
-                if p.exists() and p.is_dir():
-                    target_bios_folder = p
-                    break
+            # Locate decompiled directory inside fit_workspace
+            decomp_target = fit_workspace / bios_stem
+            if not decomp_target.exists():
+                decomp_target = fit_workspace / "corrupt"
 
-            # Dynamic directory search in fit_dir for any directory containing Decomp or partition .bin files
-            if not target_bios_folder and Path(fit_dir).exists():
-                try:
-                    from clean_fit_tools import GENUINE_SUBDIRS
-                except Exception:
-                    GENUINE_SUBDIRS = set()
-                for sub in Path(fit_dir).iterdir():
-                    if sub.is_dir() and sub.name.lower() not in GENUINE_SUBDIRS:
-                        if (sub / "Decomp").exists() or list(sub.glob("*.bin")):
-                            target_bios_folder = sub
+            # Check if created in fit_dir and move into fit_workspace (keeps fit_dir 100% clean)
+            if not decomp_target.exists():
+                for cand_name in [bios_stem, "corrupt", Path(temp_bios).stem, Path(bios_path).stem, "image", "Decomp"]:
+                    cand_p = Path(fit_dir) / cand_name
+                    if cand_p.exists() and cand_p.is_dir():
+                        try:
+                            shutil.move(str(cand_p), str(decomp_target))
                             break
+                        except Exception:
+                            pass
 
-            decomp_target = None
-            if target_bios_folder:
-                # Keep exact FIT structure: check for Decomp inside bios_stem folder
-                if (target_bios_folder / "Decomp").exists() and (target_bios_folder / "Decomp").is_dir():
-                    decomp_target = target_bios_folder / "Decomp"
+            if not decomp_target.exists():
+                if is_mfit:
+                    subprocess.run([abs_fit_exe, "--decompose", temp_bios.name], cwd=str(fit_workspace), capture_output=True, creationflags=0x08000000)
+                elif not is_legacy_fitc and xml_path.exists():
+                    subprocess.run([abs_fit_exe, "-f", xml_path.name, "-b", "-o", "dummy_out.bin"],
+                                   cwd=str(fit_workspace), capture_output=True, creationflags=0x08000000)
+
+            if not decomp_target.exists():
+                subdirs = [d for d in fit_workspace.iterdir() if d.is_dir() and d.name not in (bios_stem, "corrupt")]
+                if subdirs:
+                    decomp_target = subdirs[0]
                 else:
-                    decomp_target = target_bios_folder
+                    for cand_name in [bios_stem, "corrupt", Path(temp_bios).stem, Path(bios_path).stem, "image", "Decomp"]:
+                        cand_p = Path(fit_dir) / cand_name
+                        if cand_p.exists() and cand_p.is_dir():
+                            try:
+                                shutil.move(str(cand_p), str(decomp_target))
+                                break
+                            except Exception:
+                                pass
 
-                # Copy exact bios_stem folder structure into workspace so user sees it intact
-                if target_bios_folder != ws_bios_folder and target_bios_folder.exists():
-                    try:
-                        if ws_bios_folder.exists():
-                            shutil.rmtree(str(ws_bios_folder), ignore_errors=True)
-                        shutil.copytree(str(target_bios_folder), str(ws_bios_folder))
-                    except Exception:
-                        pass
+            active_decomp = None
+            if decomp_target and decomp_target.exists():
+                if (decomp_target / "Decomp").exists() and (decomp_target / "Decomp").is_dir():
+                    active_decomp = decomp_target / "Decomp"
+                else:
+                    active_decomp = decomp_target
 
-            if xml_path.exists() and decomp_target and decomp_target.exists() and validate_decompiled_structure(decomp_target):
+            if xml_path.exists() and active_decomp and active_decomp.exists() and validate_decompiled_structure(active_decomp):
                 log_cb(f"[SUCCESS] [OK] FIT Decompile Complete via {tool_folder_name}")
-                log_cb(f"[INFO] Active BIOS Folder: {target_bios_folder.name} (Structure Intact)")
+                folder_disp = decomp_target.name if decomp_target else "FIT_WORKSPACE"
+                log_cb(f"[INFO] Active BIOS Folder: {folder_disp} (Structure Intact)")
                 
                 # Show all decompiled files inside the folder on terminal
-                found_part_files = list(decomp_target.glob("*.bin"))
+                found_part_files = list(active_decomp.glob("*.bin"))
                 if found_part_files:
                     log_cb(f"\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-                    log_cb(f"DECOMPILED PARTITION FILES IN [{target_bios_folder.name}]:")
+                    log_cb(f"DECOMPILED PARTITION FILES IN [{folder_disp}]:")
                     log_cb(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
                     for item in sorted(found_part_files):
                         sz = item.stat().st_size
@@ -841,11 +859,11 @@ def decompile_backup_bios_with_fit(bios_path: str, log_cb=print, workspace_dir: 
                     "tool_name": tool_folder_name,
                     "fit_exe": fit_exe,
                     "fit_dir": fit_dir,
-                    "fit_workspace": workspace,
+                    "fit_workspace": fit_workspace,
                     "bios_stem": bios_stem,
-                    "fit_bios_folder": fit_bios_folder if fit_bios_folder.exists() else None,
-                    "ws_bios_folder": ws_bios_folder if ws_bios_folder.exists() else None,
-                    "decomp_target": decomp_target,
+                    "fit_bios_folder": None,
+                    "ws_bios_folder": decomp_target,
+                    "decomp_target": active_decomp,
                     "xml_path": xml_path,
                     "regions": regions,
                     "dump_bytes": dump_bytes,
@@ -949,18 +967,18 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
     is_mfit = str(fit_exe).lower().endswith("mfit.exe")
     is_legacy_fitc = "fitc.exe" in str(fit_exe_safe).lower()
 
-    run_cwd = fit_dir if (not is_mfit and Path(fit_dir).exists()) else str(workspace)
+    run_cwd = str(workspace)
 
     if is_mfit:
-        cmd = [fit_exe_safe, "--loadconfig", abs_xml, "--build", abs_final_out]
+        cmd = [fit_exe_safe, "--loadconfig", xml_path.name, "--build", final_out.name]
     elif is_legacy_fitc:
         cmd = [fit_exe_safe, "/b", "/w", str(run_cwd), "/s", str(run_cwd), "/d", str(run_cwd), xml_path.name]
     else:
-        cmd = [fit_exe_safe, "-f", abs_xml, "-b", "-o", abs_final_out, "-i", "disable"]
+        cmd = [fit_exe_safe, "-f", xml_path.name, "-b", "-o", final_out.name, "-i", "disable"]
 
     # Measure initial fit.log size to capture fresh logs
     log_pos = 0
-    for cand in [Path(run_cwd) / "fit.log", Path(fit_dir) / "fit.log", workspace / "fit.log"]:
+    for cand in [workspace / "fit.log", Path(fit_dir) / "fit.log"]:
         if cand.exists():
             try:
                 log_pos = cand.stat().st_size
@@ -979,9 +997,12 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
 
     # Check output binary
     if not final_out.exists() or final_out.stat().st_size == 0:
-        for alt_out in [Path(fit_dir) / "outimage.bin", Path(fit_dir) / "image.bin", workspace / "image.bin", workspace / "dummy_out.bin"]:
+        for alt_out in [workspace / "image.bin", workspace / "dummy_out.bin", Path(fit_dir) / "outimage.bin", Path(fit_dir) / "image.bin"]:
             if alt_out.exists() and alt_out.stat().st_size > 0:
                 shutil.copy2(alt_out, final_out)
+                if alt_out.parent == Path(fit_dir):
+                    try: os.remove(str(alt_out))
+                    except Exception: pass
                 break
 
     if final_out.exists() and final_out.stat().st_size > 0:
@@ -1004,6 +1025,127 @@ def compile_fit_workspace(decomp_ctx: dict, output_path: str, log_cb=print) -> b
 
     log_cb(f"[ERROR] FIT Compilation failed to produce a valid image via {tool_name}. Operation stopped for motherboard safety.")
     return False
+
+
+def perform_bios_rg_ready_with_fit(decomp_ctx: dict, donor_path: str, output_path: str, log_cb=print) -> dict:
+    """
+    Executes BIOS RG READY direct 1:1 replacement and FIT Rebuild:
+    1. Validates donor file byte size against decompiled BIOS Region (Must match exactly).
+    2. Overwrites matched BIOS Region in decompiled FIT_WORKSPACE directly (no cutting, no slicing).
+    3. Rebuilds / Compiles complete BIOS via Intel FIT.
+    """
+    from fit_automator import find_partition_files
+
+    regions = decomp_ctx.get("regions", {})
+    bios_reg = regions.get("bios")
+    if not bios_reg:
+        log_cb("[ERROR] BIOS Region not defined in firmware layout.")
+        return {"success": False, "error": "BIOS Region missing"}
+
+    target_size = bios_reg["size"]
+    target_offset = bios_reg["offset"]
+    decomp_target = decomp_ctx.get("decomp_target")
+    workspace = decomp_ctx.get("fit_workspace")
+    bios_stem = decomp_ctx.get("bios_stem") or Path(decomp_ctx.get("bios_path", "bios")).stem
+
+    if not os.path.exists(safe_path(donor_path)):
+        log_cb(f"[ERROR] Donor file not found: {donor_path}")
+        return {"success": False, "error": "Donor file not found"}
+
+    donor_size = os.path.getsize(safe_path(donor_path))
+    if donor_size != target_size:
+        log_cb(f"[ERROR] STRICT SECURITY REJECTION: Donor size ({donor_size} bytes) does not match target BIOS Region ({target_size} bytes)!")
+        return {"success": False, "error": f"Size mismatch: donor {donor_size} != target {target_size}"}
+
+    with open(safe_path(donor_path), "rb") as df:
+        donor_bytes = df.read()
+
+    donor_orig_name = os.path.basename(donor_path)
+    log_cb(f"[SUCCESS] [OK] Direct 1:1 Size Match Verified: {donor_size} bytes (No cutting required)")
+    log_cb(f"[ACTION] Auto-renaming donor '{donor_orig_name}' to match backup BIOS dump partition name...")
+
+    # Also stage a copy of the donor file named after the backup file stem in workspace
+    if workspace:
+        try:
+            staged_named_donor = Path(workspace) / f"{bios_stem}_BIOS_Region.bin"
+            with open(str(staged_named_donor), "wb") as bf:
+                bf.write(donor_bytes)
+        except Exception:
+            pass
+
+    target_part_files = []
+    if decomp_target and os.path.exists(decomp_target):
+        target_part_files = find_partition_files(decomp_target, "BIOS")
+
+    replace_targets = []
+    
+    # 0. Primary target: exact file specified by Intel FIT in the XML config
+    xml_path = decomp_ctx.get("xml_path")
+    if xml_path:
+        exact_target = get_xml_partition_input_file(xml_path, "BIOS")
+        if exact_target:
+            resolved_exact = exact_target if exact_target.is_absolute() else (Path(workspace) / exact_target)
+            if resolved_exact not in replace_targets:
+                replace_targets.append(resolved_exact)
+            if workspace and bios_stem:
+                mirror_p = Path(workspace) / bios_stem / "Decomp" / exact_target.name
+                if mirror_p not in replace_targets:
+                    replace_targets.append(mirror_p)
+
+    # 1. Any target partition file found in decompiled directory
+    if target_part_files:
+        for tf in target_part_files:
+            p = Path(tf)
+            if "backup" not in p.name.lower() and "backup" not in p.parent.name.lower() and p not in replace_targets:
+                replace_targets.append(p)
+
+    # 2. Target inside workspace / bios_stem / Decomp
+    if workspace:
+        for p in [Path(workspace) / bios_stem / "Decomp" / "BIOS Region.bin",
+                 Path(workspace) / "corrupt" / "Decomp" / "BIOS Region.bin",
+                 Path(workspace) / bios_stem / "BIOS Region.bin",
+                 Path(workspace) / "BIOS Region.bin"]:
+            if p.parent.exists() and p not in replace_targets:
+                replace_targets.append(p)
+
+    replaced_any = False
+    for t_file in replace_targets:
+        try:
+            if t_file.exists():
+                existing_size = t_file.stat().st_size
+                if existing_size != len(donor_bytes):
+                    log_cb(f"[ERROR] STRICT SECURITY REJECTION: Byte size mismatch on decompiled '{t_file.name}' ({existing_size} bytes vs donor {len(donor_bytes)} bytes)!")
+                    return {"success": False, "error": f"Byte size mismatch on {t_file.name}"}
+
+                os.chmod(str(t_file), 0o666)
+
+            t_file.parent.mkdir(parents=True, exist_ok=True)
+            with open(str(t_file), "wb") as pf:
+                pf.write(donor_bytes)
+            log_cb(f"[SUCCESS] [OK] Renamed '{donor_orig_name}' -> '{t_file.name}' & Replaced in: {t_file.parent.name}\\{t_file.name} (Exact {len(donor_bytes)} bytes verified)")
+            replaced_any = True
+        except Exception as ex:
+            log_cb(f"[WARNING] File write note ({t_file.name}): {ex}")
+
+    if not replaced_any and decomp_target:
+        def_target = Path(decomp_target) / "BIOS Region.bin"
+        def_target.parent.mkdir(parents=True, exist_ok=True)
+        with open(str(def_target), "wb") as pf:
+            pf.write(donor_bytes)
+        log_cb(f"[SUCCESS] [OK] Renamed '{donor_orig_name}' -> 'BIOS Region.bin' & Replaced in: {def_target.parent.name}\\{def_target.name}")
+
+    # Also keep dump_bytes in sync
+    dump_bytes = decomp_ctx.get("dump_bytes")
+    if dump_bytes and len(dump_bytes) >= target_offset + target_size:
+        dump_bytes[target_offset : target_offset + target_size] = donor_bytes
+
+    # Rebuild / Compile via FIT
+    ok = compile_fit_workspace(decomp_ctx, output_path, log_cb=log_cb)
+    return {
+        "success": ok,
+        "output_path": output_path,
+        "size": target_size
+    }
 
 
 def perform_bios_rg_exe_with_fit(decomp_ctx: dict, candidate_path: str, output_path: str, log_cb=print) -> dict:
@@ -1055,46 +1197,43 @@ def perform_bios_rg_exe_with_fit(decomp_ctx: dict, candidate_path: str, output_p
     log_cb(f"[SUCCESS] [OK] Topper & Footer Matched: {os.path.basename(candidate_path)} -> BIOS Region")
     log_cb(f"[INFO] Header Removed: {head_rem} bytes | Footer Removed: {foot_rem} bytes")
 
-    # Overwrite clean BIOS Region directly in the folder named after the BIOS file (bios_stem)
+    # Overwrite clean BIOS Region directly in isolated workspace (matching ME Clean 1:1)
     bios_stem = decomp_ctx.get("bios_stem") or Path(decomp_ctx.get("bios_path", "bios")).stem
-    fit_dir = decomp_ctx.get("fit_dir")
     workspace = decomp_ctx.get("fit_workspace")
+    decomp_target = decomp_ctx.get("decomp_target")
 
     replace_targets = []
     
-    # 0. Primary target: exact file specified by Intel FIT in the XML config (keeps exact matching filename!)
+    # 0. Primary target: exact file specified by Intel FIT in the XML config
     xml_path = decomp_ctx.get("xml_path")
     if xml_path:
         exact_target = get_xml_partition_input_file(xml_path, "BIOS")
-        if exact_target and exact_target not in replace_targets:
-            replace_targets.append(exact_target)
+        if exact_target:
+            resolved_exact = exact_target if exact_target.is_absolute() else (Path(workspace) / exact_target)
+            if resolved_exact not in replace_targets:
+                replace_targets.append(resolved_exact)
             if workspace and bios_stem:
                 mirror_p = Path(workspace) / bios_stem / "Decomp" / exact_target.name
                 if mirror_p not in replace_targets:
                     replace_targets.append(mirror_p)
 
-    # 1. Target inside fit_dir / bios_stem / Decomp (where FIT looks)
-    if fit_dir:
-        for p in [Path(fit_dir) / bios_stem / "Decomp" / "BIOS Region.bin",
-                 Path(fit_dir) / bios_stem / "BIOS Region.bin"]:
-            if p.parent.exists() and p not in replace_targets:
-                replace_targets.append(p)
-
-    # 2. Target inside workspace / bios_stem / Decomp
-    if workspace:
-        for p in [Path(workspace) / bios_stem / "Decomp" / "BIOS Region.bin",
-                 Path(workspace) / bios_stem / "BIOS Region.bin",
-                 Path(workspace) / "BIOS Region.bin"]:
-            if p.parent.exists() and p not in replace_targets:
-                replace_targets.append(p)
-
-    # 3. Any target partition file found in decompiled directory (using exact decompiled filename)
+    # 1. Any target partition file found in decompiled directory (using exact decompiled filename)
     if target_part_files:
         for tf in target_part_files:
             p = Path(tf)
             if "backup" not in p.name.lower() and "backup" not in p.parent.name.lower() and p not in replace_targets:
                 replace_targets.append(p)
 
+    # 2. Target inside workspace / bios_stem / Decomp
+    if workspace:
+        for p in [Path(workspace) / bios_stem / "Decomp" / "BIOS Region.bin",
+                 Path(workspace) / "corrupt" / "Decomp" / "BIOS Region.bin",
+                 Path(workspace) / bios_stem / "BIOS Region.bin",
+                 Path(workspace) / "BIOS Region.bin"]:
+            if p.parent.exists() and p not in replace_targets:
+                replace_targets.append(p)
+
+    cand_orig_name = os.path.basename(candidate_path)
     replaced_any = False
     for t_file in replace_targets:
         try:
@@ -1115,6 +1254,7 @@ def perform_bios_rg_exe_with_fit(decomp_ctx: dict, candidate_path: str, output_p
             t_file.parent.mkdir(parents=True, exist_ok=True)
             with open(str(t_file), "wb") as pf:
                 pf.write(trimmed_data)
+            log_cb(f"[ACTION] Auto-renamed official file '{cand_orig_name}' -> '{t_file.name}' (matching original backup structure)")
             log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {t_file.parent.name}\\{t_file.name} (Exact {len(trimmed_data)} bytes verified)")
             replaced_any = True
         except Exception as ex:
@@ -1126,6 +1266,7 @@ def perform_bios_rg_exe_with_fit(decomp_ctx: dict, candidate_path: str, output_p
         def_target.parent.mkdir(parents=True, exist_ok=True)
         with open(str(def_target), "wb") as pf:
             pf.write(trimmed_data)
+        log_cb(f"[ACTION] Auto-renamed official file '{cand_orig_name}' -> '{def_target.name}'")
         log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {def_target.parent.name}\\{def_target.name}")
 
     # Also keep dump_bytes in sync
@@ -1195,20 +1336,18 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
             xml_path = decomp_ctx.get("xml_path")
             if xml_path:
                 exact_target = get_xml_partition_input_file(xml_path, "BIOS")
-                if exact_target and exact_target not in replace_targets:
-                    replace_targets.append(exact_target)
+                if exact_target:
+                    resolved_exact = exact_target if exact_target.is_absolute() else (Path(workspace) / exact_target)
+                    if resolved_exact not in replace_targets:
+                        replace_targets.append(resolved_exact)
                     if workspace and bios_stem:
                         mirror_p = Path(workspace) / bios_stem / "Decomp" / exact_target.name
                         if mirror_p not in replace_targets:
                             replace_targets.append(mirror_p)
 
-            if fit_dir:
-                for p in [Path(fit_dir) / bios_stem / "Decomp" / "BIOS Region.bin",
-                         Path(fit_dir) / bios_stem / "BIOS Region.bin"]:
-                    if p.parent.exists() and p not in replace_targets:
-                        replace_targets.append(p)
             if workspace:
                 for p in [Path(workspace) / bios_stem / "Decomp" / "BIOS Region.bin",
+                         Path(workspace) / "corrupt" / "Decomp" / "BIOS Region.bin",
                          Path(workspace) / bios_stem / "BIOS Region.bin",
                          Path(workspace) / "BIOS Region.bin"]:
                     if p.parent.exists() and p not in replace_targets:
@@ -1219,6 +1358,7 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
                     if "backup" not in p.name.lower() and "backup" not in p.parent.name.lower() and p not in replace_targets:
                         replace_targets.append(p)
 
+            b_orig_name = os.path.basename(bios_file)
             for t_file in replace_targets:
                 try:
                     # STRICT MULTI-LAYER BYTE SECURITY GATE
@@ -1237,6 +1377,7 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
                     t_file.parent.mkdir(parents=True, exist_ok=True)
                     with open(str(t_file), "wb") as pf:
                         pf.write(trimmed_data)
+                    log_cb(f"[ACTION] Auto-renamed official file '{b_orig_name}' -> '{t_file.name}' (matching backup dump structure)")
                     log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {t_file.parent.name}\\{t_file.name} (Exact {len(trimmed_data)} bytes verified)")
                 except Exception as ex:
                     log_cb(f"[WARNING] File write note ({t_file.name}): {ex}")
@@ -1256,22 +1397,20 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
         xml_path = decomp_ctx.get("xml_path")
         if xml_path:
             exact_target = get_xml_partition_input_file(xml_path, "ME")
-            if exact_target and exact_target not in me_targets:
-                me_targets.append(exact_target)
+            if exact_target:
+                resolved_exact = exact_target if exact_target.is_absolute() else (Path(workspace) / exact_target)
+                if resolved_exact not in me_targets:
+                    me_targets.append(resolved_exact)
                 if workspace and bios_stem:
                     mirror_p = Path(workspace) / bios_stem / "Decomp" / exact_target.name
                     if mirror_p not in me_targets:
                         me_targets.append(mirror_p)
 
-        if fit_dir:
-            for p in [Path(fit_dir) / bios_stem / "Decomp" / "ME Region.bin",
-                     Path(fit_dir) / bios_stem / "Decomp" / "CSE Region.bin",
-                     Path(fit_dir) / bios_stem / "ME Region.bin"]:
-                if p.parent.exists() and p not in me_targets:
-                    me_targets.append(p)
         if workspace:
             for p in [Path(workspace) / bios_stem / "Decomp" / "ME Region.bin",
+                     Path(workspace) / "corrupt" / "Decomp" / "ME Region.bin",
                      Path(workspace) / bios_stem / "Decomp" / "CSE Region.bin",
+                     Path(workspace) / "corrupt" / "Decomp" / "CSE Region.bin",
                      Path(workspace) / bios_stem / "ME Region.bin",
                      Path(workspace) / "ME Region.bin"]:
                 if p.parent.exists() and p not in me_targets:
@@ -1282,12 +1421,14 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
                 if "backup" not in p.name.lower() and "backup" not in p.parent.name.lower() and p not in me_targets:
                     me_targets.append(p)
 
+        me_orig_name = os.path.basename(me_file)
         for mt in me_targets:
             try:
                 if mt.exists():
                     os.chmod(str(mt), 0o666)
                 mt.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(me_file, str(mt))
+                log_cb(f"[ACTION] Auto-renamed official file '{me_orig_name}' -> '{mt.name}' (matching original backup structure)")
                 log_cb(f"[SUCCESS] [OK] Replaced clean CSME Region in: {mt.parent.name}\\{mt.name}")
             except Exception as ex:
                 log_cb(f"[WARNING] ME file write note ({mt.name}): {ex}")
@@ -1325,21 +1466,20 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
         xml_path = decomp_ctx.get("xml_path")
         if xml_path:
             exact_target = get_xml_partition_input_file(xml_path, "EC")
-            if exact_target and exact_target not in ec_targets:
-                ec_targets.append(exact_target)
+            if exact_target:
+                resolved_exact = exact_target if exact_target.is_absolute() else (Path(workspace) / exact_target)
+                if resolved_exact not in ec_targets:
+                    ec_targets.append(resolved_exact)
                 if workspace and bios_stem:
                     mirror_p = Path(workspace) / bios_stem / "Decomp" / exact_target.name
                     if mirror_p not in ec_targets:
                         ec_targets.append(mirror_p)
 
-        if fit_dir:
-            for p in [Path(fit_dir) / bios_stem / "Decomp" / "EC Region.bin",
-                     Path(fit_dir) / bios_stem / "EC Region.bin"]:
-                if p.parent.exists() and p not in ec_targets:
-                    ec_targets.append(p)
         if workspace:
             for p in [Path(workspace) / bios_stem / "Decomp" / "EC Region.bin",
-                     Path(workspace) / bios_stem / "EC Region.bin"]:
+                     Path(workspace) / "corrupt" / "Decomp" / "EC Region.bin",
+                     Path(workspace) / bios_stem / "EC Region.bin",
+                     Path(workspace) / "EC Region.bin"]:
                 if p.parent.exists() and p not in ec_targets:
                     ec_targets.append(p)
         if decomp_target and os.path.exists(decomp_target):
@@ -1348,12 +1488,14 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
                 if "backup" not in p.name.lower() and "backup" not in p.parent.name.lower() and p not in ec_targets:
                     ec_targets.append(p)
 
+        ec_orig_name = os.path.basename(ec_file)
         for et in ec_targets:
             try:
                 if et.exists():
                     os.chmod(str(et), 0o666)
                 et.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(ec_file, str(et))
+                log_cb(f"[ACTION] Auto-renamed official file '{ec_orig_name}' -> '{et.name}' (matching original backup structure)")
                 log_cb(f"[SUCCESS] [OK] Replaced clean EC Region in: {et.parent.name}\\{et.name}")
             except Exception as ex:
                 log_cb(f"[WARNING] EC file write note ({et.name}): {ex}")
@@ -1376,21 +1518,20 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
         xml_path = decomp_ctx.get("xml_path")
         if xml_path:
             exact_target = get_xml_partition_input_file(xml_path, "GBE")
-            if exact_target and exact_target not in gbe_targets:
-                gbe_targets.append(exact_target)
+            if exact_target:
+                resolved_exact = exact_target if exact_target.is_absolute() else (Path(workspace) / exact_target)
+                if resolved_exact not in gbe_targets:
+                    gbe_targets.append(resolved_exact)
                 if workspace and bios_stem:
                     mirror_p = Path(workspace) / bios_stem / "Decomp" / exact_target.name
                     if mirror_p not in gbe_targets:
                         gbe_targets.append(mirror_p)
 
-        if fit_dir:
-            for p in [Path(fit_dir) / bios_stem / "Decomp" / "GBE Region.bin",
-                     Path(fit_dir) / bios_stem / "GBE Region.bin"]:
-                if p.parent.exists() and p not in gbe_targets:
-                    gbe_targets.append(p)
         if workspace:
             for p in [Path(workspace) / bios_stem / "Decomp" / "GBE Region.bin",
-                     Path(workspace) / bios_stem / "GBE Region.bin"]:
+                     Path(workspace) / "corrupt" / "Decomp" / "GBE Region.bin",
+                     Path(workspace) / bios_stem / "GBE Region.bin",
+                     Path(workspace) / "GBE Region.bin"]:
                 if p.parent.exists() and p not in gbe_targets:
                     gbe_targets.append(p)
         if decomp_target and os.path.exists(decomp_target):
@@ -1399,12 +1540,14 @@ def perform_all_rg_clean_with_fit(decomp_ctx: dict, matches: dict, output_path: 
                 if "backup" not in p.name.lower() and "backup" not in p.parent.name.lower() and p not in gbe_targets:
                     gbe_targets.append(p)
 
+        gbe_orig_name = os.path.basename(gbe_file)
         for gt in gbe_targets:
             try:
                 if gt.exists():
                     os.chmod(str(gt), 0o666)
                 gt.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(gbe_file, str(gt))
+                log_cb(f"[ACTION] Auto-renamed official file '{gbe_orig_name}' -> '{gt.name}' (matching original backup structure)")
                 log_cb(f"[SUCCESS] [OK] Replaced clean GbE Region in: {gt.parent.name}\\{gt.name}")
             except Exception as ex:
                 log_cb(f"[WARNING] GbE file write note ({gt.name}): {ex}")

@@ -124,18 +124,16 @@ def find_fit_candidates(version_str, external_dir="external", chipset_hint=None)
         if t_minor == q_minor:
             score += 500000
             
-            # RULE: 3-Part Match (Major.Minor.Patch e.g. 11.8.50, 11.0.0, 12.0.49)
-            # When first 3 parts match, this tool wins with absolute top priority!
-            # 4th part (Build number) is ignored as per user requirement.
-            if len(q_parts) >= 3 and t_patch == q_patch:
-                score += 5000000
+            # RULE: Compatible patch match within same Major.Minor branch (e.g. 11.8.x, 12.0.x)
+            # In Intel CSME architecture, tools with t_patch >= q_patch are backwards-compatible
+            # with all firmware in that branch and are essential for newer donor BIOS Guard / microcode capsules.
+            if t_patch >= q_patch:
+                score += 3000000 + (t_patch * 10000) + t_build
                 if t_build > 0:
-                    score += 500000 + t_build  # Real tool with specific build wins over generic packages
-                else:
-                    score += t_build
+                    score += 500000  # Real tool with specific build wins over generic packages
             else:
-                # Fallback only when the exact 3-part patch is not available in database
-                diff_patch = abs(t_patch - q_patch)
+                # Fallback only when tool patch is older than target firmware patch
+                diff_patch = q_patch - t_patch
                 score -= min(400000, diff_patch * 10000)
                 score += t_build
         else:
@@ -471,6 +469,62 @@ def mapped_drive_context(target_path):
     else:
         yield Path(target_path)
 
+def sync_fit_logs_to_terminal(proc_res, terminal_callback, fit_dir=None, workspace=None, start_log_pos=0):
+    """
+    Synchronizes Intel Flash Image Tool (FIT/MFIT) logs, warnings,
+    and progress lines directly to the terminal callback in real time.
+    """
+    if terminal_callback is None:
+        return
+
+    captured_lines = []
+
+    # 1. Capture from process stdout / stderr
+    if proc_res:
+        if proc_res.stdout:
+            captured_lines.extend(proc_res.stdout.splitlines())
+        if proc_res.stderr:
+            captured_lines.extend(proc_res.stderr.splitlines())
+
+    # 2. Capture fresh entries from fit.log
+    log_candidates = []
+    if workspace:
+        log_candidates.append(Path(workspace) / "fit.log")
+    if fit_dir:
+        log_candidates.append(Path(fit_dir) / "fit.log")
+    log_candidates.append(Path(os.getcwd()) / "fit.log")
+
+    for l_path in log_candidates:
+        if l_path.exists():
+            try:
+                with open(str(l_path), "r", encoding="utf-8", errors="replace") as f:
+                    if start_log_pos > 0 and l_path.stat().st_size > start_log_pos:
+                        f.seek(start_log_pos)
+                    new_lines = f.readlines()
+                    if new_lines:
+                        captured_lines.extend(new_lines)
+                        break
+            except Exception:
+                pass
+
+    if not captured_lines:
+        return
+
+    # 3. Clean and emit relevant lines
+    for raw in captured_lines:
+        line = raw.strip()
+        if not line or "====" in line or line.startswith("Copyright") or line.startswith("Using vsccommn"):
+            continue
+
+        line_lower = line.lower()
+        if any(err_word in line_lower for err_word in ["error", "failed", "exception", "overflow", "fatal"]):
+            print_terminal_log(terminal_callback, f"[FIT ERROR] {line}", "ERROR")
+        elif "warning" in line_lower or "warn" in line_lower:
+            print_terminal_log(terminal_callback, f"[FIT WARNING] {line}", "WARNING")
+        elif any(k in line_lower for k in ["decomposed", "writing map", "building", "success", "close manufacturing", "output file", "chipset initialization"]):
+            print_terminal_log(terminal_callback, f"[FIT LOG] {line}", "INFO")
+
+
 def execute_fit_decompile(bios_path, version_string, workspace_dir, terminal_callback=None, external_dir="external", custom_fit_exe=None):
     # Step 1: Pre-analysis with ME Analyzer
     print_terminal_log(terminal_callback, "[INFO] Running Pre-analysis with ME Analyzer...")
@@ -654,7 +708,17 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
         else:
             cmd = [fit_exe_safe, "-f", temp_corrupt.name, "-save", xml_path.name.replace(" ", "_"), "-i", "disable"]
         
-        subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+        # Measure initial fit.log size to capture fresh logs
+        log_pos = 0
+        fit_log_p = fit_workspace / "fit.log"
+        if not fit_log_p.exists():
+            fit_log_p = Path(fit_dir) / "fit.log"
+        if fit_log_p.exists():
+            try: log_pos = fit_log_p.stat().st_size
+            except: pass
+
+        sub_res = subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+        sync_fit_logs_to_terminal(sub_res, terminal_callback, fit_dir=fit_dir, workspace=fit_workspace, start_log_pos=log_pos)
         
         if not xml_path.exists():
             for possible in [fit_workspace / "corrupt.xml", fit_workspace / "image.xml", Path(fit_dir) / "config.xml", Path(fit_dir) / "corrupt.xml"]:
@@ -704,6 +768,24 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
                 print_terminal_log(terminal_callback, f"[SUCCESS] [OK] FIT Decompile Complete via {tool_name}")
                 print_terminal_log(terminal_callback, f"[INFO] Decompiled Files Location: {os.path.abspath(decomp_target)}")
                 print_terminal_log(terminal_callback, f"[INFO] Decompiled layout verified: {xml_path.name} and partition binaries ready.")
+
+                # Scan and display full decompiled component breakdown table
+                decomp_sub = decomp_target / "Decomp" if (decomp_target / "Decomp").exists() else decomp_target
+                extracted_binaries = sorted(list(set(list(decomp_sub.glob("*.bin")) + list(decomp_target.glob("*.bin")))), key=lambda x: x.name)
+                if extracted_binaries:
+                    print_terminal_log(terminal_callback, "━"*50)
+                    print_terminal_log(terminal_callback, f"DECOMPILED PARTITION FILES IN [{decomp_target.name}]:")
+                    print_terminal_log(terminal_callback, "━"*50)
+                    for b_file in extracted_binaries:
+                        b_sz = b_file.stat().st_size
+                        if b_sz >= 1024 * 1024:
+                            sz_str = f"{b_sz / (1024 * 1024):.2f} MB"
+                        elif b_sz >= 1024:
+                            sz_str = f"{b_sz // 1024} KB"
+                        else:
+                            sz_str = f"{b_sz} B"
+                        print_terminal_log(terminal_callback, f"• {b_file.name} [{sz_str}]")
+                    print_terminal_log(terminal_callback, "━"*50)
             else:
                 print_terminal_log(terminal_callback, f"[WARNING] Attempt {attempt}: Decompiled structure incomplete or missing partitions with {tool_name}. Trying next tool in queue...", "WARNING")
         else:
@@ -751,8 +833,18 @@ def execute_fit_rebuild(corrupt_bios_path, clean_paths_dict, version_string, out
             cmd.append(xml_path.name)
         else:
             cmd = [fit_exe_safe, "-f", xml_path.name, "-b", "-o", final_out.name, "-i", "disable"]
-            
+
+        # Measure log pos before compile
+        log_pos_build = 0
+        fit_log_build = fit_workspace / "fit.log"
+        if not fit_log_build.exists():
+            fit_log_build = Path(fit_dir) / "fit.log"
+        if fit_log_build.exists():
+            try: log_pos_build = fit_log_build.stat().st_size
+            except Exception: pass
+
         res = subprocess.run(cmd, cwd=str(fit_workspace), capture_output=True, text=True, encoding='utf-8', errors='replace', creationflags=0x08000000)
+        sync_fit_logs_to_terminal(res, terminal_callback, fit_dir=fit_dir, workspace=fit_workspace, start_log_pos=log_pos_build)
 
         # Check alternative output filenames that FIT might generate
         if not final_out.exists() or final_out.stat().st_size == 0:
