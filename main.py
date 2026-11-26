@@ -7435,19 +7435,9 @@ class BiosServiceTool(QMainWindow):
         def _run_save():
             try:
                 data = bytearray(self.hex_model.get_data())
-                
-                # AUTO FIX FV CHECKSUMS (The expert's suggestion)
-                from compare_fixer import CompareFixer
-                fix_count = CompareFixer.fix_fv_checksums(data, self.log_to_terminal)
-                
                 with open(save_path, "wb") as f:
                     f.write(data)
-                
-                if fix_count > 0:
-                    self.log_to_terminal(f"[SUCCESS] Saved with {fix_count} FV Checksum corrections! ✅")
-                else:
-                    self.log_to_terminal(f"[SUCCESS] Saved successfully. No checksum errors found. ✅")
-                    
+                self.log_to_terminal(f"[SUCCESS] Saved successfully. ✅")
                 self.log_to_terminal(f"[INFO] File: {os.path.basename(save_path)}")
                 
             except Exception as e:
@@ -7491,14 +7481,9 @@ class BiosServiceTool(QMainWindow):
                 else:
                     data = bytearray()
 
-                from compare_fixer import CompareFixer
-                fix_count = CompareFixer.fix_fv_checksums(data, self.log_to_terminal)
                 with open(save_path, "wb") as f:
                     f.write(data)
-                if fix_count > 0:
-                    self.log_to_terminal(f"[SUCCESS] Saved with {fix_count} FV Checksum corrections! ✅")
-                else:
-                    self.log_to_terminal(f"[SUCCESS] Saved successfully. ✅")
+                self.log_to_terminal(f"[SUCCESS] Saved successfully. ✅")
                 self.log_to_terminal(f"[INFO] File: {os.path.basename(save_path)}")
 
                 # --- AUTO-RELOAD SAVED FILE (AUTO VERIFY FOR BIOS REGION) ---
@@ -7727,10 +7712,6 @@ class BiosServiceTool(QMainWindow):
         exe_action = QAction("BIOS RG .EXE", self)
         exe_action.triggered.connect(self.run_bios_rg_exe)
         menu.addAction(exe_action)
-
-        all_rg_action = QAction("ALL RG CLEAN (.EXE)", self)
-        all_rg_action.triggered.connect(self.run_all_rg_clean)
-        menu.addAction(all_rg_action)
 
         menu.exec(self.btn_dmi_migrate.mapToGlobal(self.btn_dmi_migrate.rect().bottomLeft()))
 

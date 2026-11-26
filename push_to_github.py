@@ -1019,10 +1019,12 @@ class GitPushGUI:
                             except Exception:
                                 pass
 
-                # Copy core python files from root
+                # Copy core python files from root into payload and _internal
                 for f in os.listdir(BASE_DIR):
                     if f.endswith(".py") and not f.startswith("push_to_github") and not f.startswith("chat_") and not f.startswith("test_"):
-                        shutil.copy2(os.path.join(BASE_DIR, f), os.path.join(payload_content, f))
+                        src_f = os.path.join(BASE_DIR, f)
+                        shutil.copy2(src_f, os.path.join(payload_content, f))
+                        shutil.copy2(src_f, os.path.join(payload_internal, f))
 
                 if os.path.exists(os.path.join(BASE_DIR, "version.txt")):
                     shutil.copy2(os.path.join(BASE_DIR, "version.txt"), os.path.join(payload_content, "version.txt"))

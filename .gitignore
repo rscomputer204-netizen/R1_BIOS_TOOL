@@ -121,6 +121,7 @@ extract_me_diag.py
 update_cache/
 temp_update_payload/
 backup/
+waste_files/
 
 # Allow update.zip for auto-update distribution
 !update.zip

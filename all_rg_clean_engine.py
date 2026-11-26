@@ -1134,12 +1134,27 @@ def perform_bios_rg_ready_with_fit(decomp_ctx: dict, donor_path: str, output_pat
             pf.write(donor_bytes)
         log_cb(f"[SUCCESS] [OK] Renamed '{donor_orig_name}' -> 'BIOS Region.bin' & Replaced in: {def_target.parent.name}\\{def_target.name}")
 
-    # Also keep dump_bytes in sync
+    # Direct 1:1 Binary Replacement (100% Preserves Flash Descriptor, CSME, EC & GbE from original dump)
     dump_bytes = decomp_ctx.get("dump_bytes")
+    if not dump_bytes:
+        dump_p = decomp_ctx.get("bios_path") or decomp_ctx.get("dump_path")
+        if dump_p and os.path.exists(dump_p):
+            with open(dump_p, "rb") as df:
+                dump_bytes = bytearray(df.read())
+
     if dump_bytes and len(dump_bytes) >= target_offset + target_size:
         dump_bytes[target_offset : target_offset + target_size] = donor_bytes
+        with open(output_path, "wb") as out_f:
+            out_f.write(dump_bytes)
+        log_cb(f"[SUCCESS] [OK] Direct 1:1 Clean Image Generated: {len(dump_bytes):,} bytes.")
+        log_cb(f"[INFO] Flash Descriptor, CSME & GbE Regions 100% preserved from original dump (No ME Alteration).")
+        return {
+            "success": True,
+            "output_path": output_path,
+            "size": target_size
+        }
 
-    # Rebuild / Compile via FIT
+    # Fallback to FIT compilation if direct injection cannot map offsets
     ok = compile_fit_workspace(decomp_ctx, output_path, log_cb=log_cb)
     return {
         "success": ok,
@@ -1260,25 +1275,43 @@ def perform_bios_rg_exe_with_fit(decomp_ctx: dict, candidate_path: str, output_p
         except Exception as ex:
             log_cb(f"[WARNING] File write note ({t_file.name}): {ex}")
 
-    if not replaced_any:
+    if not replaced_any and workspace:
         # Emergency fallback
-        def_target = workspace / bios_stem / "Decomp" / "BIOS Region.bin"
+        def_target = Path(workspace) / bios_stem / "Decomp" / "BIOS Region.bin"
         def_target.parent.mkdir(parents=True, exist_ok=True)
         with open(str(def_target), "wb") as pf:
             pf.write(trimmed_data)
         log_cb(f"[ACTION] Auto-renamed official file '{cand_orig_name}' -> '{def_target.name}'")
         log_cb(f"[SUCCESS] [OK] Replaced clean BIOS Region in: {def_target.parent.name}\\{def_target.name}")
 
-    # Also keep dump_bytes in sync
+    # Direct 1:1 Binary Replacement (100% Preserves Flash Descriptor, CSME, EC and GbE from original dump)
     dump_bytes = decomp_ctx.get("dump_bytes")
+    if not dump_bytes:
+        dump_p = decomp_ctx.get("bios_path") or decomp_ctx.get("dump_path")
+        if dump_p and os.path.exists(dump_p):
+            with open(dump_p, "rb") as df:
+                dump_bytes = bytearray(df.read())
+
     if dump_bytes and len(dump_bytes) >= target_offset + target_size:
         dump_bytes[target_offset : target_offset + target_size] = trimmed_data
+        with open(output_path, "wb") as out_f:
+            out_f.write(dump_bytes)
+        log_cb(f"[SUCCESS] [OK] Direct 1:1 Clean Image Generated: {len(dump_bytes):,} bytes.")
+        log_cb(f"[INFO] Flash Descriptor, CSME and GbE Regions 100% preserved from original dump (No ME Alteration).")
+        return {
+            "success": True,
+            "output_path": output_path,
+            "size": target_size,
+            "head_removed": head_rem,
+            "foot_removed": foot_rem
+        }
 
-    # Rebuild / Compile via FIT
+    # Fallback to FIT compilation if direct injection cannot map offsets
     ok = compile_fit_workspace(decomp_ctx, output_path, log_cb=log_cb)
     return {
         "success": ok,
         "output_path": output_path,
+        "size": target_size,
         "head_removed": head_rem,
         "foot_removed": foot_rem
     }
